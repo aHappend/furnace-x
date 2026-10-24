@@ -1,0 +1,6 @@
+{
+  "family": "Furnace",
+  "series": "Furnace-X",
+  "current_release": "v1.0.0-dev",
+  "target_baseline": "100 MHz+ (<= 10.0 ns) on Intel Arria 10 GX (10AX115N3F40E2SG)"
+}
