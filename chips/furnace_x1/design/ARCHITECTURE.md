@@ -173,6 +173,89 @@ specified FPGA. Only the shared runtime performs native timing and physical
 hardware gates. A missing device, license or bridge is a blocker, not proof
 or permission to substitute software/simulation.
 
+## Native adapter integration blocker and provision contract
+
+The native adapter is **not implemented**. The current source inventory contains
+only the six core RTL files; there is no `fpga/board_hil.json`, board project,
+PCIe shell/IP source or supported hardware-side bridge interface declaration.
+The Python interfaces in `tests/native_gates.py` and `tests/native_vectors.py`
+specify configuration and trace formats, not a synthesizable bridge protocol.
+In particular, they do not establish whether the shell exposes memory-mapped
+transactions, streaming transfers, or a different interface. Choosing one would
+invent a platform binding. No replacement core, dummy bridge or assumed board
+pinout has been added.
+
+The retained prerequisite failure is exit 2 at
+`evidence/preparation/native-gates-validation-01/results/run-20261026T124301Z-1231c20557/commands/0002/receipt.json`;
+its `stderr.log` identifies the missing configuration. The existing export at
+`evidence/native/integration-r2/run-20261026T122843Z-cec25ecbbe/native-contract.json`
+explicitly says its adapter is not supplied. Its virtual-pin projects and
+provisional 2 ns I/O budget are not implementation projects or a derived
+platform timing budget. Neither those templates nor orchestration-test fixtures
+may be promoted to an actual board binding.
+
+The shared runtime must provision authoritative, project-local platform inputs:
+
+| Missing input | Required content and responsibility |
+|---|---|
+| Supported bridge RTL/interface | Shell top and exact port declarations, directions, widths, transfer/flow-control semantics, host address or stream framing, ordering, error handling and available storage. The platform provider supplies the real interface and integration sources; Designer implements the adapter against it. |
+| Clock and reset integration | Actual reference clock, generated core clock and their relationship, PLL/IP sources and constraints, reset assertion/release sequence and PCIe reset relationship. Designer can then document any required CDC/reset synchronization without altering the core reset contract. |
+| Board implementation | Authoritative package pin assignments, I/O standards, PCIe lane/reference-clock bindings, transceiver/IP configuration and all referenced source files for 10AX115N2F45E1SG with Quartus 17.1. Do not infer these from the device name. |
+| Capture transport | Supported command/data upload and trace readback ABI, capacity/overflow behavior and a capture-only host implementation. The shared runtime binds the physical device and command; Designer does not invent commands or program an image. |
+| Physical image provenance | A matching implementation image/build manifest and active-image identity mechanism, plus actual PCIe Gen3x8 link status and run identity. These are runtime provisions, not constants an RTL wrapper can truthfully manufacture. |
+
+Once these inputs are supplied, the adapter must instantiate the unchanged
+`furnace_x1_top` at each legal width and drive/capture its actual public nets.
+The complete mapping must contain exactly these names, with widths from SPEC:
+`clk`, `rst_n`, `s_axis_tdata`, `s_axis_tkeep`, `s_axis_tvalid`,
+`s_axis_tlast`, `s_axis_tready`, `s_check_enable`, `s_expected_crc32c`,
+`s_expected_crc64_nvme`, `m_axis_tdata`, `m_axis_tkeep`, `m_axis_tvalid`,
+`m_axis_tlast`, `m_axis_tready`, `m_crc_valid`, `m_crc_ready`, `m_crc32c`,
+`m_crc64_nvme`, `m_crc_mismatch`, `m_crc_protocol_error`.
+Actual hierarchical net names and physical shell bindings remain unavailable;
+this list is a mapping obligation, not a completed pin map.
+
+Stimulus must be established before the accepting core edge; capture registers
+must sample all listed data/control nets at that edge, observing their pre-edge
+values, including reset and idle cycles. Capture must not derive observations
+from expected CRCs, handshake predictions or host oracle rows. The transport must
+preserve the prescribed cycle sequence and independent ready inputs, with no
+silent trace loss or substitution when storage fills. Width 64 and width 512
+must each have an explicit source/image binding and physical capture coverage.
+
+Numerical launch/capture budgets cannot yet be derived: launch/capture registers,
+clock phases/skew, routing boundaries and IP timing are unknown. For a same-clock
+register path, let S be capture-clock minus launch-clock arrival, U the applicable
+uncertainty, and D the combinational/routing delay. Setup requires
+`tCQ_max + D_max + tSetup + U_setup <= T + S`; hold requires
+`tCQ_min + D_min >= tHold + S + U_hold`, with `T <= 10.0 ns`.
+Both stimulus-to-core and core-to-capture paths, including ready feedback,
+must be constrained using their actual endpoints. Internal register paths use
+normal timing analysis, not fictitious external I/O delays. Any real external
+boundary needs independently justified min/max delays and clock relationships;
+reset paths need applicable recovery/removal analysis. No numeric delay,
+false-path or multicycle exception is justified by the missing interface.
+
+Before dependent native checks are admitted, Coordinator and independent
+Reviewer must admit ownership and the complete source-selector additions for
+`fpga/board_hil.json`, both actual Quartus revisions' `.qpf`/`.qsf` files,
+`.sdc` constraints, the public-net mapping and timing-budget evidence, and every
+referenced `.qip`, IP, HDL, memory initialization and Tcl source. Exact filenames
+must follow the supplied projects rather than invented revisions. Designer
+continues to own adapter `rtl/*.sv` and this document; board/configuration and
+platform-IP ownership require explicit admission. Verifier owns adapter
+simulation, synthesis and capture-scoreboard integration. Generated images,
+manifests and reports remain separate from implementation source closure.
+
+This blocker does not establish a core RTL defect or invalidate historical L1
+results, and it does not close native acceptance. All existing checks and failed
+receipts remain mandatory/retained. Required follow-on evidence is both-width
+Quartus 17.1 implementation/post-fit STA with nonnegative setup and hold slack,
+no relevant unconstrained paths and <=10 ns period, then three consecutive
+physical PCIe Gen3x8 passes per width. A post-map report or a passed label with
+negative hold slack cannot satisfy that requirement. Engineering acceptance and
+the runtime-generated product PDF remain pending.
+
 ## Dependencies and portable commands
 
 Required portable dependencies are Python 3 (standard library), Icarus Verilog
