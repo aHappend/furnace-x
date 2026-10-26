@@ -1,0 +1,329 @@
+{
+  "gate": "quartus-sta",
+  "timestamp_utc": "2026-10-26T12:14:56.075220+00:00",
+  "project_dir": "/data/sufeng/furnace-x1-line/workspace/project/.vulcan/engineering/run-0001/quartus_sta_work",
+  "revision": "top",
+  "clock_filter": "clk_main",
+  "min_setup_slack_ns": 0.0,
+  "min_hold_slack_ns": 0.0,
+  "status": "passed",
+  "map_summary": {
+    "exists": true,
+    "path": "/data/sufeng/furnace-x1-line/workspace/project/.vulcan/engineering/run-0001/quartus_sta_work/top.map.rpt",
+    "error_count": 0,
+    "errors": [],
+    "lpm_divide_error_count": 0,
+    "lpm_divide_errors": [],
+    "warning_10268_count": 0,
+    "warning_10268": []
+  },
+  "sta_summary": {
+    "exit_code": 0,
+    "netlist_mode": "post_map",
+    "clocks": [
+      {
+        "name": "clk_main",
+        "period_ns": 10.0
+      }
+    ],
+    "wns_setup_ns": 8.671,
+    "wns_hold_ns": -0.242,
+    "failing_setup_count": 0,
+    "failing_hold_count": 20,
+    "setup_paths": [
+      {
+        "slack_ns": 8.671,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[48]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[54]"
+      },
+      {
+        "slack_ns": 8.671,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[49]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[40]"
+      },
+      {
+        "slack_ns": 8.673,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[14]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[54]"
+      },
+      {
+        "slack_ns": 8.673,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[0]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[40]"
+      },
+      {
+        "slack_ns": 8.673,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[57]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[54]"
+      },
+      {
+        "slack_ns": 8.673,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[35]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[40]"
+      },
+      {
+        "slack_ns": 8.675,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[37]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[54]"
+      },
+      {
+        "slack_ns": 8.675,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[45]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[40]"
+      },
+      {
+        "slack_ns": 8.701,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a65~reg0|furnace_crc_output_stage:g_legal.output_stage|result_mismatch[1]"
+      },
+      {
+        "slack_ns": 8.703,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a62~reg0|furnace_crc_output_stage:g_legal.output_stage|result_mismatch[1]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[10]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|out_crc64_nvme[25]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[25]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|out_crc64_nvme[53]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[47]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|out_crc64_nvme[17]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[34]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|out_crc64_nvme[32]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[48]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|out_crc64_nvme[29]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[8]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|out_crc64_nvme[10]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[63]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|out_crc64_nvme[5]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[48]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[50]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[8]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[23]"
+      },
+      {
+        "slack_ns": 8.755,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "state64[21]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|state64[4]"
+      }
+    ],
+    "hold_paths": [
+      {
+        "slack_ns": -0.242,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "valid_pipe[6]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a0~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a154~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a156~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|dffe3a[2]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a630~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|dffe3a[2]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a631~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a161~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|dffe3a[2]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a633~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|dffe3a[2]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a675~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a165~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a554~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|dffe3a[2]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a635~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a169~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|dffe3a[2]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a629~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a159~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a648~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a650~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a145~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_packet_accumulator:g_legal.packet_accumulator",
+        "to_node": "altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|dffe3a[2]|furnace_crc_packet_accumulator:g_legal.packet_accumulator|altshift_taps:out_valid_rtl_0|shift_taps_qov:auto_generated|altera_syncram_bcb1:altera_syncram4|altsyncram_4494:altsyncram7|ram_block8a639~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a164~reg0"
+      },
+      {
+        "slack_ns": -0.238,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline",
+        "to_node": "altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|dffe3a[2]|furnace_crc_beat_pipeline:g_legal.beat_pipeline|altshift_taps:meta_pipe_rtl_0|shift_taps_nov:auto_generated|altera_syncram_7cb1:altera_syncram4|altsyncram_0494:altsyncram7|ram_block8a261~reg0"
+      }
+    ],
+    "stderr_tail": []
+  },
+  "detail": "Timing closed: Setup WNS = 8.671 ns",
+  "top_module": "furnace_x1_top",
+  "clock_port": "clk",
+  "clock_period_ns": 10.0,
+  "target_frequency_mhz": 100.0,
+  "fmax_mhz": 752.45,
+  "critical_path_delay_ns": 1.329,
+  "parameters": {},
+  "source_sha256": "4dbb4e0b75e38ac19e7451ef1645c5cdb9c427d7f887163a23b947c209ac4fa6",
+  "applicable": true
+}
