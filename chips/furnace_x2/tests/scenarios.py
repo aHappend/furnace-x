@@ -17,6 +17,10 @@ class Campaign:
     def config(self, op, index=0, value=0, mask=0, action=0, enable=0, key=None):
         key = self.key if key is None else key
         self.stream.write(f"0 {op} {index} {value:x} {mask:x} {action:x} {enable} {int.from_bytes(key, 'big'):x}\n")
+        self.apply_config(op, index, value, mask, action, enable, key)
+
+    def apply_config(self, op, index=0, value=0, mask=0, action=0, enable=0, key=None):
+        key = self.key if key is None else key
         if op == 0:
             self.rules[index] = value, mask, action, bool(enable)
         elif op == 1:
@@ -30,7 +34,7 @@ class Campaign:
         self.rules = [(0, 0, 0, False)] * 64
         self.default, self.key = 0, DEFAULT_KEY
 
-    def send(self, data, labels=(), mode=1, beats=None, abort=0, check=None):
+    def send(self, data, labels=(), mode=1, beats=None, abort=0, check=None, deferred=None):
         r, l = self.rng, self.lanes
         beats = beats_for(data, l, r) if beats is None else beats
         bad = malformed(beats, l)
@@ -50,7 +54,14 @@ class Campaign:
         ident = len(self.records)
         self.stream.write(
             f"1 {ident} {len(beats)} {mode} {abort} {c32:x} {c64:x} {mismatch} {int(bad)} "
-            f"{header:x} {length} {h:x} {int(bool(tup))} {hit} {index} {action:x}\n")
+            f"{header:x} {length} {h:x} {int(bool(tup))} {hit} {index} {action:x} "
+            f"{int(deferred is not None)}\n")
+        if deferred is not None:
+            p = dict(op=0, index=0, value=0, mask=0, action=0, enable=0, key=self.key)
+            p.update(deferred)
+            self.stream.write(
+                f"{p['op']} {p['index']} {p['value']:x} {p['mask']:x} {p['action']:x} "
+                f"{p['enable']} {int.from_bytes(p['key'], 'big'):x}\n")
         for i, (d, k, _) in enumerate(beats):
             # First-beat checking controls must dominate later randomized values.
             c, a, b = (check, exp32, exp64) if i == 0 else (
@@ -60,9 +71,13 @@ class Campaign:
             "labels": list(labels), "beats": len(beats), "header": header,
             "length": length, "crc32": c32, "crc64": c64, "hash": h,
             "rss": int(bool(tup)), "hit": hit, "index": index, "action": action,
+            "matching_rules": [i for i, (v, m, _, en) in enumerate(self.rules)
+                               if en and ((header ^ v) & m) == 0],
             "fields": fields, "abort": abort}
         if abort:
             self.reset_model()
+        elif deferred is not None:
+            self.apply_config(**deferred)
         return ident
 
     def close(self):
@@ -75,7 +90,7 @@ def smoke(c):
     c.config(3, action=0x5a10)
     c.config(0, 63, action=0xaabbccdd, enable=1)
     c.send(packet(c.rng, version=6, proto=6, payload_size=90),
-           ["ipv6_tcp", "wildcard", "independent_stalls"])
+           ["ipv6_tcp", "wildcard", "independent_stalls"], deferred={"op": 2})
     c.send(packet(c.rng, version=4, proto=17, payload_size=80),
            ["ipv4_udp", "simultaneous"], mode=2)
 
@@ -88,6 +103,15 @@ def directed(c, pairs=True):
     c.config(0, 0, action=0xbad, enable=0)
     c.config(0, 63, action=0x11223344, enable=1)
     c.send(packet(r), ["wildcard", "disabled"])
+    c.config(2)
+    c.config(0, 0, action=0x11112222, enable=1)
+    for op, pending in enumerate((
+            dict(op=0, index=0, action=0x33334444, enable=1),
+            dict(op=1, key=r.randbytes(41)),
+            dict(op=2),
+            dict(op=3, action=0x55556666))):
+        c.send(packet(r), [f"atomicity_{op}"], deferred=pending)
+        c.send(packet(r), [f"atomicity_following_{op}"])
     for i in range(64):
         c.config(2)
         c.config(0, i, action=0x50000000 + i, enable=1)

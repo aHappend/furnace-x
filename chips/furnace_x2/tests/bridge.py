@@ -53,6 +53,7 @@ integer sent=0,received=0,crc_received=0,meta_received=0,first_meta=0;
 integer active=0,mode=0,abort_kind=0,bubble=0,packet_count=0,beat_count=0;
 integer stalls_b=0,stalls_c=0,stalls_m=0,simultaneous=0,resets=0,configs=0;
 integer ingress_bubbles=0;
+integer deferred_cfg=0,deferred_count=0;
 integer ecerr,emm,erv,ehit,eidx,elen;
 reg [W-1:0] bd[0:2047];
 reg [L-1:0] bk[0:2047];
@@ -197,9 +198,14 @@ initial begin
     #1;if(s_axis_tready!==0 || cfg_ready!==1) $fatal(1,"CONFIG_PRIORITY");
     tick();cfg_valid=0;s_axis_tvalid=0;configs=configs+1;
    end else if(cmd==1) begin
-    rc=$fscanf(fd,"%d %d %d %d %h %h %d %d %h %d %h %d %d %d %h",
-      id,n,mode,abort_kind,ec32,ec64,emm,ecerr,eheader,elen,ehash,erv,ehit,eidx,eaction);
-    if(rc!=15 || n>2048 || n<1) $fatal(1,"BAD_PACKET");
+    rc=$fscanf(fd,"%d %d %d %d %h %h %d %d %h %d %h %d %d %d %h %d",
+      id,n,mode,abort_kind,ec32,ec64,emm,ecerr,eheader,elen,ehash,erv,ehit,eidx,eaction,deferred_cfg);
+    if(rc!=16 || n>2048 || n<1) $fatal(1,"BAD_PACKET");
+    if(deferred_cfg) begin
+     rc=$fscanf(fd,"%d %d %h %h %h %d %h",j,i,cfg_value,cfg_mask,cfg_action,bubble,cfg_rss_key);
+     if(rc!=7) $fatal(1,"BAD_DEFERRED_CONFIG");
+     cfg_op=j;cfg_index=i;cfg_enable=bubble;
+    end
     for(i=0;i<n;i=i+1) begin
      rc=$fscanf(fd,"%h %h %h %h %h",bd[i],bk[i],bc[i],b32[i],b64[i]);
      if(rc!=5) $fatal(1,"BAD_BEAT");
@@ -214,8 +220,7 @@ initial begin
       s_axis_tlast=(sent==n-1);s_check_enable=bc[sent];
       s_expected_crc32c=b32[sent];s_expected_crc64_nvme=b64[sent];
      end else s_axis_tvalid=0;
-     // Configuration attempts during ownership must not change the snapshot.
-     cfg_valid=(sent>0);cfg_op=2;
+     cfg_valid=deferred_cfg && sent>0;
      tick();
      if ((abort_kind==1 && sent>0 && sent<n) ||
          (abort_kind==2 && final_edge>=0 && cycle-final_edge==300) ||
@@ -225,22 +230,27 @@ initial begin
      end
     end
     if(cycle>=deadline) $fatal(1,"LOST_RESULT id=%0d",id);
-    cfg_valid=0;s_axis_tvalid=0;
+    s_axis_tvalid=0;
     if(!abort_kind) begin
      $display("DONE %0d %0d %h %h %h %0d %h %0d %0d %0d %h",
        id,n,observed_c32,observed_c64,observed_header,observed_length,
        observed_hash,observed_rss,observed_hit,observed_index,observed_action);
      packet_count=packet_count+1;
     end
-    active=0;tick();tick();
+    active=0;
+    if(deferred_cfg && !abort_kind) begin
+     if(cfg_ready!==1 || cfg_valid!==1) $fatal(1,"DEFERRED_CONFIG_NOT_RELEASED");
+     tick();cfg_valid=0;configs=configs+1;deferred_count=deferred_count+1;
+    end
+    cfg_valid=0;tick();tick();
    end else if(cmd==2) reset_dut();
    else $fatal(1,"UNKNOWN_COMMAND");
   end
  end
  s_axis_tvalid=0;cfg_valid=0;m_axis_tready=1;m_crc_ready=1;m_meta_ready=1;
  repeat(20) tick();
- $display("COUNTS %0d %0d %0d %0d %0d %0d %0d %0d %0d",packet_count,beat_count,
-   stalls_b,stalls_c,stalls_m,simultaneous,resets,configs,ingress_bubbles);
+ $display("COUNTS %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d",packet_count,beat_count,
+   stalls_b,stalls_c,stalls_m,simultaneous,resets,configs,ingress_bubbles,deferred_count);
  $finish;
 end
 endmodule
@@ -323,7 +333,13 @@ begin #5;clk=1;#1;#4;clk=0;end endtask
 always @(posedge clk or negedge clk) if(!rst_n && $time>0)
  if(@ZERO@ !== 0) $fatal(1,"LEAF_RESET");
 initial begin
- rst_n=0;tick();tick();rst_n=1;
+ rst_n=0;
+`ifndef VERILATOR
+ #0;if(@ZERO@ !== 0) $fatal(1,"LEAF_RESET_TIME_ZERO");
+`else
+ #1;if(@ZERO@ !== 0) $fatal(1,"LEAF_RESET_TIME_ZERO");
+`endif
+ tick();tick();rst_n=1;
  fd=$fopen("stimulus.txt","r");if(!fd) $fatal(1,"NO_STIMULUS");
  while(!$feof(fd)) begin
   rc=$fscanf(fd,"%d",cmd);

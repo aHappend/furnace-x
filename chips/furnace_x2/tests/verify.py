@@ -61,7 +61,8 @@ class Run:
             "schema": 1, "mode": mode, "started_at": now(), "cwd": ".",
             "argv": ["python3", "tests/verify.py", *sys.argv[1:]],
             "commands": self.commands, "source_sha256": {}, "repair_of": repair_of,
-            "acceptance_evidence": "preparation" not in self.path.relative_to(ROOT).parts}
+            "acceptance_evidence": ("preparation" not in self.path.relative_to(ROOT).parts
+                                    and "--probe" not in sys.argv)}
         for src in selected():
             relative = src.relative_to(ROOT)
             self.receipt["source_sha256"][str(relative)] = digest(src)
@@ -145,6 +146,8 @@ def compile_sim(run, folder, backend, width=None, kind="top", rtl=None):
         run.command(["iverilog", "-g2012", "-Wall", "-Wno-timescale", "-s", "tb",
                      "-o", run.rel(folder / "sim"), *argv])
         return ["vvp", "sim"]
+    # PCH use is optional; some GCC/Verilator combinations reject the generated
+    # .fast.gch without a fallback header. Compile the ordinary includes instead.
     run.command(["verilator", "--binary", "--timing", "-Wno-fatal", "--top-module", "tb",
                  "-j", "2", "-MAKEFLAGS", "VK_PCH_I_FAST= VK_PCH_I_SLOW=",
                  "--Mdir", run.rel(folder / "obj"), "-o", "sim", *argv])
@@ -168,6 +171,13 @@ def parse_top_output(text, records, full=False, sample=False):
                                          "rss", "hit", "index", "action")]
             assert got == expected and count == rec["beats"], f"record mismatch: {line}"
             assert not rec["abort"]
+            for label in rec["labels"]:
+                if label.startswith("winner_"):
+                    winner = int(label.split("_")[1])
+                    assert rec["matching_rules"] == [winner] and rec["index"] == winner and rec["hit"]
+                elif label.startswith("pair_"):
+                    a, b = map(int, label.split("_")[1:])
+                    assert rec["matching_rules"] == [a, b] and rec["index"] == a and rec["hit"]
             completed.add(ident)
             coverage.update(rec["labels"])
             coverage["compared_packets"] += 1
@@ -175,6 +185,14 @@ def parse_top_output(text, records, full=False, sample=False):
             coverage["rss_eligible" if rec["rss"] else "rss_ineligible"] += 1
             if rec["fields"].get("error"):
                 coverage["parse_error"] += 1
+            else:
+                fields = rec["fields"]
+                for name in ("ip", "l4", "fragment", "unsupported"):
+                    coverage[f"observed_{name}"] += int(bool(fields.get(name)))
+                if fields.get("ip"):
+                    coverage[f"observed_ipv{fields['version']}"] += 1
+                    coverage[f"observed_protocol_{fields['proto']}"] += 1
+                coverage[f"observed_vlans_{fields.get('vlans', 0)}"] += 1
         elif line.startswith("ABORT "):
             ident, kind, sent, received = map(int, line.split()[1:])
             assert ident in records and ident not in aborted and records[ident]["abort"] == kind
@@ -185,7 +203,7 @@ def parse_top_output(text, records, full=False, sample=False):
             values = list(map(int, line.split()[1:]))
             names = ("packets", "beats", "payload_stall_cycles", "crc_stall_cycles",
                      "meta_stall_cycles", "simultaneous_terminal", "resets", "configs",
-                     "ingress_bubbles")
+                     "ingress_bubbles", "deferred_configs")
             coverage.update(dict(zip(names, values)))
         elif (line.startswith("- ") or re.fullmatch(r".*tb\.sv:\d+: \$finish called at \d+ \(.+\)", line)
               or not line.strip()):
@@ -207,6 +225,34 @@ def parse_top_output(text, records, full=False, sample=False):
                 assert coverage[f"pair_{a}_{b}"] >= 1
         for k in ("default", "wildcard", "disabled", "malformed_final", "malformed_nonfinal"):
             assert coverage[k] >= 1, f"uncovered {k}"
+        required = (
+            "capture_exceeded", "ah_invalid_length", "ipv4_reserved_fragment",
+            "udp_first_fragment_long", "bad_version", "bad_ihl", "total_under_ihl",
+            "total_truncated", "ipv6_bad_version", "ipv6_jumbogram", "third_vlan", "non_ip",
+            "observed_ip", "observed_l4", "observed_fragment", "observed_unsupported",
+            "observed_ipv4", "observed_ipv6", "observed_protocol_6", "observed_protocol_17")
+        for k in required:
+            assert coverage[k] >= 1, f"uncovered {k}"
+        assert coverage["deferred_configs"] >= 5
+        for op in range(4):
+            assert coverage[f"atomicity_{op}"] >= 1
+            assert coverage[f"atomicity_following_{op}"] >= 1
+        for n in range(3):
+            assert coverage[f"observed_vlans_{n}"] >= 1
+        for kind in (0, 43, 60, 44, 51):
+            for n in (1, 8, 9):
+                assert coverage[f"ext_{kind}_{n}"] >= 1
+        for n in (0, 1, 8, 9):
+            assert coverage[f"extensions_{n}"] >= 1
+        for v, fragment in ((4, 0x2000), (4, 1), (6, 1), (6, 8), (6, 0)):
+            assert coverage[f"fragment_{v}_{fragment}"] >= 1
+        for n in (0, 4, 5, 6, 15):
+            assert coverage[f"tcp_offset_{n}"] >= 1
+        for n in (0, 7, 8, 20, 22, 400):
+            assert coverage[f"udp_length_{n}"] >= 1
+        for v in (4, 6):
+            for proto in (1, 50, 59, 132):
+                assert coverage[f"protocol_{v}_{proto}"] >= 1
         for kind in (1, 2, 3):
             assert coverage[f"reset_observed_{kind}"] >= 1
             assert coverage[f"reset_recovery_{kind}"] >= 1
@@ -239,6 +285,9 @@ def top_run(run, width, backend, seed=17, full=False, sample=False, rtl=None, pr
             assert counters.get(f"keep_{n}", 0) >= 1
         for n in (0, 1, 255, 256, 257, 9215, 9216, 9217):
             assert counters.get(f"length_{n}", 0) >= 1
+        for boundary in range(width // 8, width // 2 + 1, width // 8):
+            for n in (boundary - 1, boundary, boundary + 1):
+                assert counters.get(f"length_{n}", 0) >= 1
         for ihl in range(5, 16):
             assert counters.get(f"ihl_{ihl}", 0) >= 1
     write_json(folder / "coverage.json", counters)
@@ -270,6 +319,16 @@ def leaf_run(run, kind, seed, suffix=""):
     result = {"compared": count, "kind": kind, "seed": seed,
               "threshold": 1056 if kind == "rss" else 3073}
     assert count >= result["threshold"]
+    if kind == "classifier":
+        assert count == 512 * 6 + 1
+        result.update(compared_walking_one_bits=512, compared_walking_zero_bits=512,
+                      compared_care_mask_bits=512, compared_ignore_mask_bits=512)
+    else:
+        assert count == 104 + 296 + 328 * 2 + 5
+        assert actual[-3] == (0x51ccc178, 1)
+        result.update(compared_ipv4_tuple_bits=104, compared_ipv6_tuple_bits=296,
+                      compared_key_bits_per_tuple=328, four_tuple_zero_protocol=True,
+                      nonzero_protocol_cases=2)
     write_json(folder / "coverage.json", result)
     return result
 
@@ -294,9 +353,9 @@ def illegal_parameters(run):
     return results
 
 
-def synthesis(run):
+def synthesis(run, probe=False):
     results = {}
-    for width in (64, 512):
+    for width in ((64,) if probe else (64, 512)):
         folder = run.path / f"yosys-{width}"
         folder.mkdir()
         source_args = " ".join(run.rel(p) for p in sorted((ROOT / "rtl").glob("*.sv")))
@@ -375,7 +434,7 @@ def synthesis(run):
     return results
 
 
-def defects(run):
+def defects(run, probe=False):
     # One local semantic edit per disposable source copy. A build or timeout is
     # not a kill: each compiled binary must reach the ordinary numerical checker.
     mutants = [
@@ -403,6 +462,8 @@ def defects(run):
          "if (meta_valid && !m_meta_ready) meta_header<=meta_header ^ 512'b1;\n"
          "                if (meta_terminal) begin meta_done<=1; meta_valid<=0; end", "UNSTABLE_META"),
     ]
+    if probe:
+        mutants = [m for m in mutants if m[0] in ("crc-polynomial", "metadata-unstable")]
     results = []
     for name, filename, old, new, marker in mutants:
         folder = run.path / name
@@ -426,7 +487,7 @@ def defects(run):
         sim = folder / "simulation"
         sim.mkdir()
         c = Campaign(64, 17, sim / "stimulus.txt")
-        c.send(b"123456789", ["crc_known"], mode=0)
+        c.send(b"123456789", ["crc_known"], mode=1 if name.startswith("metadata-") else 0)
         c.config(0, 0, value=0, mask=0, action=0x100, enable=1)
         c.config(0, 63, value=0, mask=0, action=0x200, enable=1)
         c.send(packet(c.rng, version=4, proto=6), ["ipv4_tcp"], mode=1)
@@ -446,7 +507,9 @@ def defects(run):
                   "mutant_sha256": hashes, "execution": rec}
         write_json(folder / "detected.json", result)
         results.append(result)
-    assert len(results) >= 8 and all(r["killed"] for r in results)
+    assert len(results) == len(mutants) and all(r["killed"] for r in results)
+    if not probe:
+        assert len(results) >= 8
     return results
 
 
@@ -510,15 +573,15 @@ def main():
                             run, width, "verilator", seed,
                             full=args.mode != "reproduction" and not args.probe,
                             sample=args.mode == "reproduction" or args.probe)
-                        if args.mode != "reproduction" and not args.probe:
+                        if args.mode != "reproduction" and (not args.probe or width == 64):
                             results[f"rss-{seed}-{width}"] = leaf_run(run, "rss", seed)
                             results[f"classifier-{seed}-{width}"] = leaf_run(run, "classifier", seed)
                     finally:
                         run.path = original
         if args.mode in ("all", "defects"):
-            results["defects"] = defects(run)
+            results["defects"] = defects(run, probe=args.probe)
         if args.mode in ("all", "synthesis"):
-            results["synthesis"] = synthesis(run)
+            results["synthesis"] = synthesis(run, probe=args.probe)
         if args.mode in ("all", "portability"):
             results["portability"] = portability(run)
         run.receipt.update(outcome="passed", results=results)
