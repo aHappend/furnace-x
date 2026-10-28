@@ -1,0 +1,338 @@
+{
+  "gate": "quartus-sta",
+  "timestamp_utc": "2026-10-28T20:24:48.396845+00:00",
+  "project_dir": "/data/sufeng/furnace-x2-line/workspace/project/.vulcan/engineering/run-0001/quartus_sta_work",
+  "revision": "top",
+  "clock_filter": "clk_main",
+  "min_setup_slack_ns": 0.0,
+  "min_hold_slack_ns": 0.0,
+  "status": "passed",
+  "map_summary": {
+    "exists": true,
+    "path": "/data/sufeng/furnace-x2-line/workspace/project/.vulcan/engineering/run-0001/quartus_sta_work/top.map.rpt",
+    "error_count": 0,
+    "errors": [],
+    "lpm_divide_error_count": 0,
+    "lpm_divide_errors": [],
+    "warning_10268_count": 0,
+    "warning_10268": [],
+    "uninferred_ram_count": 3,
+    "uninferred_rams": [
+      "Info (276007): RAM logic \"furnace_classifier64:g_legal.classifier|values\" is uninferred due to asynchronous read logic File: /data/sufeng/furnace-x2-line/workspace/project/.vulcan/engineering/run-0001/quartus_sta_work/rtl_staged/furnace_classifier64.sv Line: 16",
+      "Info (276007): RAM logic \"furnace_classifier64:g_legal.classifier|masks\" is uninferred due to asynchronous read logic File: /data/sufeng/furnace-x2-line/workspace/project/.vulcan/engineering/run-0001/quartus_sta_work/rtl_staged/furnace_classifier64.sv Line: 17",
+      "Info (276007): RAM logic \"furnace_classifier64:g_legal.classifier|actions\" is uninferred due to asynchronous read logic File: /data/sufeng/furnace-x2-line/workspace/project/.vulcan/engineering/run-0001/quartus_sta_work/rtl_staged/furnace_classifier64.sv Line: 18"
+    ]
+  },
+  "sta_summary": {
+    "exit_code": 0,
+    "netlist_mode": "post_fit",
+    "clocks": [
+      {
+        "name": "clk_main",
+        "period_ns": 10.0
+      }
+    ],
+    "wns_setup_ns": 1.484,
+    "wns_hold_ns": 0.043,
+    "unconstrained_setup_paths": 0,
+    "unconstrained_functional_endpoints": 0,
+    "unapproved_timing_exceptions": 0,
+    "failing_setup_count": 0,
+    "failing_hold_count": 0,
+    "setup_paths": [
+      {
+        "slack_ns": 1.484,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "busy|furnace_classifier64:g_legal.classifier|mask_q[274]"
+      },
+      {
+        "slack_ns": 1.551,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "out_valid|furnace_classifier64:g_legal.classifier|mask_q[274]"
+      },
+      {
+        "slack_ns": 1.76,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "masks~17847|furnace_classifier64:g_legal.classifier|mask_q[439]"
+      },
+      {
+        "slack_ns": 1.835,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "busy|furnace_classifier64:g_legal.classifier|mask_q[489]"
+      },
+      {
+        "slack_ns": 1.917,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "busy|furnace_classifier64:g_legal.classifier|value_q[206]"
+      },
+      {
+        "slack_ns": 1.921,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "busy|furnace_classifier64:g_legal.classifier|mask_q[70]"
+      },
+      {
+        "slack_ns": 1.925,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "out_valid|furnace_classifier64:g_legal.classifier|value_q[206]"
+      },
+      {
+        "slack_ns": 1.959,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "rule_number[1]|furnace_classifier64:g_legal.classifier|mask_q[274]"
+      },
+      {
+        "slack_ns": 1.963,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "out_valid|furnace_classifier64:g_legal.classifier|mask_q[489]"
+      },
+      {
+        "slack_ns": 1.983,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "busy|furnace_classifier64:g_legal.classifier|mask_q[159]"
+      },
+      {
+        "slack_ns": 1.988,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "busy|furnace_classifier64:g_legal.classifier|value_q[413]"
+      },
+      {
+        "slack_ns": 1.991,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "out_valid|furnace_classifier64:g_legal.classifier|mask_q[159]"
+      },
+      {
+        "slack_ns": 1.991,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "busy|furnace_classifier64:g_legal.classifier|mask_q[436]"
+      },
+      {
+        "slack_ns": 2.002,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "out_valid|furnace_classifier64:g_legal.classifier|value_q[413]"
+      },
+      {
+        "slack_ns": 2.01,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_header_parser:g_legal.parser",
+        "to_node": "out_header[230]|g_legal.held_header[230]"
+      },
+      {
+        "slack_ns": 2.034,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "mask_q[69]|furnace_classifier64:g_legal.classifier|mask_q[5]"
+      },
+      {
+        "slack_ns": 2.036,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "busy|furnace_classifier64:g_legal.classifier|value_q[369]"
+      },
+      {
+        "slack_ns": 2.048,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "busy|furnace_classifier64:g_legal.classifier|mask_q[489]"
+      },
+      {
+        "slack_ns": 2.049,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "out_valid|furnace_classifier64:g_legal.classifier|mask_q[70]"
+      },
+      {
+        "slack_ns": 2.057,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "out_valid|furnace_classifier64:g_legal.classifier|value_q[426]"
+      }
+    ],
+    "hold_paths": [
+      {
+        "slack_ns": 0.043,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "accumulator[5]|furnace_rss_toeplitz:g_legal.rss|accumulator[5]"
+      },
+      {
+        "slack_ns": 0.044,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "accumulator[6]|furnace_rss_toeplitz:g_legal.rss|accumulator[6]"
+      },
+      {
+        "slack_ns": 0.044,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "accumulator[15]|furnace_rss_toeplitz:g_legal.rss|accumulator[15]"
+      },
+      {
+        "slack_ns": 0.044,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "accumulator[16]|furnace_rss_toeplitz:g_legal.rss|accumulator[16]"
+      },
+      {
+        "slack_ns": 0.044,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "accumulator[19]|furnace_rss_toeplitz:g_legal.rss|accumulator[19]"
+      },
+      {
+        "slack_ns": 0.045,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "accumulator[17]|furnace_rss_toeplitz:g_legal.rss|accumulator[17]"
+      },
+      {
+        "slack_ns": 0.046,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x1_top:g_legal.crc_core",
+        "to_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline|contribution[72][81]|furnace_x1_top:g_legal.crc_core|furnace_crc_beat_pipeline:g_legal.beat_pipeline|contribution[35][81]"
+      },
+      {
+        "slack_ns": 0.047,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x1_top:g_legal.crc_core",
+        "to_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline|contribution[73][39]|furnace_x1_top:g_legal.crc_core|furnace_crc_beat_pipeline:g_legal.beat_pipeline|contribution[36][39]"
+      },
+      {
+        "slack_ns": 0.048,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "accumulator[10]|furnace_rss_toeplitz:g_legal.rss|accumulator[10]"
+      },
+      {
+        "slack_ns": 0.048,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x1_top:g_legal.crc_core",
+        "to_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline|contribution[111][17]|furnace_x1_top:g_legal.crc_core|furnace_crc_beat_pipeline:g_legal.beat_pipeline|contribution[55][17]"
+      },
+      {
+        "slack_ns": 0.049,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_rss_toeplitz:g_legal.rss",
+        "to_node": "accumulator[8]|furnace_rss_toeplitz:g_legal.rss|accumulator[8]"
+      },
+      {
+        "slack_ns": 0.049,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x1_top:g_legal.crc_core",
+        "to_node": "furnace_crc_beat_pipeline:g_legal.beat_pipeline|contribution[111][12]|furnace_x1_top:g_legal.crc_core|furnace_crc_beat_pipeline:g_legal.beat_pipeline|contribution[55][12]"
+      },
+      {
+        "slack_ns": 0.049,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "phase[1]|furnace_classifier64:g_legal.classifier|phase[1]"
+      },
+      {
+        "slack_ns": 0.051,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "enabled[28]|furnace_classifier64:g_legal.classifier|enabled[28]"
+      },
+      {
+        "slack_ns": 0.051,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "enabled[24]|furnace_classifier64:g_legal.classifier|enabled[24]"
+      },
+      {
+        "slack_ns": 0.052,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "enabled[56]|furnace_classifier64:g_legal.classifier|enabled[56]"
+      },
+      {
+        "slack_ns": 0.052,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "enabled[52]|furnace_classifier64:g_legal.classifier|enabled[52]"
+      },
+      {
+        "slack_ns": 0.052,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "phase[0]|furnace_classifier64:g_legal.classifier|phase[0]"
+      },
+      {
+        "slack_ns": 0.053,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_classifier64:g_legal.classifier",
+        "to_node": "enabled[60]|furnace_classifier64:g_legal.classifier|enabled[60]"
+      },
+      {
+        "slack_ns": 0.056,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_header_parser:g_legal.parser",
+        "to_node": "g_legal.more_fragments|furnace_header_parser:g_legal.parser|g_legal.more_fragments"
+      }
+    ],
+    "stderr_tail": []
+  },
+  "detail": "Timing closed: Setup WNS = 1.484 ns",
+  "top_module": "furnace_x2_top",
+  "clock_port": "clk",
+  "clock_period_ns": 10.0,
+  "target_frequency_mhz": 100.0,
+  "fmax_mhz": 117.43,
+  "critical_path_delay_ns": 8.516,
+  "parameters": {},
+  "source_sha256": "00a2bc0256e677bf1ddbb6ab66a9fdeeb9ce6e77e67402c4e0349d577f67352c",
+  "applicable": true
+}
