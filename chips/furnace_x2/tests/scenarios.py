@@ -93,6 +93,13 @@ def smoke(c):
            ["ipv6_tcp", "wildcard", "independent_stalls"], deferred={"op": 2})
     c.send(packet(c.rng, version=4, proto=17, payload_size=80),
            ["ipv4_udp", "simultaneous"], mode=2)
+    # Retained seed-17 packet 2975: the received extension length independently
+    # establishes capture overflow even though the declared IPv6 extent is cut.
+    c.send(bytes.fromhex(
+        "0123456789abfedcba98765488a84be48100375286dd60000000004b3c40"
+        "e4bbf8356b117f6888027305e26f09fce857285af73ca6a3c8003bef8dc6d24"
+        "b3c010000000000000000000000000bcbef16fdbc128da1d313a6750e304eee8329"),
+        ["truncated_extent_capture_overflow"])
 
 
 def directed(c, pairs=True):

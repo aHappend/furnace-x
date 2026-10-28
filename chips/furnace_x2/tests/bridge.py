@@ -53,7 +53,13 @@ integer sent=0,received=0,crc_received=0,meta_received=0,first_meta=0;
 integer active=0,mode=0,abort_kind=0,bubble=0,packet_count=0,beat_count=0;
 integer stalls_b=0,stalls_c=0,stalls_m=0,simultaneous=0,resets=0,configs=0;
 integer ingress_bubbles=0;
-integer deferred_cfg=0,deferred_count=0;
+integer deferred_cfg=0,deferred_count=0,priority_count=0;
+reg [1:0] pending_op;
+reg [5:0] pending_index;
+reg [511:0] pending_value,pending_mask;
+reg [31:0] pending_action,default_shadow=0;
+reg pending_enable;
+reg [327:0] pending_key;
 integer ecerr,emm,erv,ehit,eidx,elen;
 reg [W-1:0] bd[0:2047];
 reg [L-1:0] bk[0:2047];
@@ -152,6 +158,9 @@ begin
   first_meta=1;
   if (cycle-final_edge!=1196)
    $fatal(1,"META_LATENCY id=%0d observed=%0d expected=1196",id,cycle-final_edge);
+  if (now_m !== {eheader,32'(elen),ehash,1'(erv),1'(ehit),6'(eidx),eaction})
+   $fatal(1,"META_MISMATCH id=%0d at publication actual=%h expected=%h",id,now_m,
+       {eheader,32'(elen),ehash,1'(erv),1'(ehit),6'(eidx),eaction});
  end
  #4; clk=0;
  cycle=cycle+1;
@@ -161,7 +170,7 @@ begin
  rst_n=0; s_axis_tvalid=0; cfg_valid=0;
  #1; reset_check(); tick(); tick();
  active=0; held_b=0; held_c=0; held_m=0;
- rst_n=1; resets=resets+1;
+ default_shadow=0;rst_n=1; resets=resets+1;
 end endtask
 task automatic set_ready;
 begin
@@ -193,18 +202,17 @@ initial begin
     rc=$fscanf(fd,"%d %d %h %h %h %d %h",j,i,cfg_value,cfg_mask,cfg_action,bubble,cfg_rss_key);
     if(rc!=7) $fatal(1,"BAD_CONFIG");
     cfg_op=j;cfg_index=i;cfg_enable=bubble;cfg_valid=1;
-    // Simultaneous idle ingress must not leak into the parent.
-    s_axis_tvalid=1;s_axis_tdata='1;s_axis_tkeep='1;s_axis_tlast=1;
-    #1;if(s_axis_tready!==0 || cfg_ready!==1) $fatal(1,"CONFIG_PRIORITY");
-    tick();cfg_valid=0;s_axis_tvalid=0;configs=configs+1;
+    s_axis_tvalid=0;
+    tick();cfg_valid=0;configs=configs+1;
+    if(cfg_op==3) default_shadow=cfg_action;
    end else if(cmd==1) begin
     rc=$fscanf(fd,"%d %d %d %d %h %h %d %d %h %d %h %d %d %d %h %d",
       id,n,mode,abort_kind,ec32,ec64,emm,ecerr,eheader,elen,ehash,erv,ehit,eidx,eaction,deferred_cfg);
     if(rc!=16 || n>2048 || n<1) $fatal(1,"BAD_PACKET");
     if(deferred_cfg) begin
-     rc=$fscanf(fd,"%d %d %h %h %h %d %h",j,i,cfg_value,cfg_mask,cfg_action,bubble,cfg_rss_key);
+     rc=$fscanf(fd,"%d %d %h %h %h %d %h",j,i,pending_value,pending_mask,pending_action,bubble,pending_key);
      if(rc!=7) $fatal(1,"BAD_DEFERRED_CONFIG");
-     cfg_op=j;cfg_index=i;cfg_enable=bubble;
+     pending_op=j;pending_index=i;pending_enable=bubble;
     end
     for(i=0;i<n;i=i+1) begin
      rc=$fscanf(fd,"%h %h %h %h %h",bd[i],bk[i],bc[i],b32[i],b64[i]);
@@ -212,6 +220,18 @@ initial begin
     end
     active=1;sent=0;received=0;crc_received=0;meta_received=0;bubble=0;
     first_meta=0;final_edge=-1;deadline=cycle+n*8+1400;
+    // Offer a real first beat during an idle no-op configuration, then keep
+    // that beat asserted unchanged until its own ingress handshake.
+    s_axis_tvalid=1;s_axis_tdata=bd[0];s_axis_tkeep=bk[0];s_axis_tlast=(n==1);
+    s_check_enable=bc[0];s_expected_crc32c=b32[0];s_expected_crc64_nvme=b64[0];
+    cfg_valid=1;cfg_op=3;cfg_action=default_shadow;
+    #1;if(s_axis_tready!==0 || cfg_ready!==1) $fatal(1,"CONFIG_PRIORITY");
+    tick();cfg_valid=0;configs=configs+1;priority_count=priority_count+1;
+    if(sent!=0) $fatal(1,"CONFIG_PRIORITY_INGRESS_TRANSFER");
+    if(deferred_cfg) begin
+     cfg_op=pending_op;cfg_index=pending_index;cfg_value=pending_value;
+     cfg_mask=pending_mask;cfg_action=pending_action;cfg_enable=pending_enable;cfg_rss_key=pending_key;
+    end
     while ((received<n || !crc_received || !meta_received) && cycle<deadline) begin
      set_ready();
      if (bubble>0) begin s_axis_tvalid=0;bubble=bubble-1;end
@@ -241,6 +261,7 @@ initial begin
     if(deferred_cfg && !abort_kind) begin
      if(cfg_ready!==1 || cfg_valid!==1) $fatal(1,"DEFERRED_CONFIG_NOT_RELEASED");
      tick();cfg_valid=0;configs=configs+1;deferred_count=deferred_count+1;
+     if(cfg_op==3) default_shadow=cfg_action;
     end
     cfg_valid=0;tick();tick();
    end else if(cmd==2) reset_dut();
@@ -249,8 +270,8 @@ initial begin
  end
  s_axis_tvalid=0;cfg_valid=0;m_axis_tready=1;m_crc_ready=1;m_meta_ready=1;
  repeat(20) tick();
- $display("COUNTS %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d",packet_count,beat_count,
-   stalls_b,stalls_c,stalls_m,simultaneous,resets,configs,ingress_bubbles,deferred_count);
+ $display("COUNTS %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d",packet_count,beat_count,
+   stalls_b,stalls_c,stalls_m,simultaneous,resets,configs,ingress_bubbles,deferred_count,priority_count);
  $finish;
 end
 endmodule

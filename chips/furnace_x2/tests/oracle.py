@@ -97,7 +97,7 @@ def parse(data, bad_keep=False, packet_bytes=None):
                 extent = start + u16(pos + 2)
                 if data[pos] >> 4 != 4 or ihl < 20 or extent < start + ihl:
                     error = True
-                need(extent)
+                error |= extent > len(data)
                 need(start + ihl, extent)
                 flags = u16(start + 6)
                 error |= bool(flags & 0x8000)
@@ -111,7 +111,7 @@ def parse(data, bad_keep=False, packet_bytes=None):
                 error |= data[start] >> 4 != 6
                 size = u16(start + 4)
                 extent = start + 40 + size
-                need(extent)
+                error |= extent > len(data)
                 proto = data[start + 6]
                 f.update(version=6, src=int.from_bytes(data[start + 8:start + 24], "big"),
                          dst=int.from_bytes(data[start + 24:start + 40], "big"), ip=1)
@@ -123,10 +123,11 @@ def parse(data, bad_keep=False, packet_bytes=None):
                     if count == 8:
                         unsupported = True
                         break
-                    need(pos + 8, extent)
+                    error |= pos + 8 > extent or pos + 8 > len(data)
                     if pos + 8 > 256:
                         unsupported = True
                         break
+                    need(pos + 8, extent)
                     next_proto = data[pos]
                     n = 8 if proto == 44 else (
                         (data[pos + 1] + 2) * 4 if proto == 51 else (data[pos + 1] + 1) * 8)
@@ -137,10 +138,11 @@ def parse(data, bad_keep=False, packet_bytes=None):
                         seen_fragment = True
                         frag = u16(pos + 2)
                         noninitial, more = bool(frag >> 3), bool(frag & 1)
-                    need(pos + n, extent)
+                    error |= pos + n > extent or pos + n > len(data)
                     if pos + n > 256:
                         unsupported = True
                         break
+                    need(pos + n, extent)
                     pos, proto, count = pos + n, next_proto, count + 1
                     if noninitial:
                         break
@@ -150,16 +152,19 @@ def parse(data, bad_keep=False, packet_bytes=None):
                     unsupported = not (typ == 0x86dd and proto == 59)
                 elif not noninitial:
                     minimum = 20 if proto == 6 else 8
-                    need(pos + minimum, extent)
+                    error |= pos + minimum > extent or pos + minimum > len(data)
                     if pos + minimum > 256:
                         unsupported = True
                     else:
+                        need(pos + minimum, extent)
                         n = (data[pos + 12] >> 4) * 4 if proto == 6 else 8
                         if proto == 6:
                             error |= n < 20
-                            need(pos + n, extent)
+                            error |= pos + n > extent or pos + n > len(data)
                             if pos + n > 256:
                                 unsupported = True
+                            else:
+                                need(pos + n, extent)
                         else:
                             udp = u16(pos + 4)
                             error |= udp < 8 or (not more and pos + udp > extent)
@@ -250,6 +255,19 @@ def self_check():
     addresses = bytes([66, 9, 149, 187, 161, 142, 100, 80])
     assert toeplitz(addresses) == 0x323e8fc2
     assert toeplitz(addresses + bytes.fromhex("0aea06e6") + b"\0") == 0x51ccc178
+    # A missing declared payload does not erase capabilities established by
+    # received header bytes. No unavailable bytes may establish such a flag.
+    ipv6 = bytearray(40)
+    ipv6[0] = 0x60
+    ipv6[4:6] = (256).to_bytes(2, "big")
+    ipv6[6] = 60
+    for extension, unsupported in ((b"\x3b\xff" + bytes(6), 1),
+                                   (b"\x3b\x00" + bytes(6), 0),
+                                   (b"", 0)):
+        fields, header, tup = parse(ethernet(bytes(ipv6) + extension, 0x86dd))
+        assert fields == {"error": 1, "unsupported": unsupported}
+        assert header == (1 << 441) | (unsupported << 442)
+        assert tup == b""
     r = random.Random(221)
     for n in (0, 1, 7, 8, 63, 64, 65, 255):
         data = r.randbytes(n)

@@ -203,7 +203,8 @@ def parse_top_output(text, records, full=False, sample=False):
             values = list(map(int, line.split()[1:]))
             names = ("packets", "beats", "payload_stall_cycles", "crc_stall_cycles",
                      "meta_stall_cycles", "simultaneous_terminal", "resets", "configs",
-                     "ingress_bubbles", "deferred_configs")
+                     "ingress_bubbles", "deferred_configs", "priority_configs")
+            assert len(values) == len(names), "malformed public-event counters"
             coverage.update(dict(zip(names, values)))
         elif (line.startswith("- ") or re.fullmatch(r".*tb\.sv:\d+: \$finish called at \d+ \(.+\)", line)
               or not line.strip()):
@@ -213,6 +214,7 @@ def parse_top_output(text, records, full=False, sample=False):
     assert completed == {i for i, r in records.items() if not r["abort"]}, "missing completed packets"
     assert aborted == {i for i, r in records.items() if r["abort"]}, "missing reset-aborted packets"
     assert coverage["packets"] == len(completed) > 0
+    assert coverage["priority_configs"] == len(records)
     for k in ("payload_stall_cycles", "crc_stall_cycles", "meta_stall_cycles", "simultaneous_terminal"):
         assert coverage[k] > 0, f"unobserved channel event: {k}"
     if full:
