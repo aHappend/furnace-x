@@ -73,6 +73,57 @@ class ReceiptTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "changed source snapshot"):
             self.run.verify_retention()
 
+    def next_run(self):
+        return verify.Run("output", "synthetic-retention-successor")
+
+    def test_missing_previous_run_rejected(self):
+        self.command()
+        self.run.finish()
+        self.run.path.rename(self.root / "displaced-fixture")
+        successor = self.next_run()
+        with self.assertRaisesRegex(AssertionError, "missing registered invocation receipt"):
+            successor.verify_history()
+
+    def test_changed_previous_log_rejected(self):
+        self.command()
+        self.run.finish()
+        (self.root / self.run.commands[0]["stdout"]).write_text("changed fixture\n")
+        with self.assertRaisesRegex(AssertionError, "changed retained log"):
+            self.next_run().verify_history()
+
+    def test_changed_previous_receipt_rejected(self):
+        self.command()
+        self.run.finish()
+        receipt = json.loads(self.run.receipt_path.read_text())
+        receipt["commands"] = []
+        verify.write_json(self.run.receipt_path, receipt)
+        with self.assertRaisesRegex(AssertionError, "changed completed receipt"):
+            self.next_run().verify_history()
+
+    def test_failed_previous_run_retained(self):
+        with self.assertRaisesRegex(AssertionError, "tool execution failed"):
+            self.command(7)
+        self.run.receipt["outcome"] = "failed"
+        self.run.finish()
+        self.next_run().verify_history()
+        stored = json.loads(self.run.receipt_path.read_text())
+        self.assertEqual(stored["outcome"], "failed")
+        self.assertEqual(stored["commands"][0]["exit"], 7)
+
+    def test_in_progress_previous_run_allowed(self):
+        self.run.commands.append({"argv": ["synthetic-pending-command"]})
+        self.run.save()
+        self.next_run().verify_history()
+        with self.assertRaisesRegex(AssertionError, "unfinished command"):
+            self.run.verify_retention()
+
+    def test_registration_is_exclusive_and_checked(self):
+        with self.assertRaises(FileExistsError):
+            self.run.registration_path.open("x")
+        verify.write_json(self.run.registration_path, {})
+        with self.assertRaisesRegex(AssertionError, "changed invocation registration"):
+            self.run.verify_history()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
@@ -85,24 +136,34 @@ if __name__ == "__main__":
         parser.error("--out must be a fresh project-relative fixture directory")
     if args.fixtures is not None:
         FIXTURES = args.fixtures
-        unittest.main(argv=[sys.argv[0]], verbosity=2)
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(ReceiptTests)
+        result = unittest.TextTestRunner(verbosity=2).run(suite)
+        print(json.dumps({"harness_cases": result.testsRun,
+                          "failures": len(result.failures),
+                          "errors": len(result.errors),
+                          "skipped": len(result.skipped)}))
+        sys.exit(0 if result.wasSuccessful() and not result.skipped else 1)
     else:
         run = verify.Run(args.out, "receipt-retention-probe")
         run.receipt.update(
             argv=["python3", "tests/test_receipts.py", *sys.argv[1:]],
             acceptance_evidence=False)
         try:
+            run.verify_history()
             run.prerequisites(["python3"])
-            run.command(["python3", "tests/test_receipts.py", "--fixtures",
-                         run.rel(run.path / "fixtures")])
+            text, _, _ = run.command([
+                "python3", "tests/test_receipts.py", "--fixtures",
+                run.rel(run.path / "fixtures")])
+            measured = json.loads(text)
+            assert measured["harness_cases"] >= 12
+            assert measured["failures"] == measured["errors"] == measured["skipped"] == 0
             run.verify_retention()
-            run.receipt.update(outcome="passed", results={"harness_cases": 6})
+            run.receipt.update(outcome="passed", results=measured)
         except Exception as exc:
             run.receipt.update(outcome="failed", failure=f"{type(exc).__name__}: {exc}")
             print(run.receipt["failure"], file=sys.stderr)
         finally:
-            run.receipt["ended_at"] = verify.now()
-            run.save()
+            run.finish()
         print(json.dumps({"outcome": run.receipt["outcome"],
                           "receipt": run.rel(run.receipt_path)}))
         sys.exit(0 if run.receipt["outcome"] == "passed" else 1)

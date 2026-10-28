@@ -8,8 +8,9 @@ hierarchy/memory/state and mapped no-latch/no-divide assertions; portability ->
 fresh source-only package executing the same smoke/oracle and compiled samples.
 All modes are mandatory; --probe is an advisory, bounded development diagnostic.
 Receipts stay at the invocation root even while commands use partition folders.
-Completed command journals and log hashes detect loss during this invocation;
-they cannot recover artifacts removed after execution or certify old evidence.
+Exclusive sibling registrations detect whole-run loss on later invocations of
+the same output root; completion seals bind finished receipts. These are local
+detection safeguards, not backups, authenticated storage or historical recovery.
 """
 import argparse
 from collections import Counter
@@ -74,16 +75,30 @@ class Run:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(src, dst)
         self.save()
+        self.catalog = self.path.parent / "retention"
+        self.catalog.mkdir(exist_ok=True)
+        self.registration_path = self.catalog / (self.path.name + ".json")
+        self.registration = {
+            "schema": 1, "registered_at": now(),
+            "receipt": self.rel(self.receipt_path),
+            "source_sha256": dict(self.receipt["source_sha256"])}
+        with self.registration_path.open("x") as output:
+            output.write(json.dumps(self.registration, indent=2, sort_keys=True) + "\n")
 
     def save(self):
         write_json(self.receipt_path, self.receipt)
 
-    def verify_retention(self):
-        for relative, expected in self.receipt["source_sha256"].items():
-            snapshot = self.receipt_path.parent / "source" / relative
+    @staticmethod
+    def verify_artifacts(receipt_path, receipt):
+        for relative, expected in receipt["source_sha256"].items():
+            snapshot = receipt_path.parent / "source" / relative
             assert snapshot.is_file(), f"missing source snapshot: {relative}"
             assert digest(snapshot) == expected, f"changed source snapshot: {relative}"
-        for record in self.commands:
+        for record in receipt["commands"]:
+            # A different invocation may still be running a command. Its
+            # completed journals are checked on the next audit as well.
+            if "ended_at" not in record:
+                continue
             for stream in ("stdout", "stderr"):
                 artifact = ROOT / record[stream]
                 assert artifact.is_file(), f"missing retained log: {record[stream]}"
@@ -93,6 +108,43 @@ class Run:
             assert journal.is_file(), f"missing command journal: {record['journal']}"
             assert json.loads(journal.read_text()) == record, (
                 f"changed command journal: {record['journal']}")
+
+    def verify_history(self):
+        assert self.registration_path.is_file(), "missing invocation registration"
+        assert json.loads(self.registration_path.read_text()) == self.registration, (
+            "changed invocation registration")
+        for path in sorted(self.catalog.glob("run-*.json")):
+            if path.name.endswith(".complete.json"):
+                continue
+            registration = json.loads(path.read_text())
+            receipt_path = ROOT / registration["receipt"]
+            assert receipt_path.is_file(), (
+                f"missing registered invocation receipt: {registration['receipt']}")
+            receipt = json.loads(receipt_path.read_text())
+            assert receipt["source_sha256"] == registration["source_sha256"], (
+                f"changed registered source identity: {registration['receipt']}")
+            seal_path = path.with_suffix(".complete.json")
+            if seal_path.exists():
+                seal = json.loads(seal_path.read_text())
+                assert seal["receipt"] == registration["receipt"]
+                assert seal["receipt_sha256"] == digest(receipt_path), (
+                    f"changed completed receipt: {registration['receipt']}")
+            self.verify_artifacts(receipt_path, receipt)
+
+    def verify_retention(self):
+        self.verify_history()
+        assert all("ended_at" in record for record in self.commands), (
+            "unfinished command at invocation completion")
+        self.verify_artifacts(self.receipt_path, self.receipt)
+
+    def finish(self):
+        self.receipt["ended_at"] = now()
+        self.save()
+        seal = {"schema": 1, "sealed_at": now(),
+                "receipt": self.rel(self.receipt_path),
+                "receipt_sha256": digest(self.receipt_path)}
+        with self.registration_path.with_suffix(".complete.json").open("x") as output:
+            output.write(json.dumps(seal, indent=2, sort_keys=True) + "\n")
 
     def rel(self, path):
         return str(Path(path).relative_to(ROOT))
@@ -573,6 +625,7 @@ def main():
         parser.error("--out must be a project-relative child directory")
     run = Run(args.out, args.mode, args.repair_of)
     try:
+        run.verify_history()
         tools = ["python3"]
         if args.mode in ("all", "smoke", "portability", "reproduction"):
             tools += ["iverilog", "vvp"]
@@ -618,8 +671,7 @@ def main():
         run.receipt.update(outcome="failed", failure=f"{type(exc).__name__}: {exc}")
         print(run.receipt["failure"], file=sys.stderr)
     finally:
-        run.receipt["ended_at"] = now()
-        run.save()
+        run.finish()
     print(json.dumps({"outcome": run.receipt["outcome"], "receipt": run.rel(run.path / "receipt.json")}))
     return 0 if run.receipt["outcome"] == "passed" else 1
 
