@@ -28,6 +28,9 @@ No FIFO depth or packet-count parameter exists. There is one outstanding packet.
 `furnace_x2_top #(DATA_WIDTH=512)` preserves every `furnace_x1_top` port.
 The legal widths are exactly 64 and 512. Data/keep ports use minimum width one
 for illegal-parameter diagnostics only. All other buses are unsigned.
+Keep-port widths test `DATA_WIDTH >= 8` before selecting `DATA_WIDTH >> 3`;
+negative widths therefore select one diagnostic bit, not a logical-right-shift
+result. Illegal configurations instantiate no legal datapath.
 
 Configuration: inputs `cfg_valid`, `cfg_op[1:0]`, `cfg_index[5:0]`,
 `cfg_value[511:0]`, `cfg_mask[511:0]`, `cfg_action[31:0]`, `cfg_enable`,

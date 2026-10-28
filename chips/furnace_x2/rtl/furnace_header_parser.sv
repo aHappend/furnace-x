@@ -5,7 +5,7 @@ module furnace_header_parser #(
     input wire clk, rst_n,
     input wire in_fire,
     input wire [((DATA_WIDTH > 0) ? DATA_WIDTH : 1)-1:0] in_data,
-    input wire [(((DATA_WIDTH>>3) > 0) ? (DATA_WIDTH>>3) : 1)-1:0] in_keep,
+    input wire [((DATA_WIDTH >= 8) ? (DATA_WIDTH>>3) : 1)-1:0] in_keep,
     input wire in_last,
     output reg out_valid,
     output reg [511:0] out_header,

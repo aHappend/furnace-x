@@ -52,6 +52,7 @@ integer fd,rc,cmd,id=0,n=0,i,j,cycle=0,deadline=0,final_edge=-1;
 integer sent=0,received=0,crc_received=0,meta_received=0,first_meta=0;
 integer active=0,mode=0,abort_kind=0,bubble=0,packet_count=0,beat_count=0;
 integer stalls_b=0,stalls_c=0,stalls_m=0,simultaneous=0,resets=0,configs=0;
+integer ingress_bubbles=0;
 integer ecerr,emm,erv,ehit,eidx,elen;
 reg [W-1:0] bd[0:2047];
 reg [L-1:0] bk[0:2047];
@@ -62,6 +63,10 @@ integer accepted_at[0:2047];
 reg [31:0] ec32,ehash,eaction;
 reg [63:0] ec64;
 reg [511:0] eheader;
+reg [31:0] observed_c32,observed_hash,observed_action;
+reg [63:0] observed_c64;
+reg [511:0] observed_header;
+integer observed_length,observed_rss,observed_hit,observed_index;
 reg held_b=0,held_c=0,held_m=0;
 reg [W+L:0] hold_b;
 reg [98:0] hold_c;
@@ -82,10 +87,6 @@ begin
  if (rst_n) begin
   if ((^{s_axis_tready,cfg_ready,m_axis_tvalid,m_crc_valid,m_meta_valid})===1'bx)
    $fatal(1,"ACTIVE_XZ control cycle=%0d",cycle);
-  if ({m_axis_tdata,m_axis_tkeep,m_axis_tvalid,m_axis_tlast,m_crc_valid,
-       m_crc32c,m_crc64_nvme,m_crc_mismatch,m_crc_protocol_error} !==
-      {p_data,p_keep,p_valid,p_last,p_cv,p_c32,p_c64,p_mm,p_pe})
-    $fatal(1,"PARENT_COMPATIBILITY cycle=%0d",cycle);
   if (held_b && (!m_axis_tvalid || now_b !== hold_b)) $fatal(1,"UNSTABLE_PAYLOAD");
   if (held_c && (!m_crc_valid || now_c !== hold_c)) $fatal(1,"UNSTABLE_CRC");
   if (held_m && (!m_meta_valid || now_m !== hold_m)) $fatal(1,"UNSTABLE_META");
@@ -96,6 +97,7 @@ begin
   if (held_c) stalls_c=stalls_c+1;
   if (held_m) stalls_m=stalls_m+1;
   if (active && sent>0 && cfg_ready) $fatal(1,"CONFIG_ACCEPT_DURING_PACKET");
+  if (active && sent>0 && final_edge<0 && !s_axis_tvalid) ingress_bubbles=ingress_bubbles+1;
   if (active && final_edge>=0 && s_axis_tready) $fatal(1,"NEXT_PACKET_TOO_EARLY");
   if (m_axis_tvalid) begin
    if (!active || received>=sent) $fatal(1,"DUPLICATE_PAYLOAD id=%0d",id);
@@ -109,17 +111,28 @@ begin
    if (!active || crc_received || final_edge<0) $fatal(1,"DUPLICATE_CRC id=%0d",id);
    if (now_c !== {ec32,ec64,2'(emm),1'(ecerr)})
     $fatal(1,"CRC_MISMATCH id=%0d actual=%h expected=%h",id,now_c,{ec32,ec64,2'(emm),1'(ecerr)});
-   if (m_crc_ready) crc_received=1;
+   if (mode==0 && cycle-final_edge!=16) $fatal(1,"CRC_LATENCY id=%0d",id);
+   if (m_crc_ready) begin
+    crc_received=1;observed_c32=m_crc32c;observed_c64=m_crc64_nvme;
+   end
   end
   if (m_meta_valid) begin
    if (!active || meta_received || final_edge<0) $fatal(1,"DUPLICATE_META id=%0d",id);
    if (now_m !== {eheader,32'(elen),ehash,1'(erv),1'(ehit),6'(eidx),eaction})
     $fatal(1,"META_MISMATCH id=%0d actual=%h expected=%h",id,now_m,
         {eheader,32'(elen),ehash,1'(erv),1'(ehit),6'(eidx),eaction});
-   if (m_meta_ready) meta_received=1;
+   if (m_meta_ready) begin
+    meta_received=1;observed_header=m_header;observed_length=m_packet_bytes;
+    observed_hash=m_rss_hash;observed_rss=m_rss_valid;
+    observed_hit=m_rule_hit;observed_index=m_rule_index;observed_action=m_action;
+   end
   end
   if (m_meta_valid && m_meta_ready && m_crc_valid && m_crc_ready &&
       m_axis_tvalid && m_axis_tready && m_axis_tlast) simultaneous=simultaneous+1;
+  if ({m_axis_tdata,m_axis_tkeep,m_axis_tvalid,m_axis_tlast,m_crc_valid,
+       m_crc32c,m_crc64_nvme,m_crc_mismatch,m_crc_protocol_error} !==
+      {p_data,p_keep,p_valid,p_last,p_cv,p_c32,p_c64,p_mm,p_pe})
+    $fatal(1,"PARENT_COMPATIBILITY cycle=%0d",cycle);
  end
 end endtask
 task automatic tick;
@@ -129,6 +142,7 @@ begin
  if (rst_n && s_axis_tvalid && s_axis_tready) begin
   accepted_at[sent]=cycle; sent=sent+1;
   if (s_axis_tlast) final_edge=cycle;
+  else if(mode!=0 && sent%3==0) bubble=2;
  end
  clk=1;
  #1;
@@ -163,7 +177,11 @@ begin
 end endtask
 initial begin
  rst_n=0;
+`ifndef VERILATOR
  #0; reset_check();
+`else
+ #1; reset_check();
+`endif
  tick(); tick(); rst_n=1;
  fd=$fopen("stimulus.txt","r");
  if (!fd) $fatal(1,"NO_STIMULUS");
@@ -186,11 +204,12 @@ initial begin
      rc=$fscanf(fd,"%h %h %h %h %h",bd[i],bk[i],bc[i],b32[i],b64[i]);
      if(rc!=5) $fatal(1,"BAD_BEAT");
     end
-    active=1;sent=0;received=0;crc_received=0;meta_received=0;
+    active=1;sent=0;received=0;crc_received=0;meta_received=0;bubble=0;
     first_meta=0;final_edge=-1;deadline=cycle+n*8+1400;
     while ((received<n || !crc_received || !meta_received) && cycle<deadline) begin
      set_ready();
-     if (sent<n) begin
+     if (bubble>0) begin s_axis_tvalid=0;bubble=bubble-1;end
+     else if (sent<n) begin
       s_axis_tvalid=1;s_axis_tdata=bd[sent];s_axis_tkeep=bk[sent];
       s_axis_tlast=(sent==n-1);s_check_enable=bc[sent];
       s_expected_crc32c=b32[sent];s_expected_crc64_nvme=b64[sent];
@@ -209,7 +228,8 @@ initial begin
     cfg_valid=0;s_axis_tvalid=0;
     if(!abort_kind) begin
      $display("DONE %0d %0d %h %h %h %0d %h %0d %0d %0d %h",
-       id,n,ec32,ec64,eheader,elen,ehash,erv,ehit,eidx,eaction);
+       id,n,observed_c32,observed_c64,observed_header,observed_length,
+       observed_hash,observed_rss,observed_hit,observed_index,observed_action);
      packet_count=packet_count+1;
     end
     active=0;tick();tick();
@@ -219,8 +239,8 @@ initial begin
  end
  s_axis_tvalid=0;cfg_valid=0;m_axis_tready=1;m_crc_ready=1;m_meta_ready=1;
  repeat(20) tick();
- $display("COUNTS %0d %0d %0d %0d %0d %0d %0d %0d",packet_count,beat_count,
-   stalls_b,stalls_c,stalls_m,simultaneous,resets,configs);
+ $display("COUNTS %0d %0d %0d %0d %0d %0d %0d %0d %0d",packet_count,beat_count,
+   stalls_b,stalls_c,stalls_m,simultaneous,resets,configs,ingress_bubbles);
  $finish;
 end
 endmodule

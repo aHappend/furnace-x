@@ -118,13 +118,16 @@ class Run:
 
 
 def prepare_parent(folder):
-    source = (ROOT / "furnace_x1_reference/rtl/furnace_x1_top.sv").read_text()
-    renamed = source.replace("module furnace_x1_top", "module parent_x1_top", 1)
-    if source == renamed:
-        raise AssertionError("parent module name not found")
-    (folder / "parent_x1_top.sv").write_text(renamed)
-    for p in (ROOT / "furnace_x1_reference/rtl").glob("*.sv"):
+    parents = sorted((ROOT / "furnace_x1_reference/rtl").glob("*.sv"))
+    assert len(parents) == 6
+    names = {p.stem: "parent_" + p.stem for p in parents}
+    names["furnace_x1_top"] = "parent_x1_top"
+    pieces = []
+    for p in parents:
         assert p.read_bytes() == (ROOT / "rtl" / p.name).read_bytes(), f"parent copy changed: {p.name}"
+        pieces.append(re.sub(r"\b(" + "|".join(names) + r")\b",
+                             lambda match: names[match.group()], p.read_text()))
+    (folder / "parent_x1_top.sv").write_text("\n".join(pieces))
 
 
 def compile_sim(run, folder, backend, width=None, kind="top", rtl=None):
@@ -143,7 +146,8 @@ def compile_sim(run, folder, backend, width=None, kind="top", rtl=None):
                      "-o", run.rel(folder / "sim"), *argv])
         return ["vvp", "sim"]
     run.command(["verilator", "--binary", "--timing", "-Wno-fatal", "--top-module", "tb",
-                 "-j", "2", "--Mdir", run.rel(folder / "obj"), "-o", "sim", *argv])
+                 "-j", "2", "-MAKEFLAGS", "VK_PCH_I_FAST= VK_PCH_I_SLOW=",
+                 "--Mdir", run.rel(folder / "obj"), "-o", "sim", *argv])
     return ["obj/sim"]
 
 
@@ -180,7 +184,8 @@ def parse_top_output(text, records, full=False, sample=False):
         elif line.startswith("COUNTS "):
             values = list(map(int, line.split()[1:]))
             names = ("packets", "beats", "payload_stall_cycles", "crc_stall_cycles",
-                     "meta_stall_cycles", "simultaneous_terminal", "resets", "configs")
+                     "meta_stall_cycles", "simultaneous_terminal", "resets", "configs",
+                     "ingress_bubbles")
             coverage.update(dict(zip(names, values)))
         elif (line.startswith("- ") or re.fullmatch(r".*tb\.sv:\d+: \$finish called at \d+ \(.+\)", line)
               or not line.strip()):
@@ -193,6 +198,7 @@ def parse_top_output(text, records, full=False, sample=False):
     for k in ("payload_stall_cycles", "crc_stall_cycles", "meta_stall_cycles", "simultaneous_terminal"):
         assert coverage[k] > 0, f"unobserved channel event: {k}"
     if full:
+        assert coverage["ingress_bubbles"] > 0
         assert coverage["seeded"] >= 1024
         for i in range(64):
             assert coverage[f"winner_{i}"] >= 1
@@ -279,19 +285,169 @@ def illegal_parameters(run):
         run.command(["iverilog", "-g2012", "-Wall", "-s", "tb", "-o",
                      run.rel(folder / "sim"), run.rel(folder / "tb.sv"),
                      *[run.rel(p) for p in sorted((ROOT / "rtl").glob("*.sv"))]])
-        text, _, rec = run.command(["vvp", "sim"], cwd=folder, expect=None)
-        assert rec["exit"] != 0 and "PARAMETER ERROR: DATA_WIDTH" in text
-        assert "MISSING PARAMETER ERROR" not in text
+        text, _, rec = run.command(["vvp", "sim"], cwd=folder, timeout=600, expect=None)
+        assert rec["exit"] != 0 and "PARAMETER ERROR: DATA_WIDTH" in text, (
+            f"DATA_WIDTH={width}: explicit parameter diagnostic not observed; "
+            f"actual exit={rec['exit']}, stdout={rec['stdout']}")
+        assert "MISSING PARAMETER ERROR" not in text, f"DATA_WIDTH={width}: missing RTL diagnostic"
         results.append({"width": width, "compiled": True, "explicit_rejection": True})
     return results
 
 
 def synthesis(run):
-    raise NotImplementedError("synthesis implementation is not yet complete")
+    results = {}
+    for width in (64, 512):
+        folder = run.path / f"yosys-{width}"
+        folder.mkdir()
+        source_args = " ".join(run.rel(p) for p in sorted((ROOT / "rtl").glob("*.sv")))
+        before, mapped = folder / "structure.json", folder / "mapped.json"
+        flattened = folder / "flattened.json"
+        script = (
+            f"read_verilog -sv {source_args}\n"
+            f"hierarchy -check -top furnace_x2_top -chparam DATA_WIDTH {width}\n"
+            "proc; opt_expr; opt_clean; check -assert\n"
+            "memory -nomap; opt_clean; check -assert\n"
+            f"write_json {run.rel(before)}\nstat\n"
+            "techmap; opt -fast; check -assert\n"
+            f"write_json {run.rel(mapped)}\nstat\n"
+            "flatten; opt_clean; check -assert\n"
+            f"write_json {run.rel(flattened)}\nstat\n")
+        (folder / "synthesis.ys").write_text(script)
+        run.command(["yosys", "-s", run.rel(folder / "synthesis.ys")])
+        netlists = [json.loads(p.read_text())["modules"] for p in (before, mapped)]
+        for modules in netlists:
+            assert "furnace_x2_top" in modules
+            for name, module in modules.items():
+                assert int(module.get("attributes", {}).get("blackbox", "0"), 2) == 0, name
+                for cell in module.get("cells", {}).values():
+                    typ = cell["type"]
+                    assert not re.search(r"(?i)(dlatch|\$div|\$mod|\$divfloor|\$modfloor)", typ), typ
+                    assert typ.startswith("$") or typ in modules, f"unresolved module: {typ}"
+            # Every required block must survive as a connected, substantive block.
+            top = modules["furnace_x2_top"]
+            majors = {}
+            for instance in ("crc_core", "parser", "rss", "classifier"):
+                found = [c for n, c in top["cells"].items() if n.split(".")[-1] == instance]
+                assert len(found) == 1, (width, instance)
+                cell = found[0]
+                module = modules[cell["type"]]
+                assert len(module.get("cells", {})) > 0, f"empty block: {instance}"
+                outputs = [c for p, c in cell["connections"].items()
+                           if cell["port_directions"].get(p) == "output"]
+                assert outputs and any(isinstance(b, int) for c in outputs for b in c)
+                used = Counter(b for c in top["cells"].values()
+                               for p, bits in c["connections"].items()
+                               if c["port_directions"].get(p) == "input"
+                               for b in bits if isinstance(b, int))
+                used.update(b for p in top["ports"].values() if p["direction"] == "output"
+                            for b in p["bits"] if isinstance(b, int))
+                assert any(used[b] for c in outputs for b in c if isinstance(b, int)), instance
+                majors[instance] = module
+            crc = majors["crc_core"]
+            for instance in ("beat_pipeline", "packet_accumulator", "tail_pipeline", "output_stage"):
+                assert any(n.split(".")[-1] == instance for n in crc["cells"]), instance
+            assert any("furnace_crc_linear" in n for n in modules)
+            classifier = majors["classifier"]
+            memory_cells = [c for c in classifier["cells"].values() if c["type"] == "$mem_v2"]
+            memories = [{"width": int(c["parameters"]["WIDTH"], 2),
+                         "size": int(c["parameters"]["SIZE"], 2)} for c in memory_cells]
+            assert sum(x["width"] * x["size"] for x in memories) >= 64 * (512 * 2 + 32)
+            assert sum(x["width"] == 512 and x["size"] == 64 for x in memories) >= 2
+            assert any(x["width"] == 32 and x["size"] == 64 for x in memories)
+            state_cells = [c for m in modules.values() for c in m.get("cells", {}).values()
+                           if re.search(r"(?i)dff", c["type"])]
+            assert len(state_cells) > 0, "no retained state"
+        flat = json.loads(flattened.read_text())["modules"]["furnace_x2_top"]
+        flat_types = Counter(c["type"] for c in flat["cells"].values())
+        assert all(t.startswith("$") for t in flat_types), "unresolved mapped hierarchy"
+        assert not any(re.search(r"(?i)(dlatch|\$div|\$mod)", t) for t in flat_types)
+        assert any("DFF" in t.upper() for t in flat_types)
+        assert sum(t == "$mem_v2" for t in flat_types) >= 1
+        stats = {"width": width, "hierarchy_modules": len(netlists[0]),
+                 "mapped_modules": len(netlists[1]),
+                 "mapped_cell_types": dict(Counter(c["type"] for m in netlists[1].values()
+                                                   for c in m.get("cells", {}).values())),
+                 "flattened_cell_types": dict(flat_types),
+                 "classifier_memory": memories, "retained_state_cells": len(state_cells),
+                 "latches": 0, "division_or_remainder": 0}
+        write_json(folder / "assertions.json", stats)
+        results[str(width)] = stats
+    return results
 
 
 def defects(run):
-    raise NotImplementedError("mutation implementation is not yet complete")
+    # One local semantic edit per disposable source copy. A build or timeout is
+    # not a kill: each compiled binary must reach the ordinary numerical checker.
+    mutants = [
+        ("crc-polynomial", "furnace_crc_linear.sv",
+         "state = (state >> 1) ^ POLYNOMIAL;",
+         "state = (state >> 1) ^ (POLYNOMIAL ^ 1);", "CRC_MISMATCH"),
+        ("parser-endian", "furnace_header_parser.sv",
+         "nh[31:0]={header[23:0],octet};", "nh[31:0]={octet,header[31:8]};", "META_MISMATCH"),
+        ("transport-offset", "furnace_header_parser.sv",
+         "if (rel+17'd1==header_len) begin", "if (rel+17'd2==header_len) begin", "META_MISMATCH"),
+        ("fragment-eligibility", "furnace_header_parser.sv",
+         "!final_header[302] && !final_header[441]", "1'b1 && !final_header[441]", "META_MISMATCH"),
+        ("rss-key-direction", "furnace_rss_toeplitz.sv",
+         "key_shift[327:296]", "key_shift[31:0]", "META_MISMATCH"),
+        ("rss-tuple-direction", "furnace_rss_toeplitz.sv",
+         "tuple_shift[295]", "tuple_shift[0]", "META_MISMATCH"),
+        ("mask-polarity", "furnace_classifier64.sv",
+         "mask_q[63:0])", "~mask_q[63:0])", "META_MISMATCH"),
+        ("priority-reversed", "furnace_classifier64.sv",
+         "!found && enable_q && equal_q", "enable_q && equal_q", "META_MISMATCH"),
+        ("metadata-dropped", "furnace_x2_top.sv",
+         "meta_valid<=1;", "meta_valid<=0;", "LOST_RESULT"),
+        ("metadata-unstable", "furnace_x2_top.sv",
+         "if (meta_terminal) begin meta_done<=1; meta_valid<=0; end",
+         "if (meta_valid && !m_meta_ready) meta_header<=meta_header ^ 512'b1;\n"
+         "                if (meta_terminal) begin meta_done<=1; meta_valid<=0; end", "UNSTABLE_META"),
+    ]
+    results = []
+    for name, filename, old, new, marker in mutants:
+        folder = run.path / name
+        folder.mkdir()
+        rtl = folder / "rtl"
+        rtl.mkdir()
+        patches = []
+        for p in sorted((ROOT / "rtl").glob("*.sv")):
+            original = p.read_text()
+            text = original
+            if p.name == filename:
+                assert old in original, f"mutation anchor absent: {name}"
+                # The offset mutant deliberately changes the IPv4 boundary only.
+                text = original.replace(old, new, 1)
+                patches.extend(difflib.unified_diff(
+                    original.splitlines(True), text.splitlines(True),
+                    fromfile="rtl/" + p.name, tofile="mutant/rtl/" + p.name))
+            (rtl / p.name).write_text(text)
+        (folder / "mutation.patch").write_text("".join(patches))
+        hashes = {p.name: digest(p) for p in sorted(rtl.glob("*.sv"))}
+        sim = folder / "simulation"
+        sim.mkdir()
+        c = Campaign(64, 17, sim / "stimulus.txt")
+        c.send(b"123456789", ["crc_known"], mode=0)
+        c.config(0, 0, value=0, mask=0, action=0x100, enable=1)
+        c.config(0, 63, value=0, mask=0, action=0x200, enable=1)
+        c.send(packet(c.rng, version=4, proto=6), ["ipv4_tcp"], mode=1)
+        c.send(packet(c.rng, version=6, proto=17), ["ipv6_udp"], mode=1)
+        c.send(packet(c.rng, fragment=0x2000), ["fragment"], mode=1)
+        c.close()
+        write_json(folder / "expected.json", c.records)
+        write_json(folder / "mutation.json", {"name": name, "source_sha256": hashes,
+                                            "expected_checker": marker})
+        executable = compile_sim(run, sim, "verilator", width=64, rtl=rtl)
+        text, err, rec = run.command(executable, cwd=sim, expect=None)
+        assert rec["exit"] != 0 and not rec["timeout"], f"surviving mutant: {name}"
+        assert marker in text + err, f"wrong rejection for {name}: {text[-1600:]} {err[-1600:]}"
+        assert "Error-" in text + err or "Assertion failed" in text + err
+        result = {"name": name, "killed": True, "checker": marker,
+                  "exit": rec["exit"], "patch": run.rel(folder / "mutation.patch"),
+                  "mutant_sha256": hashes, "execution": rec}
+        write_json(folder / "detected.json", result)
+        results.append(result)
+    assert len(results) >= 8 and all(r["killed"] for r in results)
+    return results
 
 
 def portability(run):
@@ -352,8 +508,9 @@ def main():
                     try:
                         results[f"behavior-{seed}-{width}"] = top_run(
                             run, width, "verilator", seed,
-                            full=args.mode != "reproduction", sample=args.mode == "reproduction")
-                        if args.mode != "reproduction":
+                            full=args.mode != "reproduction" and not args.probe,
+                            sample=args.mode == "reproduction" or args.probe)
+                        if args.mode != "reproduction" and not args.probe:
                             results[f"rss-{seed}-{width}"] = leaf_run(run, "rss", seed)
                             results[f"classifier-{seed}-{width}"] = leaf_run(run, "classifier", seed)
                     finally:
