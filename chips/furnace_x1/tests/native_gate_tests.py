@@ -17,6 +17,7 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_gates as gates
+import evidence_audit
 from scoreboard import FunctionalMismatch, check_trace
 from native_vectors import export_bundle, score_capture, verify_bundle
 from verify import ROOT, Run, inventory, relative_output, write_json
@@ -38,6 +39,72 @@ class NativeGateTests(unittest.TestCase):
     def setUp(self):
         self.directory = FIXTURES / self._testMethodName
         self.directory.mkdir(parents=True)
+
+    def test_evidence_audit_preserves_missing_history_as_unresolved(self):
+        historical = self.directory / "missing" / "receipt.json"
+        surviving = self.directory / "surviving.json"
+        surviving.write_text('{"status":"passed"}\n')
+        original = surviving.read_bytes()
+        result = evidence_audit.audit(
+            [str(historical.relative_to(ROOT))], [str(surviving.relative_to(ROOT))])
+        self.assertEqual(result["historical_preservation"], "unresolved")
+        self.assertEqual(result["loss_mechanism"], "unknown")
+        self.assertEqual(result["engineering_acceptance"], "not_established_by_this_audit")
+        self.assertEqual(result["unavailable_records"],
+                         [str(historical.relative_to(ROOT))])
+        self.assertFalse(historical.parent.exists())
+        self.assertEqual(surviving.read_bytes(), original)
+        self.assertEqual(result["records"][1]["size_bytes"], len(original))
+        self.assertEqual(result["records"][1]["sha256"], gates.sha(surviving))
+
+    def test_evidence_audit_does_not_hide_access_errors_or_authenticate_presence(self):
+        path = self.directory / "receipt.json"
+        path.write_text("{}")
+        name = str(path.relative_to(ROOT))
+        with patch.object(Path, "read_bytes", side_effect=PermissionError("synthetic denial")), \
+                self.assertRaises(PermissionError):
+            evidence_audit.observe(name)
+        result = evidence_audit.audit([name], [name])
+        self.assertEqual(result["historical_preservation"],
+                         "availability_observed_not_authenticated")
+        self.assertEqual(result["engineering_acceptance"], "not_established_by_this_audit")
+        with self.assertRaises(FunctionalMismatch):
+            evidence_audit.observe(".vulcan/receipt.json")
+        with self.assertRaises(FunctionalMismatch):
+            evidence_audit.observe("../receipt.json")
+        alias = self.directory / "metadata-alias"
+        alias.symlink_to(ROOT / ".vulcan", target_is_directory=True)
+        with self.assertRaises(FunctionalMismatch):
+            evidence_audit.observe(str((alias / "receipt.json").relative_to(ROOT)))
+
+    def test_evidence_audit_cli_appends_records_without_recreating_history(self):
+        historical = self.directory / "missing.json"
+        surviving = self.directory / "surviving.json"
+        surviving.write_text('{"status":"passed"}\n')
+        output = self.directory / "audit"
+        run = Run(self.directory / "child-commands", "audit-cli-fixture", None)
+        run.record["tool_versions"]["python3"] = sys.version
+        reports = []
+        for _ in range(2):
+            _, stdout, _ = run.child(
+                [sys.executable, "tests/evidence_audit.py",
+                 "--out", str(output.relative_to(ROOT)),
+                 "--historical", str(historical.relative_to(ROOT)),
+                 "--surviving", str(surviving.relative_to(ROOT))], ROOT)
+            summary = json.loads(stdout)
+            self.assertEqual(summary["historical_preservation"], "unresolved")
+            report = ROOT / summary["audit_record"]
+            reports.append((report, report.read_bytes()))
+            receipt = json.loads((report.parent / "receipt.json").read_text())
+            self.assertFalse(receipt["acceptance_evidence"])
+            self.assertEqual(receipt["status"], "passed")
+            self.assertEqual(receipt["results"]["availability"]["loss_mechanism"], "unknown")
+        self.assertNotEqual(reports[0][0], reports[1][0])
+        for path, content in reports:
+            self.assertEqual(path.read_bytes(), content)
+        self.assertFalse(historical.exists())
+        self.assertEqual(surviving.read_text(), '{"status":"passed"}\n')
+        run.finish("passed")
 
     def test_json_update_preserves_previous_receipt_on_storage_failure(self):
         receipt = self.directory / "receipt.json"
