@@ -31,6 +31,11 @@ negative diagnostics and caller-adjudicated exits remain supported.
 This guards new runs; it cannot recover evidence lost from a historical run.
 Successful runs also require unchanged deliverable inputs and every retained
 source snapshot to match its recorded hash; missing snapshots fail closed.
+JSON updates serialize first, then flush and fsync a unique same-directory
+pending file before atomic replacement. A failed write/sync/replacement leaves
+the previous receipt intact and retains the pending file for diagnosis; pending
+files are never acceptance evidence. This does not prevent external deletion,
+guarantee directory durability after power loss, or restore historical losses.
 """
 
 import argparse
@@ -179,7 +184,14 @@ def stamp():
 
 
 def write_json(path, value):
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+    text = json.dumps(value, indent=2, sort_keys=True) + "\n"
+    with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent,
+            prefix=f".{path.name}.", suffix=".pending", delete=False) as pending:
+        pending.write(text)
+        pending.flush()
+        os.fsync(pending.fileno())
+    os.replace(pending.name, path)
 
 
 def inventory(root=ROOT):

@@ -8,6 +8,7 @@ Neither selector establishes timing closure or physical hardware coverage.
 
 import argparse
 import copy
+import errno
 import json
 from pathlib import Path
 import sys
@@ -37,6 +38,35 @@ class NativeGateTests(unittest.TestCase):
     def setUp(self):
         self.directory = FIXTURES / self._testMethodName
         self.directory.mkdir(parents=True)
+
+    def test_json_update_preserves_previous_receipt_on_storage_failure(self):
+        receipt = self.directory / "receipt.json"
+        previous = {"status": "running", "commands": [{"exit_code": None}]}
+        write_json(receipt, previous)
+        original = receipt.read_bytes()
+        for operation in ("fsync", "replace"):
+            with self.subTest(operation=operation):
+                with patch(f"verify.os.{operation}",
+                           side_effect=OSError(errno.ENOSPC, "synthetic storage failure")), \
+                        self.assertRaises(OSError):
+                    write_json(receipt, {"status": "passed"})
+                self.assertEqual(receipt.read_bytes(), original)
+                self.assertEqual(json.loads(receipt.read_text()), previous)
+        pending = list(self.directory.glob(".receipt.json.*.pending"))
+        self.assertEqual(len(pending), 2)
+        for path in pending:
+            self.assertEqual(json.loads(path.read_text()), {"status": "passed"})
+
+    def test_json_update_serialization_failure_preserves_previous_receipt(self):
+        receipt = self.directory / "receipt.json"
+        write_json(receipt, {"status": "running"})
+        original = receipt.read_bytes()
+        with self.assertRaises(TypeError):
+            write_json(receipt, {"status": object()})
+        self.assertEqual(receipt.read_bytes(), original)
+        write_json(receipt, {"status": "completed", "exit_code": 0})
+        self.assertEqual(json.loads(receipt.read_text()),
+                         {"status": "completed", "exit_code": 0})
 
     def test_child_receipt_is_retained_before_execution(self):
         run = Run(self.directory / "receipts", "pending-child-receipt-test", None)
