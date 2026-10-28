@@ -7,6 +7,9 @@ defects -> separately compiled observable mutants; synthesis -> real retained
 hierarchy/memory/state and mapped no-latch/no-divide assertions; portability ->
 fresh source-only package executing the same smoke/oracle and compiled samples.
 All modes are mandatory; --probe is an advisory, bounded development diagnostic.
+Receipts stay at the invocation root even while commands use partition folders.
+Completed command journals and log hashes detect loss during this invocation;
+they cannot recover artifacts removed after execution or certify old evidence.
 """
 import argparse
 from collections import Counter
@@ -56,6 +59,7 @@ class Run:
     def __init__(self, out, mode, repair_of=None):
         self.path = ROOT / out / ("run-" + uuid.uuid4().hex[:12])
         self.path.mkdir(parents=True, exist_ok=False)
+        self.receipt_path = self.path / "receipt.json"
         self.commands = []
         self.receipt = {
             "schema": 1, "mode": mode, "started_at": now(), "cwd": ".",
@@ -72,7 +76,23 @@ class Run:
         self.save()
 
     def save(self):
-        write_json(self.path / "receipt.json", self.receipt)
+        write_json(self.receipt_path, self.receipt)
+
+    def verify_retention(self):
+        for relative, expected in self.receipt["source_sha256"].items():
+            snapshot = self.receipt_path.parent / "source" / relative
+            assert snapshot.is_file(), f"missing source snapshot: {relative}"
+            assert digest(snapshot) == expected, f"changed source snapshot: {relative}"
+        for record in self.commands:
+            for stream in ("stdout", "stderr"):
+                artifact = ROOT / record[stream]
+                assert artifact.is_file(), f"missing retained log: {record[stream]}"
+                assert digest(artifact) == record[stream + "_sha256"], (
+                    f"changed retained log: {record[stream]}")
+            journal = ROOT / record["journal"]
+            assert journal.is_file(), f"missing command journal: {record['journal']}"
+            assert json.loads(journal.read_text()) == record, (
+                f"changed command journal: {record['journal']}")
 
     def rel(self, path):
         return str(Path(path).relative_to(ROOT))
@@ -96,6 +116,12 @@ class Run:
             except OSError as exc:
                 record.update(exit=None, timeout=False, error=str(exc))
         record["ended_at"] = now()
+        for stream in ("stdout", "stderr"):
+            record[stream + "_sha256"] = digest(ROOT / record[stream])
+        journal = base.with_suffix(".json")
+        record["journal"] = self.rel(journal)
+        with journal.open("x") as output:
+            output.write(json.dumps(record, indent=2, sort_keys=True) + "\n")
         self.save()
         text = base.with_suffix(".stdout").read_text()
         errors = base.with_suffix(".stderr").read_text()
@@ -586,6 +612,7 @@ def main():
             results["synthesis"] = synthesis(run, probe=args.probe)
         if args.mode in ("all", "portability"):
             results["portability"] = portability(run)
+        run.verify_retention()
         run.receipt.update(outcome="passed", results=results)
     except Exception as exc:
         run.receipt.update(outcome="failed", failure=f"{type(exc).__name__}: {exc}")
