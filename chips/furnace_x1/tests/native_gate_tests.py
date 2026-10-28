@@ -131,6 +131,34 @@ class NativeGateTests(unittest.TestCase):
         self.assertEqual(json.loads((run.path / "receipt.json").read_text())["status"],
                          "passed")
 
+    def test_run_success_rejects_missing_or_changed_source_snapshot(self):
+        for alteration in ("missing", "changed"):
+            with self.subTest(alteration=alteration):
+                run = Run(self.directory / "receipts", "source-integrity-test", None)
+                name = next(iter(run.record["source_hashes"]))
+                snapshot = run.path / "source" / name
+                if alteration == "missing":
+                    snapshot.rename(snapshot.with_suffix(snapshot.suffix + ".retained"))
+                else:
+                    snapshot.write_bytes(snapshot.read_bytes() + b"\n")
+                with self.assertRaisesRegex(FunctionalMismatch, "source snapshot"):
+                    run.finish("passed")
+                self.assertNotEqual(
+                    json.loads((run.path / "receipt.json").read_text())["status"],
+                    "passed")
+                run.finish("failed", RuntimeError("deliberately altered source fixture"))
+
+    def test_run_success_rejects_changed_deliverable_inventory(self):
+        run = Run(self.directory / "receipts", "source-freshness-test", None)
+        changed = dict(run.record["source_hashes"])
+        changed[next(iter(changed))] = "0" * 64
+        with patch("verify.inventory", return_value=changed), \
+                self.assertRaisesRegex(FunctionalMismatch, "sources changed"):
+            run.finish("passed")
+        self.assertNotEqual(
+            json.loads((run.path / "receipt.json").read_text())["status"], "passed")
+        run.finish("failed", RuntimeError("synthetic changed-inventory fixture"))
+
     def test_run_success_rejects_caught_unexpected_child_exit(self):
         for allowed in ((0,), (7,)):
             with self.subTest(allowed=allowed):

@@ -29,6 +29,8 @@ Child exit policies are retained and rechecked before success, so catching an
 unexpected tool failure cannot turn it into a passing run. Explicitly permitted
 negative diagnostics and caller-adjudicated exits remain supported.
 This guards new runs; it cannot recover evidence lost from a historical run.
+Successful runs also require unchanged deliverable inputs and every retained
+source snapshot to match its recorded hash; missing snapshots fail closed.
 """
 
 import argparse
@@ -350,6 +352,13 @@ class Run:
 
     def finish(self, status, error=None):
         if status == "passed":
+            require(inventory() == self.record["source_hashes"],
+                    "deliverable sources changed during execution")
+            for name, digest in self.record["source_hashes"].items():
+                snapshot = self.path / "source" / name
+                require(snapshot.is_file(), f"missing source snapshot: {name}")
+                require(hashlib.sha256(snapshot.read_bytes()).hexdigest() == digest,
+                        f"changed source snapshot: {name}")
             for command in self.commands:
                 require(command["status"] == "completed" and not command["timeout"] and
                         type(command["exit_code"]) is int,
