@@ -11,6 +11,8 @@ Receipts stay at the invocation root even while commands use partition folders.
 Exclusive sibling registrations detect whole-run loss on later invocations of
 the same output root; completion seals bind finished receipts. These are local
 detection safeguards, not backups, authenticated storage or historical recovery.
+Explicit repair links must name a retained failed receipt with intact artifacts;
+their receipt hash is bound before execution and rechecked at completion.
 """
 import argparse
 from collections import Counter
@@ -109,7 +111,32 @@ class Run:
             assert json.loads(journal.read_text()) == record, (
                 f"changed command journal: {record['journal']}")
 
+    def verify_repair_reference(self):
+        reference = self.receipt["repair_of"]
+        if reference is None:
+            return
+        relative = Path(reference)
+        assert not relative.is_absolute() and ".." not in relative.parts, (
+            "repair reference must be project-relative")
+        path = ROOT / relative
+        assert path.resolve().is_relative_to(ROOT.resolve()), (
+            "repair reference escapes project")
+        assert path.is_file(), f"missing repair reference receipt: {reference}"
+        original = json.loads(path.read_text())
+        assert original.get("outcome") == "failed" and original.get("ended_at"), (
+            f"repair reference is not a completed failure: {reference}")
+        assert all("ended_at" in command for command in original["commands"]), (
+            f"repair reference has unfinished commands: {reference}")
+        binding = {"receipt": str(relative), "receipt_sha256": digest(path)}
+        if "repair_reference" in self.receipt:
+            assert self.receipt["repair_reference"] == binding, (
+                f"changed repair reference receipt: {reference}")
+        self.verify_artifacts(path, original)
+        self.receipt["repair_reference"] = binding
+        self.save()
+
     def verify_history(self):
+        self.verify_repair_reference()
         assert self.registration_path.is_file(), "missing invocation registration"
         assert json.loads(self.registration_path.read_text()) == self.registration, (
             "changed invocation registration")
