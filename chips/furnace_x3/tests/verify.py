@@ -407,11 +407,9 @@ def synthesize(e, minimum_only=False):
     e.record["synthesis"] = results
 
 
-def defects(e):
+def defects(e, selected=None):
     e.require(["verilator", "make", "g++"])
     functional(e, 64, 65, 3, [17], label="baseline")
-    leaf(e, "bucket_tb", label="baseline-bucket")
-    leaf(e, "scheduler_tb", label="baseline-scheduler")
     mutations = [
         ("crc-polynomial", "furnace_crc_beat_pipeline.sv",
          "32'h82f63b78", "32'h82f63b79", "functional", "CRC polynomial/bit order mismatch"),
@@ -429,14 +427,23 @@ def defects(e):
          "bucket_tb", "TOKEN refill/debit/refund"),
         ("sg-byte-boundary", "furnace_sg_dma.sv",
          "output_index<=output_index+1'b1;", "output_index<=output_index+2'd2;",
-         "functional", "packet keep mismatch"),
+         "functional", "packet last mismatch"),
         ("ring-wrap", "furnace_descriptor_rings.sv",
          "physical_index[evt_queue]==entries[evt_queue]-1'b1",
          "physical_index[evt_queue]==entries[evt_queue]",
          "functional", "unexpected memory address"),
     ]
-    killed = []
-    for name, filename, old, new, kind, expected in mutations:
+    if selected is not None:
+        mutations = [mutation for mutation in mutations if mutation[0] in selected]
+        if {mutation[0] for mutation in mutations} != set(selected):
+            raise AssertionError("unknown selected defect")
+    if any(mutation[4] == "bucket_tb" for mutation in mutations):
+        leaf(e, "bucket_tb", label="baseline-bucket")
+    if any(mutation[4] == "scheduler_tb" for mutation in mutations):
+        leaf(e, "scheduler_tb", label="baseline-scheduler")
+    records = [{"name": mutation[0], "status": "not_executed"} for mutation in mutations]
+    e.record["mutants"] = records
+    for record, (name, filename, old, new, kind, expected) in zip(records, mutations):
         root = e.path / f"mutant-{name}-{uuid.uuid4().hex[:8]}"
         root.mkdir()
         baseline_hashes = identity()
@@ -449,6 +456,11 @@ def defects(e):
         if text.count(old) != 1:
             raise AssertionError(f"{name}: injection must identify one concrete source site")
         path.write_text(text.replace(old, new))
+        record.update(
+            status="compiling", file=f"rtl/{filename}", old=old, new=new,
+            baseline_hash=baseline_hashes[f"rtl/{filename}"],
+            mutant_hash=hashlib.sha256(path.read_bytes()).hexdigest(),
+            source_copy=str(root.relative_to(ROOT)), expected_failure=expected)
         if kind == "functional":
             binary = compile_sim(e, 64, 65, 3, root=root, label=name)
             corpus = binary.parent / "vectors.txt"
@@ -464,18 +476,21 @@ def defects(e):
             shutil.copy2(obj / f"V{kind}", binary)
             shutil.rmtree(obj)
             argv = [os.path.relpath(binary, root), "+seed=17"]
+        record["status"] = "compiled"
+        record["rejection_stdout"] = str(
+            (e.path / f"{name}-functional-rejection.stdout.txt").relative_to(ROOT))
+        record["rejection_stderr"] = str(
+            (e.path / f"{name}-functional-rejection.stderr.txt").relative_to(ROOT))
         output = e.run(argv, f"{name}-functional-rejection", cwd=root, expect_failure=True)
-        if "SCOREBOARD" not in output or expected not in output:
+        first = next((line for line in output.splitlines() if "SCOREBOARD" in line), None)
+        record.update(status="rejected_unclassified", first_functional_failure=first)
+        if first is None or f"SCOREBOARD {expected}" not in first:
             raise AssertionError(f"{name}: rejection was not the expected functional comparison")
-        first = next(line for line in output.splitlines() if "SCOREBOARD" in line)
-        killed.append({"name": name, "file": f"rtl/{filename}", "old": old, "new": new,
-                       "baseline_hash": baseline_hashes[f"rtl/{filename}"],
-                       "mutant_hash": hashlib.sha256(path.read_bytes()).hexdigest(),
-                       "first_functional_failure": first,
-                       "source_copy": str(root.relative_to(ROOT))})
-    if len(killed) < 6:
+        record["status"] = "functionally_killed"
+    if not records or any(record["status"] != "functionally_killed" for record in records):
+        raise AssertionError("not all selected mutants compiled and failed functional comparisons")
+    if selected is None and len(records) < 6:
         raise AssertionError("fewer than six compiling, functionally killed mutants")
-    e.record["mutants"] = killed
 
 
 def sensitivity_probe(e):
@@ -536,7 +551,7 @@ def delivery(e):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=["behavior", "defects", "synthesis", "delivery"])
-    parser.add_argument("--prepare", choices=["startup", "smoke", "cell", "credits", "portable", "rollover", "synthesis-min", "sensitivity"])
+    parser.add_argument("--prepare", choices=["startup", "smoke", "cell", "credits", "portable", "rollover", "synthesis-min", "sensitivity", "boundary-sensitivity"])
     parser.add_argument("--delivery-smoke", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--width", type=int, choices=[64, 512], default=64)
     parser.add_argument("--maximum", type=int, default=65)
@@ -584,6 +599,8 @@ def main():
                 synthesize(e, minimum_only=True)
             elif suite == "sensitivity":
                 sensitivity_probe(e)
+            elif suite == "boundary-sensitivity":
+                defects(e, selected=("sg-byte-boundary", "ring-wrap"))
             elif suite == "behavior":
                 e.record["matrix"] = [
                     {"width": w, "maximum": m, "sg": s, "seed": seed,
