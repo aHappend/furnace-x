@@ -91,6 +91,21 @@ def make_cases(bound=131072, compact=False):
     def recover():
         add("recovery-singleton", good_frame, good)
 
+    if bound == 1:
+        for payload in (b"", b"\x00", b"\xff"):
+            frame = lz4_frame([(False, literal_block(payload))], payload,
+                             content_size=True, block_checksum=True, content_checksum=True)
+            valid.append(("singleton", frame, payload))
+            add("singleton", frame, payload)
+        add("singleton-declared-too-large", good_frame, b"", 2, decoded=2)
+        recover()
+        frame = lz4_frame([(True, b"ab")], b"ab")
+        add("singleton-concealed-overrun", frame, b"a", 2, decoded=1)
+        recover()
+        add("singleton-reset", good_frame, good, reset_after=5)
+        recover()
+        return cases, valid
+
     if compact:
         for payload in (b"", b"\x00", b"0123456789abcdefgh", bytes(range(64))):
             frame = lz4_frame([(False, literal_block(payload))], payload,

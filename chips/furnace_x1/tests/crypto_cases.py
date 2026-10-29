@@ -6,7 +6,7 @@ import random
 from crypto_reference import aes128, encrypt_gcm, selftest
 
 
-def generate(directory, compact=False):
+def generate(directory, compact=False, max_length=257):
     rng = random.Random(89)
     aes_cases = [(bytes.fromhex(k), bytes.fromhex(p), bytes.fromhex(c)) for k, p, c in selftest()]
     for _ in range(0 if compact else 32):
@@ -22,6 +22,7 @@ def generate(directory, compact=False):
 
     def case(length, status=0, tag_bit=None, frame_error=0, delay=0):
         nonlocal checked_library
+        length = min(length, max_length)
         key = bytes(rng.randrange(256) for _ in range(16))
         nonce = bytes(rng.randrange(256) for _ in range(12))
         aad = bytes(rng.randrange(256) for _ in range(52))

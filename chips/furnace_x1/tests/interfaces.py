@@ -34,6 +34,16 @@ def reset_expression():
                               ["m_axi_" + p for p in AXI_OUT]) + "}"
 
 
+def axil_declarations():
+    lines = []
+    for fields, kind in ((AXIL_IN, "reg"), (AXIL_OUT, "wire")):
+        for field, width in fields.items():
+            shape = f"[{width-1}:0]" if width > 1 else ""
+            lines.append(f"{kind} {shape} s_axil_{field}" +
+                         ("=0;" if kind == "reg" else ";"))
+    return "\n".join(lines)
+
+
 def crossbar_declarations():
     lines = []
     for prefix, fields, kind in [

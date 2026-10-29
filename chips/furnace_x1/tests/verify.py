@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""FURNACE-X1 independent verification entrypoint.
-
-Development is incremental: unimplemented admitted coverage fails explicitly.
-No partial experiment is reported as acceptance of a mandatory suite.
-"""
+"""FURNACE-X1 source-bound public-interface L1 verification and retained probes."""
 
 import argparse
 from pathlib import Path
@@ -19,9 +15,11 @@ import crypto_reference
 import crypto_cases
 import interfaces
 import soc_cases
+import soc_boundaries
 import synthesis
 import yosys_packed
 import mutations
+import suites
 
 
 def tensor_vectors(path, count=256):
@@ -35,14 +33,36 @@ def tensor_vectors(path, count=256):
     for mode in range(3):
         accumulator = 0
         for index in range(count):
-            first = index < 4 or index % 4 == 0
-            last = index < 4 or index % 4 == 3 or index == count - 1
+            first = index < 32 or index % 4 == 0
+            last = index < 32 or index % 4 == 3 or index == count - 1
             if index < 32:
-                weights = [((index + lane) & 15) if mode != 1
-                           else special[(index + lane) % len(special)] for lane in range(8)]
+                weights = [((index + lane) & 15) if mode != 1 else 0x3F80 for lane in range(8)]
                 activations = [([0, 1, 0xFFFF, 0x7FFF, 0x8000, 255, 0xFF00, 17][lane])
-                               if mode == 0 else special[(index * 3 + lane) % len(special)]
+                               if mode == 0 else (special[index % len(special)] if lane == 0 else 0)
                                for lane in range(8)]
+                if mode != 0:
+                    weights = [0x3F80 if mode == 1 else 1] * 8
+                    if index == 20:  # Negative zero products.
+                        weights = [0xBF80 if mode == 1 else 15] * 8
+                        activations = [0] * 8
+                    elif index == 21:  # Exact cancellation.
+                        activations = [0x3F80, 0xBF80] + [0] * 6
+                    elif index == 22:  # Finite product overflow.
+                        weights = [0x7F7F if mode == 1 else 7] + [0] * 7
+                        activations = [0x7F7F] + [0] * 7
+                    elif index == 23:  # Invalid infinity times zero.
+                        weights = [0] * 8
+                        activations = [0x7F80] + [0] * 7
+                    elif index == 24:  # Opposite infinities in the reduction.
+                        activations = [0x7F80, 0xFF80] + [0] * 6
+                    elif index == 25:  # Tree association and intermediate ties.
+                        activations = [0x4B80, 0x3F80, 0xCB80, 0x3F80] + [0] * 4
+                    elif index == 26 and mode == 1:
+                        weights = [1] + [0] * 7
+                        activations = [0x3F80] + [0] * 7
+                    elif index == 27 and mode == 1:
+                        weights = [1] + [0] * 7
+                        activations = [0x3700] + [0] * 7
             else:
                 weights = [rng.randrange(65536 if mode == 1 else 16) for _ in range(8)]
                 activations = [rng.randrange(65536) for _ in range(8)]
@@ -90,9 +110,10 @@ def tensor_probe(run, simulator="verilator", count=256, rtl=None):
     run.save()
 
 
-def soc_probe(run, simulator="verilator", count=24, max_tile=32, depth=1, seed=17, rtl=None):
+def soc_probe(run, simulator="verilator", count=24, max_tile=32, depth=1, seed=17, rtl=None,
+              large=False):
     path = run.directory / "soc-vectors.txt"
-    records = soc_cases.generate(path, count, max_tile, depth, seed)
+    records = soc_cases.generate(path, count, max_tile, depth, seed, large=large)
     run.receipt["soc_expected"] = records
     run.save()
     tb = run.directory / "soc_tb.sv"
@@ -102,8 +123,12 @@ def soc_probe(run, simulator="verilator", count=24, max_tile=32, depth=1, seed=1
     parameters = ([f"-Psoc_tb.MAX_TILE_BYTES={max_tile}", f"-Psoc_tb.RING_DEPTH={depth}"]
                   if simulator == "iverilog" else [
                       f"-GMAX_TILE_BYTES={max_tile}", f"-GRING_DEPTH={depth}"])
+    if large:
+        if simulator != "verilator":
+            raise ValueError("64-KiB integrated capacity runs use compiled simulation")
+        parameters.append("-GREGION_BITS=17")
     command = compile_tb(run, "soc", simulator, parameters, tb=tb, rtl=rtl)
-    _, stdout, _ = run.command([*command, "+vectors=" + str(path)], "soc-sim-" + simulator,
+    _, stdout, _ = run.command([*command, "+vectors=" + str(path), f"+seed={seed}"], "soc-sim-" + simulator,
                               timeout=600 if simulator == "iverilog" else 3600)
     if f"COUNTS soc completed={count} " not in stdout:
         raise AssertionError("SoC comparisons absent: " + stdout)
@@ -111,13 +136,37 @@ def soc_probe(run, simulator="verilator", count=24, max_tile=32, depth=1, seed=1
     run.save()
 
 
-def crypto_probe(run, simulator="verilator"):
+def soc_boundary_probe(run, simulator="verilator", max_tile=32, depth=1, compact=False):
+    path = run.directory / "soc-boundary-vectors.txt"
+    records, completed = soc_boundaries.generate(path, max_tile, depth, compact=compact)
+    run.receipt["soc_boundaries"] = records
+    run.save()
+    tb = run.directory / "soc_tb.sv"
+    tb.write_text((ROOT / "tests/soc_tb.sv").read_text().replace(
+        "/* PUBLIC_DECLARATIONS */", interfaces.declarations()).replace(
+        "/* PUBLIC_RESET_EXPRESSION */", interfaces.reset_expression()))
+    parameters = ([f"-Psoc_tb.MAX_TILE_BYTES={max_tile}", f"-Psoc_tb.RING_DEPTH={depth}"]
+                  if simulator == "iverilog" else [
+                      f"-GMAX_TILE_BYTES={max_tile}", f"-GRING_DEPTH={depth}"])
+    command = compile_tb(run, "soc", simulator, parameters, tb=tb)
+    _, stdout, _ = run.command([*command, "+vectors=" + str(path)], "soc-boundary-sim",
+                              timeout=600 if simulator == "iverilog" else 3600)
+    if f"COUNTS soc completed={completed} " not in stdout:
+        raise AssertionError("SoC boundary comparisons absent: " + stdout)
+    run.receipt["coverage"]["soc_boundary_cases"] = len(records)
+    run.save()
+
+
+def crypto_probe(run, simulator="verilator", max_length=257):
     compact = simulator == "iverilog"
-    expected = crypto_cases.generate(run.directory, compact)
+    expected = crypto_cases.generate(run.directory, compact, max_length)
     run.receipt["crypto_expected"] = expected
     run.save()
     for name in ("aes", "gcm"):
-        command = compile_tb(run, name, simulator)
+        parameters = ([] if name == "aes" else
+                      [f"-Pgcm_tb.MAX_TILE_BYTES={max_length}"] if compact else
+                      [f"-GMAX_TILE_BYTES={max_length}"])
+        command = compile_tb(run, name, simulator, parameters)
         _, stdout, _ = run.command([*command, "+vectors=" + str(run.directory / (name + "-vectors.txt"))],
                                   name + "-sim-" + simulator, timeout=600 if compact else 3600)
         wanted = (f"COUNTS aes compared={expected['aes_cases']}" if name == "aes" else
@@ -136,10 +185,26 @@ def xbar_probe(run, simulator="verilator"):
     command = compile_tb(run, "xbar", simulator, tb=tb)
     _, stdout, _ = run.command(command, "xbar-sim-" + simulator,
                               timeout=600 if simulator == "iverilog" else 3600)
-    if "COUNTS xbar reads=80 writes=80 " not in stdout:
+    if "COUNTS xbar reads=88 writes=88 " not in stdout:
         raise AssertionError("crossbar comparisons absent: " + stdout)
-    run.receipt["coverage"]["xbar_read_transactions"] = 80
-    run.receipt["coverage"]["xbar_write_transactions"] = 80
+    run.receipt["coverage"]["xbar_read_transactions"] = 88
+    run.receipt["coverage"]["xbar_write_transactions"] = 88
+    run.save()
+
+
+def csr_probe(run, simulator="iverilog"):
+    tb = run.directory / "csr_tb.sv"
+    tb.write_text((ROOT / "tests/csr_tb.sv").read_text().replace(
+        "/* AXIL_DECLARATIONS */", interfaces.axil_declarations()).replace(
+        "/* AXIL_OUTPUTS */", ",".join("s_axil_" + p for p in interfaces.AXIL_OUT)))
+    command = compile_tb(run, "csr", simulator, tb=tb)
+    _, stdout, _ = run.command(command, "csr-sim-" + simulator,
+                              timeout=600 if simulator == "iverilog" else 3600)
+    import re
+    result = re.search(r"COUNTS csr comparisons=(\d+) set_clear=1 concurrent=1", stdout)
+    if result is None or int(result[1]) < 60:
+        raise AssertionError("CSR comparison counters missing: " + stdout)
+    run.receipt["coverage"]["csr_comparisons"] = int(result[1])
     run.save()
 
 
@@ -172,9 +237,12 @@ def lz4_probe(run, simulator="verilator", bound=131072):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=["behavior", "boundaries", "defects", "synthesis", "portable"])
-    parser.add_argument("--probe", choices=["tensor", "lz4", "soc", "synthesis", "frontends", "yosys-lowered", "crypto", "xbar", "mutation"])
+    parser.add_argument("--probe", choices=["tensor", "lz4", "soc", "soc-capacity", "soc-matrix-cell", "soc-boundaries", "synthesis", "frontends", "yosys-lowered", "crypto", "xbar", "csr", "mutation", "portable-smoke"])
+    parser.add_argument("--max-tile", type=int, default=32)
+    parser.add_argument("--ring-depth", type=int, default=1)
     parser.add_argument("--mutant", choices=sorted(mutations.MUTANTS), default="sign")
     parser.add_argument("--lz4-bound", type=int, default=131072)
+    parser.add_argument("--crypto-bound", type=int, default=257)
     parser.add_argument("--simulator", choices=["iverilog", "verilator"], default="verilator")
     parser.add_argument("--repair-of", help="retained receipt explaining the prior failure")
     args = parser.parse_args()
@@ -188,9 +256,14 @@ def main():
     try:
         ref.selftest()
         crypto_reference.selftest()
-        if args.probe in ("synthesis", "frontends", "yosys-lowered") or args.suite == "synthesis":
+        if args.suite:
+            suites.execute(args.suite, run, sys.modules[__name__])
+            run.finish("passed")
+            print(f"L1 COMPLETED {directory.relative_to(ROOT)}/receipt.json")
+            return 0
+        if args.probe in ("synthesis", "frontends", "yosys-lowered", "portable-smoke"):
             run.versions(["python3", "yosys"])
-            if args.probe == "yosys-lowered":
+            if args.probe in ("yosys-lowered", "portable-smoke"):
                 run.versions(["iverilog", "vvp"])
         else:
             run.versions(["python3", args.simulator] + (["vvp"] if args.simulator == "iverilog" else ["make", "g++"]))
@@ -199,7 +272,14 @@ def main():
         elif args.probe == "lz4":
             lz4_probe(run, args.simulator, args.lz4_bound)
         elif args.probe == "soc":
-            soc_probe(run, args.simulator, count=4 if args.simulator == "iverilog" else 24)
+            soc_probe(run, args.simulator, count=4 if args.simulator == "iverilog" else 24,
+                      max_tile=args.max_tile, depth=args.ring_depth)
+        elif args.probe == "soc-boundaries":
+            soc_boundary_probe(run, args.simulator, args.max_tile, args.ring_depth)
+        elif args.probe == "soc-capacity":
+            soc_probe(run, max_tile=65536, depth=16, count=1, large=True)
+        elif args.probe == "soc-matrix-cell":
+            suites.soc_matrix_cell(run, sys.modules[__name__], args.max_tile, args.ring_depth)
         elif args.probe == "synthesis":
             synthesis.synthesize(run, 32, 1, "yosys-probe")
         elif args.probe == "frontends":
@@ -211,16 +291,18 @@ def main():
         elif args.probe == "yosys-lowered":
             rtl = yosys_packed.sources(run)
             soc_probe(run, "iverilog", count=4, rtl=rtl)
-            synthesis.synthesize(run, 32, 1, "yosys-probe", rtl=rtl)
+            synthesis.synthesize(run, args.max_tile, args.ring_depth, "yosys-probe", rtl=rtl)
         elif args.probe == "crypto":
-            crypto_probe(run, args.simulator)
+            crypto_probe(run, args.simulator, args.crypto_bound)
         elif args.probe == "xbar":
             xbar_probe(run, args.simulator)
+        elif args.probe == "csr":
+            csr_probe(run, args.simulator)
+        elif args.probe == "portable-smoke":
+            suites.synthesis_matrix(run, sys.modules[__name__], configurations=((32, 1),))
         elif args.probe == "mutation":
             run.receipt["mutation_receipt"] = mutations.execute(args.mutant, compile_tb, tensor_vectors)
             run.save()
-        else:
-            raise NotImplementedError(f"{args.suite}: complete admitted suite not yet implemented")
     except Exception as exc:
         run.finish("failed", exc)
         print(f"FAILED {directory.relative_to(ROOT)}/receipt.json: {exc}", file=sys.stderr)

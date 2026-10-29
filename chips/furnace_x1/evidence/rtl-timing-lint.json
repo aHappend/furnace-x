@@ -1,0 +1,33 @@
+{
+  "gate": "rtl-timing-lint",
+  "timestamp_utc": "2026-10-29T17:28:08.858906+00:00",
+  "root": "/data/sufeng/furnace-soc1-line/workspace/project",
+  "status": "passed",
+  "max_comb_div_width": 0,
+  "rtl_files_checked": 14,
+  "auto_sanitized_nomem2reg_files": [],
+  "source_sha256": {
+    "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
+    "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
+    "rtl/furnace_axi4_xbar.sv": "403b8ef98a25e8bf11072456db876ae8f9c39de50609c169bc8bae930eb5a5ed",
+    "rtl/furnace_command_ring.sv": "a7e7c886652e194e0c556be33f364e464dc4bee5866d76a3b11fab83ba60df5c",
+    "rtl/furnace_csr.sv": "778a5e3cf3f07e733ff31df3da79e9418c0e66d25cfd2ddd25f2178cee617e2a",
+    "rtl/furnace_dma128.sv": "4b896d0f4c857ec9ec524a5897f0ce9078ba219a4ea781bf8a88f81e23bce12c",
+    "rtl/furnace_fp32_add5.sv": "4805a009a2314fa4079e364dd8320a3491d62b9dbe913c29d2a7d1f3feed0cfd",
+    "rtl/furnace_fp32_mul4.sv": "ba224aa2d85fe71aea5151d345750b4169d39df0d32f4cca4c0ecf703f7cc98d",
+    "rtl/furnace_fp32_round.sv": "11ba7438c65add73d63b3ce154110fbef6b9f2af4df3ef6632a6029cd8f71fe7",
+    "rtl/furnace_ghash_mul.sv": "410a0bb113e4d52bee8982cdcd68cb7d33177577f364790154a5f05a9e98941c",
+    "rtl/furnace_lz4_frontend.sv": "e1119bdcece22f0fe30f7b2d0a2079f6b2f94aea3face7bd4d405ebf24ab7156",
+    "rtl/furnace_tensor8.sv": "0f3df239bda3d5297e8eca0d17d4afcf9ae96cc42749f8e56805d491b96bed5b",
+    "rtl/furnace_x1_top.sv": "7667f36aada79d3df98383bb85a651ec07ec97ed01ef2d6d2bca38b88a143388",
+    "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
+  },
+  "netlist_sha256": {},
+  "rtl_div_mod_hazards": [],
+  "netlist_div_mod_hazards": [],
+  "mixed_assign_hazards": [],
+  "lut_clock_gate_hazards": [],
+  "ast_unroll_loop_hazards": [],
+  "detail": "Zero combinational divider/modulo, LUT clock-gate, AST loop-unroll, or mixed-assignment hazards detected.",
+  "applicable": true
+}
