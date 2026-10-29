@@ -13,6 +13,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from execution import ROOT, Run, fresh
 import reference as ref
+import lz4_cases
 
 
 def tensor_vectors(path, count=256):
@@ -76,21 +77,54 @@ def tensor_probe(run, simulator="verilator", count=256):
     run.save()
 
 
+def lz4_probe(run, simulator="verilator", bound=131072):
+    compact = simulator == "iverilog"
+    cases, valid = lz4_cases.make_cases(bound, compact=compact)
+    for label, frame, expected in valid:
+        if ref.decode_lz4(frame) != expected:
+            raise AssertionError(f"LZ4 independent reference: {label}")
+    run.receipt["reference_liblz4"] = lz4_cases.library_check(valid)
+    run.receipt["lz4_cases"] = [{k: v for k, v in case.items() if k not in ("frame", "expected")}
+                                for case in cases]
+    run.save()
+    path = run.directory / "lz4-vectors.txt"
+    lz4_cases.write_cases(path, cases)
+    parameters = ([f"-Plz4_tb.MAX_DECODED_BYTES={bound}"] if compact
+                  else [f"-GMAX_DECODED_BYTES={bound}"])
+    command = compile_tb(run, "lz4", simulator, parameters)
+    _, stdout, _ = run.command([*command, "+vectors=" + str(path)], "lz4-sim-" + simulator,
+                              timeout=600 if compact else 3600)
+    reset_count = sum(bool(c["reset_after"]) for c in cases)
+    expected = f"COUNTS lz4 cases={len(cases)} completed={len(cases)-reset_count} reset={reset_count}"
+    if expected not in stdout:
+        raise AssertionError("LZ4 comparison counters missing: " + stdout)
+    run.receipt["coverage"]["lz4_valid_cases"] = len(valid)
+    run.receipt["coverage"]["lz4_completed_cases"] = len(cases) - reset_count
+    run.save()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=["behavior", "boundaries", "defects", "synthesis", "portable"])
-    parser.add_argument("--probe", choices=["tensor"])
+    parser.add_argument("--probe", choices=["tensor", "lz4"])
+    parser.add_argument("--lz4-bound", type=int, default=131072)
     parser.add_argument("--simulator", choices=["iverilog", "verilator"], default="verilator")
+    parser.add_argument("--repair-of", help="retained receipt explaining the prior failure")
     args = parser.parse_args()
     if (args.suite is None) == (args.probe is None):
         parser.error("select exactly one of --suite or --probe")
     directory = fresh(args.suite or args.probe, preparation=bool(args.probe))
     run = Run(directory)
+    if args.repair_of:
+        run.receipt["repair_of"] = args.repair_of
+        run.save()
     try:
         ref.selftest()
         run.versions(["python3", args.simulator] + (["vvp"] if args.simulator == "iverilog" else ["make", "g++"]))
         if args.probe == "tensor":
             tensor_probe(run, args.simulator, 8 if args.simulator == "iverilog" else 256)
+        elif args.probe == "lz4":
+            lz4_probe(run, args.simulator, args.lz4_bound)
         else:
             raise NotImplementedError(f"{args.suite}: complete admitted suite not yet implemented")
     except Exception as exc:
