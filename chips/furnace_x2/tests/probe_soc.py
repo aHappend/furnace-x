@@ -24,7 +24,7 @@ CELLS = (
 )
 
 
-def stimulus(run, cell, seed, frames, errors=False):
+def stimulus(run, cell, seed, frames, errors=False, fault=0):
     iw, ih, ow, oh, n, depth, ring, tile = cell
     weights = [-8, -3, 0, 7, 1, -1, 5, -6]
     packed_weights = sum((v & 15) << (4 * i) for i, v in enumerate(weights))
@@ -106,7 +106,9 @@ def stimulus(run, cell, seed, frames, errors=False):
         ve.append(int.from_bytes(mm.record(0 if verror else vector(vision), ident, verror), "little"))
         ae.append(int.from_bytes(mm.record(0 if aerror else vector(audio),
                                           audio_ident, aerror), "little"))
-        result_error = 8 if audio_ident != ident else verror or aerror
+        token_verror = 5 if fault == 5 and frame == 0 else verror
+        token_aerror = 5 if fault == 6 and frame == 0 else aerror
+        result_error = 8 if audio_ident != ident else token_verror or token_aerror
         result = 0 if result_error else mm.tensor_w4(weights, (*vision, *audio))
         re.append(int.from_bytes(mm.record(result, ident, result_error), "little"))
     files = (("vision.hex", vi, 7), ("audio.hex", ai, 9),
@@ -123,7 +125,8 @@ def stimulus(run, cell, seed, frames, errors=False):
     run.receipt["seed"] = seed
     run.receipt["expected_pairs"] = frames
     run.receipt["directed_errors"] = errors
-    run.receipt["expected_correct_consecutive_tail"] = frames-8 if errors else frames
+    run.receipt["stream_axi_fault"] = fault
+    run.receipt["expected_correct_consecutive_tail"] = frames-(8 if errors else int(fault != 0))
     run.save()
     return [f"+IMAGE={run.path}/memory.hex",
             f"+VISION={run.path}/vision.hex", f"+AUDIO={run.path}/audio.hex",
@@ -131,20 +134,22 @@ def stimulus(run, cell, seed, frames, errors=False):
             f"+AEXPECTED={run.path}/audio-expected.hex",
             f"+REXPECTED={run.path}/result-expected.hex",
             f"+VC={len(vi)}", f"+AC={len(ai)}", f"+FRAMES={frames}", f"+SEED={seed}",
+            f"+FAULT={fault}",
             f"+KEY={int.from_bytes(key, 'little'):032x}",
             f"+WEIGHTS={packed_weights:08x}",
             f"+LEGACY={mm.tensor_w4(weights, activations) & ((1 << 64)-1):016x}"]
 
 
-def execute(run, cell, seed, simulator, sources=None, errors=False, frames=None):
+def execute(run, cell, seed, simulator, sources=None, errors=False, frames=None, fault=0):
     frames = (1 if simulator == "iverilog" else
               frames if frames is not None else max(16, cell[5]+2) if errors else 8)
     if simulator == "iverilog":
         errors = False
     if simulator == "iverilog" and max(cell[:4]) >= 64:
         cell = CELLS[1]
-    args = stimulus(run, cell, seed, frames, errors)
+    args = stimulus(run, cell, seed, frames, errors, fault)
     parameters = dict(zip(("IW", "IH", "OW", "OH", "N", "DEPTH", "RING", "TILE"), cell))
+    parameters["FAULT_SWEEP"] = int(simulator == "verilator" and fault == 0)
     rtl = (sources if sources is not None else
            [str(p.relative_to(ROOT)) for p in sorted(ROOT.glob("rtl/*.sv"))])
     obj = run.path / "compile-obj"
@@ -166,10 +171,17 @@ def execute(run, cell, seed, simulator, sources=None, errors=False, frames=None)
             log = run.command([str(obj / "sim"), *args], "simulation")
         if "COMPARED legacy=1" not in log.read_text():
             raise AssertionError("missing completed comparison summary")
+        expected_faults = 4 if parameters["FAULT_SWEEP"] else int(fault != 0)
+        if f"axi_faults={expected_faults}" not in log.read_text():
+            raise AssertionError("required AXI error injection/comparison absent")
         run.receipt.setdefault("soc_comparisons", []).append(
             dict(configuration=cell, seed=seed, pairs=frames,
-                 legacy_completions=1, rejected_authentication_updates=1,
-                 stored_feature_records=2 * frames, stored_result_records=frames,
+                 successful_legacy_completions=1, rejected_authentication_updates=1,
+                 rejected_candidate_dma_updates=4 if parameters["FAULT_SWEEP"] else 0,
+                 injected_axi_failures=expected_faults,
+                 feature_record_data_comparisons=2*frames, result_record_data_comparisons=frames,
+                 successful_feature_write_responses=2*frames-int(fault in (5, 6)),
+                 successful_result_write_responses=frames-int(fault == 7),
                  raw_output=str(log.relative_to(ROOT))))
         run.save()
     finally:
@@ -184,6 +196,7 @@ def main():
     parser.add_argument("--simulator", choices=("iverilog", "verilator"), default="verilator")
     parser.add_argument("--repair-of")
     parser.add_argument("--errors", action="store_true")
+    parser.add_argument("--fault", type=int, choices=(0, 5, 6, 7), default=0)
     parser.add_argument("--lower-packed", action="store_true",
                         help="Behaviorally exercise the exact Yosys input conversion")
     args = parser.parse_args()
@@ -195,7 +208,7 @@ def main():
             from yosys_input import prepare_sources
             sources = prepare_sources(run)
         execute(run, CELLS[args.cell], args.seed, args.simulator,
-                sources=sources, errors=args.errors)
+                sources=sources, errors=args.errors, fault=args.fault)
     except Exception as caught:
         error = caught
     finally:

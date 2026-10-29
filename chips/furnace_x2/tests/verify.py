@@ -167,12 +167,43 @@ def main():
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--fusion-depth", type=int, choices=(1, 3, 16))
     parser.add_argument("--qos", action="store_true")
+    parser.add_argument("--mutation", type=int, choices=range(8),
+                        help="Preparation-only one mutation and unmutated control")
+    parser.add_argument("--parameters", action="store_true")
+    parser.add_argument("--security-kind", type=int, choices=range(4))
+    parser.add_argument("--legacy-soc", action="store_true")
+    parser.add_argument("--csr", action="store_true")
     args = parser.parse_args()
     run = Run(f"l1-{args.suite}", ["python3", *sys.argv],
               preparation=args.preparation, repair_of=args.repair_of)
     error = None
     try:
-        if args.qos:
+        if args.csr:
+            if not args.preparation:
+                raise ValueError("--csr requires --preparation")
+            import csr_checks
+            csr_checks.execute(run)
+        elif args.legacy_soc:
+            if not args.preparation:
+                raise ValueError("--legacy-soc requires --preparation")
+            import legacy_soc_checks
+            legacy_soc_checks.execute(run, args.reference, args.seed, limit=6)
+        elif args.security_kind is not None:
+            if not args.preparation:
+                raise ValueError("--security-kind requires --preparation")
+            import security_checks
+            security_checks.execute(run, args.security_kind, args.reference, args.simulator)
+        elif args.parameters:
+            if not args.preparation:
+                raise ValueError("--parameters requires --preparation")
+            import parameter_checks
+            parameter_checks.execute(run)
+        elif args.mutation is not None:
+            if not args.preparation:
+                raise ValueError("--mutation requires --preparation")
+            import mutation_checks
+            mutation_checks.one(run, args.mutation)
+        elif args.qos:
             if not args.preparation:
                 raise ValueError("--qos requires --preparation")
             import qos_checks
@@ -208,6 +239,12 @@ def main():
         elif args.suite == "behavior":
             import matrix_checks
             matrix_checks.execute(run)
+        elif args.suite == "mutations":
+            import mutation_checks
+            mutation_checks.execute(run)
+        elif args.suite == "reproduction":
+            import reproduction_checks
+            reproduction_checks.execute(run)
         else:
             raise NotImplementedError(
                 f"{args.suite} suite is not yet implemented; no acceptance claimed")

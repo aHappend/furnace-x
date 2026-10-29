@@ -11,6 +11,7 @@ def scenarios():
     for bank in range(4):
         for write in (0, 1):
             base = (bank << 16) | (write << 18)
+            cases.append(base)
             for index, order in enumerate(itertools.permutations(range(4))):
                 priorities = [0] * 4
                 for source, value in zip(order, (15, 11, 5, 0)):
@@ -28,6 +29,7 @@ def scenarios():
             if write:
                 for wlast in (1, 2):
                     cases.append(base | (1 << 19) | (wlast << 24) | 0x7531)
+            cases.append(base | (3 << 24) | 0x00F0)
     return cases
 
 
