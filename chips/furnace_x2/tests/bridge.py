@@ -82,9 +82,15 @@ wire [W+L:0] now_b={m_axis_tdata,m_axis_tkeep,m_axis_tlast};
 wire [98:0] now_c={m_crc32c,m_crc64_nvme,m_crc_mismatch,m_crc_protocol_error};
 wire [615:0] now_m={m_header,m_packet_bytes,m_rss_hash,m_rss_valid,m_rule_hit,m_rule_index,m_action};
 task automatic report(input string record);
+reg [1023:0] io_error;
 begin
  $display("%s",record);
  $fdisplay(transcript,"%s",record);
+ // Check completed-record writes without adding per-cycle I/O.
+ $fflush();
+ $fflush(transcript);
+ if ($ferror(transcript,io_error))
+  $fatal(1,"TRANSCRIPT_WRITE_ERROR %s",io_error);
 end endtask
 task automatic reset_check;
 begin

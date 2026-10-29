@@ -16,6 +16,8 @@ their receipt hash is bound before execution and rechecked at completion.
 Top simulations also retain a separate file-channel copy of public observations.
 It must agree byte-for-byte with stdout events; neither channel replaces missing
 or corrupt observations. This localizes future transport loss, not its cause.
+The bridge flushes at completed event records and checks file-channel I/O errors;
+this is not a remedy for exhausted storage or lost historical evidence.
 """
 import argparse
 from collections import Counter
