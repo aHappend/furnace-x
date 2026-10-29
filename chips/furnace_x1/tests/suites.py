@@ -16,8 +16,16 @@ import yosys_packed
 def child(parent, label, function):
     directory = fresh(label, preparation="preparation" in parent.directory.parts)
     run = Run(directory)
-    row = {"label": label, "receipt": str(directory.relative_to(ROOT) / "receipt.json")}
-    parent.receipt.setdefault("runs", []).append(row)
+    run.receipt["parent_receipt"] = str(parent.directory.relative_to(ROOT) / "receipt.json")
+    run.save()
+    rows = parent.receipt.setdefault("runs", [])
+    row = next((r for r in rows if r["label"] == label), None)
+    if row is None:
+        row = {"label": label}
+        rows.append(row)
+    elif row["outcome"] != "not_started":
+        raise AssertionError(f"duplicate verification run: {label}")
+    row.update(receipt=str(directory.relative_to(ROOT) / "receipt.json"), outcome="running")
     parent.save()
     try:
         function(run)
@@ -110,7 +118,7 @@ def parameter_diagnostics(run, api):
 def synthesis_matrix(run, api, configurations=((1, 1), (257, 3), (4096, 8), (65536, 16))):
     rtl = yosys_packed.sources(run)
     # Execute the generated syntax-lowered sources, not a bypass implementation.
-    api.soc_probe(run, "iverilog", count=4, rtl=rtl)
+    api.soc_probe(run, "iverilog", count=5, rtl=rtl)
     for max_tile, depth in configurations:
         synthesis.synthesize(run, max_tile, depth, f"yosys-{max_tile}-{depth}", rtl=rtl)
     if len(run.receipt["synthesis"]) != len(configurations):
@@ -141,7 +149,10 @@ def portable(run):
     receipt = json.loads((bundle / match[1]).read_text())
     if receipt["outcome"] != "passed" or receipt["source_sha256"] != copied:
         raise AssertionError("portable child sources/outcome not bound")
-    if receipt["coverage"].get("soc_compared_descriptors") != 4 or not receipt.get("synthesis"):
+    expected = receipt.get("soc_expected", [])
+    if (receipt["coverage"].get("soc_compared_descriptors") != 5 or not receipt.get("synthesis")
+            or {r["mode"] for r in expected if r["status"] == 0} != {0, 1, 2}
+            or not any(r["status"] == 4 for r in expected) or expected[-1]["status"] != 0):
         raise AssertionError("portable integrated/synthesis evidence absent")
     run.receipt["coverage"]["portable"] = {
         "copied_files": len(copied), "all_modes_and_tag_rejection": True,
@@ -151,13 +162,34 @@ def portable(run):
 
 
 def execute(suite, run, api):
+    parameter_labels = [f"illegal-{field}-{value}" for field, values in
+                        (("MAX_TILE_BYTES", (0, 65537)), ("RING_DEPTH", (0, 17)))
+                        for value in values] + ["illegal-decoder-0", "illegal-decoder-131073"]
+    required = {
+        "behavior": ["icarus-tensor", "icarus-crypto", "icarus-lz4", "icarus-soc",
+                     "tensor", "crypto", "lz4", "xbar", "soc-32-1", "soc-257-3", "soc-4096-8"],
+        "boundaries": ["csr-icarus", "csr-verilator"] + [f"ring-{d}" for d in (1, 3, 8, 16)] +
+                      [f"boundary-{m}-{d}" for m in (1, 16, 257, 4096, 65536) for d in (1, 3, 8, 16)] +
+                      ["soc-fault-reset", "soc-integrated-65536", "soc-capacity-65536"] +
+                      parameter_labels + ["lz4-bound-131072", "lz4-bound-65536", "lz4-bound-1",
+                                          "singleton-crypto"],
+    }
+    if suite in required:
+        run.receipt["runs"] = [{"label": label, "outcome": "not_started", "receipt": None}
+                               for label in required[suite]]
+    if suite == "synthesis":
+        run.receipt["required_synthesis_configurations"] = [[1, 1], [257, 3], [4096, 8], [65536, 16]]
+    if suite == "defects":
+        run.receipt["mutation_ledger"] = {key: {"outcome": "not_started", "receipt": None}
+                                          for key in mutations.MUTANTS}
+    run.save()
     if suite == "behavior":
         run.versions(["python3", "iverilog", "vvp", "verilator", "make", "g++"])
         for label, fn in [
             ("icarus-tensor", lambda r: api.tensor_probe(r, "iverilog", 8)),
             ("icarus-crypto", lambda r: api.crypto_probe(r, "iverilog")),
             ("icarus-lz4", lambda r: api.lz4_probe(r, "iverilog")),
-            ("icarus-soc", lambda r: api.soc_probe(r, "iverilog", 4)),
+            ("icarus-soc", lambda r: api.soc_probe(r, "iverilog", 5)),
             ("tensor", api.tensor_probe), ("crypto", api.crypto_probe),
             ("lz4", api.lz4_probe), ("xbar", api.xbar_probe),
         ]:
@@ -187,8 +219,11 @@ def execute(suite, run, api):
     elif suite == "defects":
         run.versions(["python3", "verilator", "make", "g++"])
         for key in mutations.MUTANTS:
+            run.receipt["mutation_ledger"][key]["outcome"] = "running"
+            run.save()
             receipt = mutations.execute(key, api.compile_tb, api.tensor_vectors, preparation=False)
             run.receipt.setdefault("mutations", {})[key] = receipt
+            run.receipt["mutation_ledger"][key] = {"outcome": "detected", "receipt": receipt}
             run.save()
         if len(run.receipt["mutations"]) != 6:
             raise AssertionError("missing mandatory detected mutants")
@@ -203,4 +238,6 @@ def execute(suite, run, api):
         raise ValueError(f"unknown suite: {suite}")
     if hashes() != run.receipt["source_sha256"]:
         raise AssertionError("accepted verification/design sources changed during execution")
+    if suite in required and any(row["outcome"] != "passed" for row in run.receipt["runs"]):
+        raise AssertionError("required verification run missing or incomplete")
     run.save()

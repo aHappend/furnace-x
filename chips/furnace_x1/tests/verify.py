@@ -333,7 +333,7 @@ def main():
         elif args.probe == "lz4":
             lz4_probe(run, args.simulator, args.lz4_bound)
         elif args.probe == "soc":
-            soc_probe(run, args.simulator, count=4 if args.simulator == "iverilog" else 24,
+            soc_probe(run, args.simulator, count=5 if args.simulator == "iverilog" else 24,
                       max_tile=args.max_tile, depth=args.ring_depth)
         elif args.probe == "soc-boundaries":
             soc_boundary_probe(run, args.simulator, args.max_tile, args.ring_depth)
@@ -351,7 +351,7 @@ def main():
                          "['sv2v','slang','yosys-slang','yosys']}))"], "frontend-tools")
         elif args.probe == "yosys-lowered":
             rtl = yosys_packed.sources(run)
-            soc_probe(run, "iverilog", count=4, rtl=rtl)
+            soc_probe(run, "iverilog", count=5, rtl=rtl)
             synthesis.synthesize(run, args.max_tile, args.ring_depth, "yosys-probe", rtl=rtl)
         elif args.probe == "crypto":
             crypto_probe(run, args.simulator, args.crypto_bound)

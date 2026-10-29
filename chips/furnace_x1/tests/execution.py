@@ -116,6 +116,14 @@ class Run:
                         removed.append(str(path.relative_to(self.directory)))
                         path.unlink()
         self.receipt["removed_transient_objects"] = removed
+        if outcome == "failed":
+            rows = list(self.receipt.get("runs", []))
+            rows += list(self.receipt.get("mutation_ledger", {}).values())
+            for row in rows:
+                if row.get("outcome") == "not_started":
+                    row["outcome"] = "not_executed"
+                elif row.get("outcome") == "running":
+                    row["outcome"] = "failed"
         self.receipt.update(outcome=outcome, end=now())
         if error is not None:
             self.receipt["error"] = str(error)
