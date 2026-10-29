@@ -149,6 +149,14 @@ def make_cases(bound=131072, compact=False):
         label = f"overlap-offset{offset}"
         valid.append((label, frame, bytes(expected)))
         add(label, frame, bytes(expected))
+    for label, block, expected in [
+        ("match-extension255-chain", b"\x1fA\x01\x00\xff\xff\x07\x5012345",
+         b"A" * 537 + b"12345"),
+        ("minimum-match4", b"\x10A\x01\x00\x8012345678", b"A" * 5 + b"12345678"),
+    ]:
+        frame = lz4_frame([(False, block)], expected, block_checksum=True, content_checksum=True)
+        valid.append((label, frame, expected))
+        add(label, frame, expected)
     for label, frame, expected in extended():
         valid.append((label, frame, expected))
         if len(expected) <= bound:
@@ -159,6 +167,15 @@ def make_cases(bound=131072, compact=False):
     # Excess bytes are concealed behind an otherwise accepted declaration.
     b2_frame, b2_expected = extended()[2][1:]
     add("concealed-excess", b2_frame, b2_expected[:65536], 2, decoded=65536)
+    recover()
+    raw = pattern(65536)
+    if bound >= 65557:
+        frame = lz4_frame([(True, raw), (False, b"\x0c\xff\xff\x5012345")],
+                          raw + raw[1:17] + b"12345", independent=True)
+        add("independent-block-history-invalidated", frame, raw, 3, decoded=65557)
+        recover()
+    frame = lz4_frame([(False, b"\x0c\x01\x00\x5012345")], b"A" * 16 + b"12345")
+    add("new-frame-has-no-history", frame, b"", 3, decoded=21)
     recover()
     if bound == 131072:
         add("decoded131073-start-reject", good_frame, b"", 2, decoded=131073)
@@ -181,6 +198,8 @@ def make_cases(bound=131072, compact=False):
     add("trailing-byte", good_frame + b"x", good, 2)
     recover()
     add("concatenated-frame", good_frame * 2, good, 2)
+    recover()
+    add("skippable-frame", b"\x50\x2a\x4d\x18\x00\x00\x00\x00", b"", 2, decoded=0)
     recover()
     for index in range(4):
         frame = bytearray(good_frame)

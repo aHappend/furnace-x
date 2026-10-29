@@ -1,6 +1,5 @@
 """Self-contained admitted suites; no prior evidence or generated build is an input."""
 
-import hashlib
 import re
 import shutil
 import sys
@@ -15,7 +14,7 @@ import yosys_packed
 
 
 def child(parent, label, function):
-    directory = fresh(label)
+    directory = fresh(label, preparation="preparation" in parent.directory.parts)
     run = Run(directory)
     row = {"label": label, "receipt": str(directory.relative_to(ROOT) / "receipt.json")}
     parent.receipt.setdefault("runs", []).append(row)
@@ -87,6 +86,27 @@ def illegal_parameter(run, api, name, parameters):
     run.save()
 
 
+def ring(run, api, depth):
+    command = api.compile_tb(run, "ring", "iverilog", [f"-Pring_tb.RING_DEPTH={depth}"])
+    _, stdout, _ = run.command(command, "ring-sim", timeout=600)
+    match = re.search(rf"COUNTS ring depth={depth} comparisons=(\d+) wraps=8 coincidences=16", stdout)
+    if match is None or int(match[1]) < 40:
+        raise AssertionError("ring comparisons missing: " + stdout)
+    run.receipt["coverage"]["ring"] = dict(depth=depth, comparisons=int(match[1]), wraps=8,
+                                         pre_edge_capacity_collisions=16)
+    run.save()
+
+
+def parameter_diagnostics(run, api):
+    for field, values in (("MAX_TILE_BYTES", (0, 65537)), ("RING_DEPTH", (0, 17))):
+        for value in values:
+            child(run, f"illegal-{field}-{value}", lambda r, f=field, v=value:
+                  illegal_parameter(r, api, "soc", [f"-Psoc_tb.{f}={v}"]))
+    for value in (0, 131073):
+        child(run, f"illegal-decoder-{value}", lambda r, v=value:
+              illegal_parameter(r, api, "lz4", [f"-Plz4_tb.MAX_DECODED_BYTES={v}"]))
+
+
 def synthesis_matrix(run, api, configurations=((1, 1), (257, 3), (4096, 8), (65536, 16))):
     rtl = yosys_packed.sources(run)
     # Execute the generated syntax-lowered sources, not a bypass implementation.
@@ -149,6 +169,8 @@ def execute(suite, run, api):
         run.versions(["python3", "iverilog", "vvp", "verilator", "make", "g++"])
         child(run, "csr-icarus", lambda r: api.csr_probe(r, "iverilog"))
         child(run, "csr-verilator", lambda r: api.csr_probe(r, "verilator"))
+        for depth in (1, 3, 8, 16):
+            child(run, f"ring-{depth}", lambda r, d=depth: ring(r, api, d))
         for max_tile in (1, 16, 257, 4096, 65536):
             for depth in (1, 3, 8, 16):
                 child(run, f"boundary-{max_tile}-{depth}",
@@ -158,13 +180,7 @@ def execute(suite, run, api):
         child(run, "soc-integrated-65536", lambda r: api.soc_boundary_probe(r, max_tile=65536, depth=16))
         child(run, "soc-capacity-65536", lambda r: api.soc_probe(
             r, max_tile=65536, depth=16, count=1, large=True))
-        for field, values in (("MAX_TILE_BYTES", (0, 65537)), ("RING_DEPTH", (0, 17))):
-            for value in values:
-                child(run, f"illegal-{field}-{value}", lambda r, f=field, v=value:
-                      illegal_parameter(r, api, "soc", [f"-Psoc_tb.{f}={v}"]))
-        for value in (0, 131073):
-            child(run, f"illegal-decoder-{value}", lambda r, v=value:
-                  illegal_parameter(r, api, "lz4", [f"-Plz4_tb.MAX_DECODED_BYTES={v}"]))
+        parameter_diagnostics(run, api)
         for bound in (131072, 65536, 1):
             child(run, f"lz4-bound-{bound}", lambda r, b=bound: api.lz4_probe(r, bound=b))
         child(run, "singleton-crypto", lambda r: api.crypto_probe(r, max_length=1))

@@ -1,5 +1,32 @@
 #!/usr/bin/env python3
-"""FURNACE-X1 source-bound public-interface L1 verification and retained probes."""
+"""FURNACE-X1 source-bound public-interface L1 verification.
+
+Run each command from the project directory:
+    python3 tests/verify.py --suite behavior
+    python3 tests/verify.py --suite boundaries
+    python3 tests/verify.py --suite defects
+    python3 tests/verify.py --suite synthesis
+    python3 tests/verify.py --suite portable
+
+behavior: compact IEEE smoke; exact AES/GCM, LZ4 and tensor oracles;
+          concurrent AXI scoreboards; three seeds at each admitted SoC geometry.
+boundaries: all twenty top parameter tuples; CSR/ring event priorities; bus
+            faults, reset epochs, singleton/64-KiB capacity, extended LZ4 history
+            and explicit illegal-parameter diagnostics.
+defects: six disposable, compiled RTL mutations must reach their named functional
+         comparison, not merely fail compilation or time out.
+synthesis: real memory-preserving Yosys at minimum, nonpower, default and maximum
+           geometry, with literal engines, state, memories and outputs retained.
+portable: copy only declared sources and execute a fresh relative-path process
+          for all tensor modes, authentication rejection and real synthesis.
+
+Dependencies: Python 3, Icarus/vvp, Verilator, make, g++ and Yosys. Optional
+installed liblz4/cryptography independently cross-check the mandatory pure-Python
+references; published known answers remain mandatory without either library.
+Every invocation retains fresh source snapshots, exact subprocess logs, achieved
+comparisons and failures. --probe is advisory preparation, never suite acceptance.
+The shared runtime owns physical timing/hardware gates and the final report.
+"""
 
 import argparse
 from pathlib import Path
@@ -22,7 +49,7 @@ import mutations
 import suites
 
 
-def tensor_vectors(path, count=256):
+def tensor_vectors(path, count=256, coverage=None):
     rng = random.Random(2026)
     special = [0, 0x8000, 1, 0x8001, 0x7F, 0x80, 0x807F, 0x8080,
                0x3F80, 0xBF80, 0x3F81, 0x3F00, 0x7F7F, 0xFF7F,
@@ -30,6 +57,9 @@ def tensor_vectors(path, count=256):
     lines = []
     counts = {}
     results = 0
+    codes = {0: set(), 2: set()}
+    lane_distinct = set()
+    directed = []
     for mode in range(3):
         accumulator = 0
         for index in range(count):
@@ -63,6 +93,9 @@ def tensor_vectors(path, count=256):
                     elif index == 27 and mode == 1:
                         weights = [1] + [0] * 7
                         activations = [0x3700] + [0] * 7
+                    elif index == 28 and mode == 1:
+                        weights = [3] + [0] * 7
+                        activations = [0x3700] + [0] * 7
             else:
                 weights = [rng.randrange(65536 if mode == 1 else 16) for _ in range(8)]
                 activations = [rng.randrange(65536) for _ in range(8)]
@@ -72,12 +105,21 @@ def tensor_vectors(path, count=256):
             if first:
                 accumulator = 0
             accumulator = ref.tensor(mode, weights, activations, accumulator)
+            if mode != 1:
+                codes[mode].update(weights)
+            if len(set(activations)) == 8:
+                lane_distinct.add(mode)
+            if mode != 0 and index in (0, 21, 22, 23, 24, 25, 26, 27, 28):
+                directed.append(dict(mode=mode, index=index, expected=f"{accumulator:08x}"))
             w = sum(x << ((16 if mode == 1 else 4) * lane) for lane, x in enumerate(weights))
             a = sum(x << (16 * lane) for lane, x in enumerate(activations))
             lines.append(f"{mode} {int(first)} {int(last)} {w:032x} {a:032x} {accumulator:016x}\n")
             results += last
         counts[str(mode)] = count
     path.write_text("".join(lines))
+    if coverage is not None:
+        coverage.update(w4_codes={str(k): sorted(v) for k, v in codes.items()},
+                        lane_distinct_modes=sorted(lane_distinct), directed_results=directed)
     return counts, results
 
 
@@ -98,7 +140,8 @@ def compile_tb(run, name, simulator="verilator", parameters=(), rtl=None, tb=Non
 
 def tensor_probe(run, simulator="verilator", count=256, rtl=None):
     path = run.directory / "tensor-vectors.txt"
-    counts, results = tensor_vectors(path, count)
+    exercised = {}
+    counts, results = tensor_vectors(path, count, exercised)
     command = compile_tb(run, "tensor", simulator, rtl=rtl)
     _, stdout, _ = run.command([*command, "+vectors=" + str(path)], "tensor-sim-" + simulator,
                               timeout=600 if simulator == "iverilog" else 3600)
@@ -107,6 +150,12 @@ def tensor_probe(run, simulator="verilator", count=256, rtl=None):
         raise AssertionError("tensor comparison counters missing: " + stdout)
     run.receipt["coverage"]["tensor_vectors_per_mode"] = counts
     run.receipt["coverage"]["tensor_compared_results"] = results
+    if count >= 256:
+        if any(codes != list(range(16)) for codes in exercised["w4_codes"].values()):
+            raise AssertionError("not every W4 code reached the tensor oracle")
+        if exercised["lane_distinct_modes"] != [0, 1, 2]:
+            raise AssertionError("lane-distinct activation coverage absent")
+    run.receipt["coverage"]["tensor_transferred_categories"] = exercised
     run.save()
 
 
@@ -185,10 +234,11 @@ def xbar_probe(run, simulator="verilator"):
     command = compile_tb(run, "xbar", simulator, tb=tb)
     _, stdout, _ = run.command(command, "xbar-sim-" + simulator,
                               timeout=600 if simulator == "iverilog" else 3600)
-    if "COUNTS xbar reads=88 writes=88 " not in stdout:
+    if "COUNTS xbar reads=184 writes=184 " not in stdout:
         raise AssertionError("crossbar comparisons absent: " + stdout)
-    run.receipt["coverage"]["xbar_read_transactions"] = 88
-    run.receipt["coverage"]["xbar_write_transactions"] = 88
+    run.receipt["coverage"]["xbar_read_transactions"] = 184
+    run.receipt["coverage"]["xbar_write_transactions"] = 184
+    run.receipt["coverage"]["xbar_concurrent_targets_per_direction"] = 4
     run.save()
 
 
@@ -201,7 +251,7 @@ def csr_probe(run, simulator="iverilog"):
     _, stdout, _ = run.command(command, "csr-sim-" + simulator,
                               timeout=600 if simulator == "iverilog" else 3600)
     import re
-    result = re.search(r"COUNTS csr comparisons=(\d+) set_clear=1 concurrent=1", stdout)
+    result = re.search(r"COUNTS csr comparisons=(\d+) set_clear=2 concurrent=1", stdout)
     if result is None or int(result[1]) < 60:
         raise AssertionError("CSR comparison counters missing: " + stdout)
     run.receipt["coverage"]["csr_comparisons"] = int(result[1])
@@ -229,7 +279,14 @@ def lz4_probe(run, simulator="verilator", bound=131072):
     expected = f"COUNTS lz4 cases={len(cases)} completed={len(cases)-reset_count} reset={reset_count}"
     if expected not in stdout:
         raise AssertionError("LZ4 comparison counters missing: " + stdout)
-    run.receipt["coverage"]["lz4_valid_cases"] = len(valid)
+    successes = {c["label"] for c in cases if c["status"] == 0 and not c["reset_after"]}
+    errors = {c["label"] for c in cases if c["status"] != 0 and not c["reset_after"]}
+    if not compact and bound >= 65536 and (len(successes) < 64 or len(errors) < 32):
+        raise AssertionError("LZ4 valid/error category thresholds not met")
+    run.receipt["coverage"]["lz4_distinct_success_categories"] = sorted(successes)
+    run.receipt["coverage"]["lz4_distinct_error_categories"] = sorted(errors)
+    run.receipt["coverage"]["lz4_valid_cases"] = sum(
+        c["status"] == 0 and not c["reset_after"] for c in cases)
     run.receipt["coverage"]["lz4_completed_cases"] = len(cases) - reset_count
     run.save()
 
@@ -237,7 +294,7 @@ def lz4_probe(run, simulator="verilator", bound=131072):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=["behavior", "boundaries", "defects", "synthesis", "portable"])
-    parser.add_argument("--probe", choices=["tensor", "lz4", "soc", "soc-capacity", "soc-matrix-cell", "soc-boundaries", "synthesis", "frontends", "yosys-lowered", "crypto", "xbar", "csr", "mutation", "portable-smoke"])
+    parser.add_argument("--probe", choices=["tensor", "lz4", "soc", "soc-capacity", "soc-matrix-cell", "soc-boundaries", "synthesis", "frontends", "yosys-lowered", "crypto", "xbar", "csr", "ring", "parameters", "mutation", "portable-smoke"])
     parser.add_argument("--max-tile", type=int, default=32)
     parser.add_argument("--ring-depth", type=int, default=1)
     parser.add_argument("--mutant", choices=sorted(mutations.MUTANTS), default="sign")
@@ -265,6 +322,10 @@ def main():
             run.versions(["python3", "yosys"])
             if args.probe in ("yosys-lowered", "portable-smoke"):
                 run.versions(["iverilog", "vvp"])
+        elif args.probe in ("ring", "parameters"):
+            run.versions(["python3", "iverilog", "vvp"])
+        elif args.probe in ("mutation", "soc-capacity", "soc-matrix-cell"):
+            run.versions(["python3", "verilator", "make", "g++"])
         else:
             run.versions(["python3", args.simulator] + (["vvp"] if args.simulator == "iverilog" else ["make", "g++"]))
         if args.probe == "tensor":
@@ -298,6 +359,10 @@ def main():
             xbar_probe(run, args.simulator)
         elif args.probe == "csr":
             csr_probe(run, args.simulator)
+        elif args.probe == "ring":
+            suites.ring(run, sys.modules[__name__], args.ring_depth)
+        elif args.probe == "parameters":
+            suites.parameter_diagnostics(run, sys.modules[__name__])
         elif args.probe == "portable-smoke":
             suites.synthesis_matrix(run, sys.modules[__name__], configurations=((32, 1),))
         elif args.probe == "mutation":

@@ -38,6 +38,7 @@ def generate(path, count=24, max_tile=32, depth=1, seed=17, *, content_checksum=
     write(0x40, 1)
     read(8, 2)
     write(0x10, 3)
+    lines.append("9 0\n")
     completed = 0
     next_slot = 0
     for batch_start in range(0, count, depth):
@@ -159,5 +160,16 @@ def generate(path, count=24, max_tile=32, depth=1, seed=17, *, content_checksum=
         completed += batch_size
         lines.append(f"3 {completed}\n")
         write(4, 0)
+        batch = records[batch_start:completed]
+        irq_status = int(any(r["status"] == 0 for r in batch))
+        irq_status |= 2 * int(any(r["status"] != 0 for r in batch))
+        read(0x0C, irq_status)
+        read(0x14, batch[-1]["status"])
+        read(0x28, batch[-1]["tile_id"])
+        read(0x24, completed)
+        read(8, 2 | (8 if any(r["status"] != 0 for r in records) else 0))
+        lines.append("9 1\n")
+        write(0x0C, 3)
+        lines.append("9 0\n")
     path.write_text("".join(lines))
     return records

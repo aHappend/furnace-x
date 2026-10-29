@@ -77,7 +77,9 @@ def generate(path, max_tile, depth, *, compact=False):
         elif case == "weight-zero":
             field(28, 0)
         elif case == "weight-bound":
-            field(28, max_tile + 1)
+            oversized = ((max_tile >> 2) + 1) << 2
+            field(28, oversized)
+            field(32, oversized >> 2)
         elif case == "vector-zero":
             field(32, 0)
         elif case == "vector-overflow":
@@ -149,7 +151,8 @@ def generate(path, max_tile, depth, *, compact=False):
             data[desc_address + i] = byte
             after[desc_address + i] = byte
         lines += [f"0 {a:x} {byte:x} {int(a in permissions)} {after[a]:x}" for a, byte in sorted(data.items())]
-        lines += ["8", f"4 {rd_fault:x} {wr_fault:x} 2"]
+        response = 3 if case in ("frame-read", "plaintext-write", "completion-write") else 2
+        lines += ["8", f"4 {rd_fault:x} {wr_fault:x} {response}"]
         lines += ["1 4 0 f 0 0 0", f"1 24 {head+1:x} f 0 3 0",
                   f"1 24 {head:x} f 2 0 3",
                   f"1 24 {head+depth+1:x} f 2 0 0",
