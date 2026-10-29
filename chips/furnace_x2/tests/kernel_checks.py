@@ -45,8 +45,8 @@ def vectors(kind, n, seed):
     return result
 
 
-def execute(run, kind, n, simulator, seed=17, sources=None):
-    pairs = vectors(kind, n, seed)
+def execute(run, kind, n, simulator, seed=17, sources=None, pairs=None):
+    pairs = vectors(kind, n, seed) if pairs is None else pairs
     label = f"kernel-{kind}-n{n}-{simulator}"
     args = []
     for stem, index in (("input", 0), ("expected", 1)):

@@ -6,6 +6,9 @@ Each generated input is retained alongside the original source fingerprints.
 """
 
 import re
+import hashlib
+
+from run_support import ROOT
 
 
 TOKEN = re.compile(
@@ -109,3 +112,17 @@ def lower_packed(text):
     if re.search(r"\b(?:wire|reg|logic)\s+(?:signed\s+)?\[[^]]+\]\s*\[", lowered):
         raise ValueError("unsupported multidimensional packed declaration remains")
     return lowered + "\n"
+
+
+def prepare_sources(run):
+    sources = []
+    for source in sorted(ROOT.glob("rtl/*.sv")):
+        target = run.path / source.name
+        (ROOT / target).write_text(lower_packed(source.read_text()))
+        sources.append(str(target))
+        run.receipt.setdefault("lowered_sha256", {})[str(target)] = hashlib.sha256(
+            (ROOT / target).read_bytes()).hexdigest()
+    if not sources:
+        raise AssertionError("no deliverable RTL sources")
+    run.save()
+    return sources

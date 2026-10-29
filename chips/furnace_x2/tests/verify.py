@@ -1,14 +1,31 @@
-"""Portable L1 verification. Native timing and hardware gates are runtime-owned."""
+"""Portable L1 verification; delivery is not yet verification-complete.
+
+Implemented entry paths:
+  smoke: reference KATs, four public arithmetic kernels, authenticated single-pair
+         complete SoC, corrupted candidate rejection, reset/startup/stall checks.
+  synthesis: procedural Yosys synthesis of three complete configurations, syntax
+             conversion behavioral comparison, literal hierarchy and cell checks.
+
+Saved independent compiled probes additionally cover malformed vision/audio
+streams, mismatched fusion IDs, full record-ring reservation/release, both lead
+directions, authenticated bank retention, and exact three-mode legacy arithmetic.
+They remain advisory until integrated into complete admitted check suites.
+
+Unfinished: the complete 7x3 behavioral matrix with exhaustive per-frame leaf
+vectors; complete legacy/security and CSR/DMA fault matrix; exhaustive QoS,
+protocol and parameter-boundary checks; eight functional mutation kills; and
+fresh-tree reproduction. Unfinished suites deliberately fail, never skip.
+The shared runtime owns native timing and hardware gates and product reporting.
+"""
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from run_support import ROOT, Run
-from yosys_input import lower_packed
+from yosys_input import prepare_sources
 
 
 SUITES = ("smoke", "behavior", "compatibility", "protocol", "mutations",
@@ -18,13 +35,7 @@ SUITES = ("smoke", "behavior", "compatibility", "protocol", "mutations",
 def synthesis(run):
     """Lower packed-vector syntax, preserving all procedural RTL for Yosys."""
     run.command(["yosys", "-V"], "yosys-version")
-    lowered_sources = []
-    for source in sorted(ROOT.glob("rtl/*.sv")):
-        target = run.path / source.name
-        (ROOT / target).write_text(lower_packed(source.read_text()))
-        lowered_sources.append(str(target))
-        run.receipt.setdefault("lowered_sha256", {})[str(target)] = hashlib.sha256(
-            (ROOT / target).read_bytes()).hexdigest()
+    lowered_sources = prepare_sources(run)
     # Exercise the actual syntax-lowered complete hierarchy as well as the
     # original source. Conversion is not allowed to create a passing netlist by
     # disconnecting public functionality.
@@ -56,6 +67,7 @@ def synthesis(run):
         modules = design["modules"]
         counts = {}
         paths = {}
+        subtree_state = {}
         leaf_cells = []
 
         def walk(module_name, path):
@@ -66,14 +78,20 @@ def synthesis(run):
             original = original.split()[0].lstrip("\\")
             counts[original] = counts.get(original, 0) + 1
             paths[path] = original
+            local_state = 0
             for name, cell in module.get("cells", {}).items():
                 child = cell["type"]
                 if child in modules:
-                    walk(child, f"{path}.{name}")
+                    local_state += walk(child, f"{path}.{name}")
                 elif child.startswith("$"):
                     leaf_cells.append(cell)
+                    local_state += int("dff" in child.lower() or child.startswith("$mem"))
                 else:
                     raise AssertionError(f"unresolved cell {child} at {path}.{name}")
+            output_bits = [bit for port in module.get("ports", {}).values()
+                           if port["direction"] == "output" for bit in port["bits"]]
+            subtree_state[path] = (local_state, sum(isinstance(b, int) for b in output_bits))
+            return local_state
 
         walk("furnace_x2_top", "furnace_x2_top")
         forbidden = [c["type"] for c in leaf_cells
@@ -97,8 +115,18 @@ def synthesis(run):
                     if p.split(".")[-1] == instance and m == module]
             if len(hits) != 1:
                 raise AssertionError(f"{instance}/{module}: observed {hits}")
+            if min(subtree_state[hits[0]]) == 0:
+                raise AssertionError(f"constant/stateless replacement at {hits[0]}")
         if counts.get("furnace_tensor8") != 1:
             raise AssertionError("X2 must contain exactly one active tensor")
+        for module, minimum in {
+            "furnace_aes128_block": 1, "furnace_aes128_gcm": 1,
+            "furnace_ghash_mul": 1, "furnace_lz4_frontend": 1,
+            "furnace_xxh32": 3, "furnace_command_ring": 1,
+            "furnace_x2_csr": 1, "furnace_dma128": 4,
+        }.items():
+            if counts.get(module, 0) < minimum:
+                raise AssertionError(f"missing active legacy functionality: {module}")
         state = sum("dff" in c["type"].lower() for c in leaf_cells)
         memories = sum(c["type"].startswith("$mem") for c in leaf_cells)
         arithmetic = sum(c["type"] in ("$add", "$sub", "$mul") for c in leaf_cells)
@@ -134,12 +162,32 @@ def main():
     parser.add_argument("--simulator", choices=("iverilog", "verilator"), default="iverilog")
     parser.add_argument("--tensor", action="store_true", help="Preparation-only tensor probe")
     parser.add_argument("--reference", action="store_true")
+    parser.add_argument("--matrix-cell", type=int, choices=range(7),
+                        help="Preparation-only one-cell matrix diagnostic")
+    parser.add_argument("--seed", type=int, default=17)
+    parser.add_argument("--fusion-depth", type=int, choices=(1, 3, 16))
+    parser.add_argument("--qos", action="store_true")
     args = parser.parse_args()
     run = Run(f"l1-{args.suite}", ["python3", *sys.argv],
               preparation=args.preparation, repair_of=args.repair_of)
     error = None
     try:
-        if args.tensor:
+        if args.qos:
+            if not args.preparation:
+                raise ValueError("--qos requires --preparation")
+            import qos_checks
+            qos_checks.execute(run, simulator=args.simulator)
+        elif args.fusion_depth is not None:
+            if not args.preparation:
+                raise ValueError("--fusion-depth requires --preparation")
+            import fusion_checks
+            fusion_checks.execute(run, args.fusion_depth)
+        elif args.matrix_cell is not None:
+            if not args.preparation:
+                raise ValueError("--matrix-cell requires --preparation")
+            import matrix_checks
+            matrix_checks.execute_cell(run, args.matrix_cell, args.seed)
+        elif args.tensor:
             if not args.preparation:
                 raise ValueError("--tensor requires --preparation")
             import tensor_checks
@@ -157,6 +205,9 @@ def main():
             synthesis(run)
         elif args.suite == "smoke":
             smoke(run)
+        elif args.suite == "behavior":
+            import matrix_checks
+            matrix_checks.execute(run)
         else:
             raise NotImplementedError(
                 f"{args.suite} suite is not yet implemented; no acceptance claimed")

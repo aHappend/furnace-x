@@ -26,7 +26,6 @@ CELLS = (
 
 def stimulus(run, cell, seed, frames, errors=False):
     iw, ih, ow, oh, n, depth, ring, tile = cell
-    rng = random.Random(seed)
     weights = [-8, -3, 0, 7, 1, -1, 5, -6]
     packed_weights = sum((v & 15) << (4 * i) for i, v in enumerate(weights))
     plain = packed_weights.to_bytes(4, "little")
@@ -78,18 +77,8 @@ def stimulus(run, cell, seed, frames, errors=False):
     for frame in range(frames):
         ident = (65533 + frame) & 65535
         audio_ident = (ident + 1) & 65535 if errors and frame == 7 else ident
-        pixels = [rng.randrange(256) for _ in range(iw * ih)]
-        samples = [rng.randrange(-32768, 32768) for _ in range(n)]
-        if frame == 0:
-            pixels = [255] * len(pixels)
-            samples = [-32768] * n
-        elif frame == 1:
-            pixels = [i & 255 for i in range(len(pixels))]
-            samples = [32767, -32768] * (n // 2)
-        elif frame == 2:
-            pixels = [0] * len(pixels)
-            pixels[0] = 255
-            samples = [32767] + [0] * (n - 1)
+        from matrix_checks import frame_inputs
+        pixels, samples = frame_inputs(cell, seed, frame)
         vision = mm.vision(pixels, iw, ih, ow, oh)[2]
         _, bins, audio = mm.audio(samples)
         mm.check_dft(mm.fir(samples), bins)
@@ -134,7 +123,7 @@ def stimulus(run, cell, seed, frames, errors=False):
     run.receipt["seed"] = seed
     run.receipt["expected_pairs"] = frames
     run.receipt["directed_errors"] = errors
-    run.receipt["expected_correct_consecutive_tail"] = 8 if errors else frames
+    run.receipt["expected_correct_consecutive_tail"] = frames-8 if errors else frames
     run.save()
     return [f"+IMAGE={run.path}/memory.hex",
             f"+VISION={run.path}/vision.hex", f"+AUDIO={run.path}/audio.hex",
@@ -147,8 +136,9 @@ def stimulus(run, cell, seed, frames, errors=False):
             f"+LEGACY={mm.tensor_w4(weights, activations) & ((1 << 64)-1):016x}"]
 
 
-def execute(run, cell, seed, simulator, sources=None, errors=False):
-    frames = 1 if simulator == "iverilog" else (16 if errors else 8)
+def execute(run, cell, seed, simulator, sources=None, errors=False, frames=None):
+    frames = (1 if simulator == "iverilog" else
+              frames if frames is not None else max(16, cell[5]+2) if errors else 8)
     if simulator == "iverilog":
         errors = False
     if simulator == "iverilog" and max(cell[:4]) >= 64:
@@ -194,11 +184,18 @@ def main():
     parser.add_argument("--simulator", choices=("iverilog", "verilator"), default="verilator")
     parser.add_argument("--repair-of")
     parser.add_argument("--errors", action="store_true")
+    parser.add_argument("--lower-packed", action="store_true",
+                        help="Behaviorally exercise the exact Yosys input conversion")
     args = parser.parse_args()
     run = Run("soc", ["python3", *sys.argv], preparation=True, repair_of=args.repair_of)
     error = None
     try:
-        execute(run, CELLS[args.cell], args.seed, args.simulator, errors=args.errors)
+        sources = None
+        if args.lower_packed:
+            from yosys_input import prepare_sources
+            sources = prepare_sources(run)
+        execute(run, CELLS[args.cell], args.seed, args.simulator,
+                sources=sources, errors=args.errors)
     except Exception as caught:
         error = caught
     finally:
