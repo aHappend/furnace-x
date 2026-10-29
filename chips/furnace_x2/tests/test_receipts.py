@@ -369,6 +369,65 @@ class ReceiptTests(unittest.TestCase):
     def test_rejected_simulation_still_cleans_build_intermediates(self):
         self.check_simulation_cleanup(7)
 
+    def reproduction_receipt(self):
+        results = {}
+        for width in (64, 512):
+            for name, packets, seeded in (("smoke", 8, 0), ("behavior-17", 160, 128)):
+                results[f"{name}-{width}"] = {
+                    "packets": packets, "compared_packets": packets, "seeded": seeded,
+                    "payload_stall_cycles": 1, "crc_stall_cycles": 1,
+                    "meta_stall_cycles": 1, "simultaneous_terminal": 1}
+        return {"outcome": "passed", "mode": "reproduction", "python_isolated": True,
+                "source_sha256": {"synthetic": "binding"}, "results": results}
+
+    def test_reproduction_measures_both_widths(self):
+        receipt = self.reproduction_receipt()
+        measured = verify.check_reproduction(receipt, receipt["source_sha256"])
+        self.assertEqual(set(measured), {"64", "512"})
+        for width in measured:
+            self.assertEqual(measured[width]["sample_seeded_packets"], 128)
+            self.assertEqual(measured[width]["sample_directed_packets"], 32)
+
+    def test_reproduction_pass_label_cannot_replace_coverage(self):
+        for width in (64, 512):
+            for field, value in (("seeded", 127), ("compared_packets", 159),
+                                 ("packets", 159), ("meta_stall_cycles", 0)):
+                with self.subTest(width=width, field=field):
+                    receipt = self.reproduction_receipt()
+                    receipt["results"][f"behavior-17-{width}"][field] = value
+                    with self.assertRaises(AssertionError):
+                        verify.check_reproduction(receipt, receipt["source_sha256"])
+            receipt = self.reproduction_receipt()
+            del receipt["results"][f"smoke-{width}"]
+            with self.assertRaises(KeyError):
+                verify.check_reproduction(receipt, receipt["source_sha256"])
+
+    def test_reproduction_rejects_nonisolated_or_wrong_sources(self):
+        for field, value in (("python_isolated", False), ("mode", "smoke"),
+                             ("outcome", "failed"), ("source_sha256", {})):
+            with self.subTest(field=field):
+                receipt = self.reproduction_receipt()
+                receipt[field] = value
+                with self.assertRaises(AssertionError):
+                    verify.check_reproduction(receipt, {"synthetic": "binding"})
+
+    def test_isolated_python_ignores_poisoned_pythonpath(self):
+        poison = self.root / "poison"
+        poison.mkdir()
+        (poison / "sitecustomize.py").write_text(
+            "POISON_MARKER = True\n"
+            "raise RuntimeError('synthetic inherited import must not run')\n")
+        with patch.dict(verify.os.environ, {"PYTHONPATH": str(poison)}):
+            text, errors, _ = self.run.command([
+                sys.executable, "-I", "-c",
+                "import json,os,sys; print(json.dumps({'isolated': sys.flags.isolated, "
+                "'poison_loaded': getattr(sys.modules.get('sitecustomize'), "
+                "'POISON_MARKER', False), "
+                "'poison_on_path': os.environ['PYTHONPATH'] in sys.path}))"], cwd=self.root)
+        self.assertEqual(json.loads(text), {
+            "isolated": 1, "poison_loaded": False, "poison_on_path": False})
+        self.assertEqual(errors, "")
+
     def check_simulation_cleanup(self, exit_code):
         folder = self.run.path / "simulation"
         objects = folder / "obj"
@@ -400,6 +459,7 @@ if __name__ == "__main__":
     paths = parser.add_mutually_exclusive_group(required=True)
     paths.add_argument("--out", type=Path)
     paths.add_argument("--fixtures", type=Path)
+    parser.add_argument("--repair-of", help="project-relative preserved prior failure receipt")
     args = parser.parse_args()
     destination = args.out if args.out is not None else args.fixtures
     if destination.is_absolute() or ".." in destination.parts:
@@ -414,7 +474,7 @@ if __name__ == "__main__":
                           "skipped": len(result.skipped)}))
         sys.exit(0 if result.wasSuccessful() and not result.skipped else 1)
     else:
-        run = verify.Run(args.out, "receipt-retention-probe")
+        run = verify.Run(args.out, "receipt-retention-probe", repair_of=args.repair_of)
         run.receipt.update(
             argv=["python3", "tests/test_receipts.py", *sys.argv[1:]],
             acceptance_evidence=False)

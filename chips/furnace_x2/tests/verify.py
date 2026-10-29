@@ -22,6 +22,8 @@ Successful functional simulations must also have empty diagnostic stderr; only
 recognized simulator finish notices may accompany their stdout event records.
 New simulations remove only disposable Verilator object/archive/PCH files after
 execution, including rejected mutants; generated sources and binaries stay retained.
+Clean-package reproduction uses isolated Python imports and checks the child's
+measured both-width coverage explicitly, not just its reported passing outcome.
 """
 import argparse
 from collections import Counter
@@ -75,7 +77,9 @@ class Run:
         self.commands = []
         self.receipt = {
             "schema": 1, "mode": mode, "started_at": now(), "cwd": ".",
-            "argv": ["python3", "tests/verify.py", *sys.argv[1:]],
+            "argv": ["python3", *(["-I"] if sys.flags.isolated else []),
+                     "tests/verify.py", *sys.argv[1:]],
+            "python_isolated": bool(sys.flags.isolated),
             "commands": self.commands, "source_sha256": {}, "repair_of": repair_of,
             "acceptance_evidence": ("preparation" not in self.path.relative_to(ROOT).parts
                                     and "--probe" not in sys.argv)}
@@ -721,6 +725,31 @@ def defects(run, probe=False):
     return results
 
 
+def check_reproduction(receipt, source_hashes):
+    assert receipt["outcome"] == "passed", "reproduction did not pass"
+    assert receipt["mode"] == "reproduction", "wrong reproduction mode"
+    assert receipt.get("python_isolated") is True, "reproduction Python imports are not isolated"
+    assert receipt["source_sha256"] == source_hashes, "reproduction source identity changed"
+    measured = {}
+    for width in (64, 512):
+        smoke_result = receipt["results"][f"smoke-{width}"]
+        sample = receipt["results"][f"behavior-17-{width}"]
+        assert smoke_result["compared_packets"] > 0, f"missing {width}-bit smoke comparisons"
+        assert sample["seeded"] >= 128, f"insufficient {width}-bit seeded comparisons"
+        directed_count = sample["compared_packets"] - sample["seeded"]
+        assert directed_count >= 32, f"insufficient {width}-bit directed comparisons"
+        for result in (smoke_result, sample):
+            assert result["packets"] == result["compared_packets"]
+            for event in ("payload_stall_cycles", "crc_stall_cycles",
+                          "meta_stall_cycles", "simultaneous_terminal"):
+                assert result[event] > 0, f"missing {width}-bit reproduction event: {event}"
+        measured[str(width)] = {
+            "smoke_compared_packets": smoke_result["compared_packets"],
+            "sample_seeded_packets": sample["seeded"],
+            "sample_directed_packets": directed_count}
+    return measured
+
+
 def portability(run):
     stage = run.path / "package"
     stage.mkdir()
@@ -729,15 +758,16 @@ def portability(run):
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, dest)
     # This subprocess resolves ROOT within the staged package, not the original.
-    command = ["python3", "tests/verify.py", "--mode", "reproduction",
+    command = ["python3", "-I", "tests/verify.py", "--mode", "reproduction",
                "--out", "evidence/reproduction"]
     run.command(command, cwd=stage)
     receipts = list(stage.glob("evidence/reproduction/run-*/receipt.json"))
     assert len(receipts) == 1
     receipt = json.loads(receipts[0].read_text())
-    assert receipt["outcome"] == "passed"
-    assert receipt["source_sha256"] == run.receipt["source_sha256"]
-    return {"package_receipt": run.rel(receipts[0]), "sources": len(selected())}
+    measured = check_reproduction(receipt, run.receipt["source_sha256"])
+    return {"package_receipt": run.rel(receipts[0]),
+            "package_receipt_sha256": digest(receipts[0]),
+            "sources": len(selected()), "measured": measured}
 
 
 def main():
