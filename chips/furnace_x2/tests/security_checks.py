@@ -13,8 +13,11 @@ def frame(payload, compressed=None, checksums=False):
     if checksums:
         header += len(payload).to_bytes(8, "little")
     block = payload if compressed is None else compressed
-    result = (b"\x04\x22\x4d\x18" + header
-              + bytes(((model.xxh32(header) >> 8) & 255,))
+    prefix = (b"\x04\x22\x4d\x18" + header
+              + bytes(((model.xxh32(header) >> 8) & 255,)))
+    if not payload and compressed is None:
+        return prefix+bytes(4)+(model.xxh32(b"").to_bytes(4, "little") if checksums else b"")
+    result = (prefix
               + ((0x80000000 if compressed is None else 0) | len(block)).to_bytes(4, "little")
               + block)
     if checksums:
@@ -63,12 +66,16 @@ def cases(kind, seed=203):
                 for payload in (b"", b"a", *(rng.randbytes(n) for n in
                     (2, 3, 4, 7, 15, 16, 17, 31, 32, 33, 63, 256, 4096)))]
     result = []
-    for payload in (b"a", bytes(range(16)), b"abcd"*8, rng.randbytes(4096)):
+    for payload in (b"", b"a", bytes(range(16)), b"abcd"*8, rng.randbytes(4096)):
         for checksums in (False, True):
             encoded = frame(payload, checksums=checksums)
             if model.lz4_frame(encoded) != payload:
                 raise AssertionError("independent LZ4 frame construction")
             result.append(dict(data=encoded, expected=payload, declared=len(payload)))
+    empty_compressed = frame(b"", b"\0", True)
+    if model.lz4_frame(empty_compressed) != b"":
+        raise AssertionError("independent empty compressed frame construction")
+    result.append(dict(data=empty_compressed, expected=b"", declared=0))
     # Standard match constraints retain at least five final literals.
     for block, payload in ((b"\x1fa\x01\x00\x01\x50bcdef", b"a"*21+b"bcdef"),
                            (b"\x44abcd\x04\x00\x50efghi", b"abcd"*3+b"efghi")):

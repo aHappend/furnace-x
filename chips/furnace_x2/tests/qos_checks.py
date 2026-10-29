@@ -29,6 +29,9 @@ def scenarios():
             if write:
                 for wlast in (1, 2):
                     cases.append(base | (1 << 19) | (wlast << 24) | 0x7531)
+                    for malformed in range(1, 6):
+                        cases.append(base | (1 << 19) | (wlast << 24)
+                                     | (malformed << 20) | 0x7531)
             cases.append(base | (3 << 24) | 0x00F0)
     return cases
 

@@ -84,20 +84,31 @@ def execute_cell(run, index, seed):
     for kind, pairs in enumerate(leaf_pairs(cell, seed, frames)):
         kernel_checks.execute(run, kind, cell[4], "verilator", seed, pairs=pairs)
     run.receipt["matrix_cell"] = dict(
-        index=index, seed=seed, frames=frames, consecutive_correct_tail=frames-8,
-        leaf_pixels=frames*cell[2]*cell[3], spatial_channels=4*frames*cell[2]*cell[3],
-        filtered_samples=frames*cell[4], fft_bins=frames*cell[4])
+        index=index, seed=seed, frames=frames,
+        consecutive_correct_tail=run.receipt["soc_comparisons"][-1]["observed_coverage"]["correct_tail"],
+        unique_leaf_pixels=frames*cell[2]*cell[3],
+        leaf_pixel_comparisons=2*frames*cell[2]*cell[3],
+        spatial_lane_comparisons=8*frames*cell[2]*cell[3],
+        filtered_sample_comparisons=2*frames*cell[4], fft_bin_comparisons=2*frames*cell[4])
     run.save()
 
 
 def execute(run):
-    ledger = []
+    ledger = [dict(cell=index, configuration=probe_soc.CELLS[index], seed=seed,
+                   required_consecutive_correct_pairs=8, outcome="pending", actual=None)
+              for index in range(len(probe_soc.CELLS)) for seed in (17, 89, 203)]
+    run.receipt["matrix"] = ledger
+    run.receipt["required_matrix_runs"] = 21
+    run.save()
     for index in range(len(probe_soc.CELLS)):
         for seed in (17, 89, 203):
+            entry = next(row for row in ledger if row["cell"]==index and row["seed"]==seed)
             child = Run(f"l1-behavior-cell{index}-seed{seed}",
                         ["python3", "tests/verify.py", "--suite", "behavior"],
                         preparation=not run.receipt["acceptance_evidence"])
             error = None
+            entry.update(receipt=str(child.path/"receipt.json"), outcome="running")
+            run.save()
             try:
                 execute_cell(child, index, seed)
             except Exception as caught:
@@ -105,11 +116,10 @@ def execute(run):
                 raise
             finally:
                 child.finish(error)
-                ledger.append(dict(cell=index, seed=seed, receipt=str(child.path/"receipt.json"),
-                                   outcome="passed" if error is None else "failed"))
-                run.receipt["matrix"] = ledger
+                entry.update(outcome="passed" if error is None else "failed",
+                             actual=child.receipt.get("matrix_cell"))
                 run.save()
-    if len(ledger) != 21:
+    if len(ledger) != 21 or any(row["outcome"]!="passed" for row in ledger):
         raise AssertionError("incomplete mandatory matrix")
     child = Run("l1-shared-tensor-contention",
                 ["python3", "tests/verify.py", "--suite", "behavior"],
