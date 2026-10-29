@@ -42,8 +42,13 @@ def parse(data, malformed_keep=False):
         if not condition:
             raise ValueError("truncated or malformed wire header")
 
+    def result(value, tuple_bytes=b""):
+        if malformed_keep or len(data) > 9216:
+            return (1 << 441) | (value & (1 << 442)), b""
+        return value, tuple_bytes
+
     try:
-        require(not malformed_keep and len(data) >= 14)
+        require(len(data) >= 14)
         field(int.from_bytes(data[:6], "big"), 393)
         field(int.from_bytes(data[6:12], "big"), 345)
         etype, cursor, vlans = u16(12), 14, []
@@ -59,7 +64,7 @@ def parse(data, malformed_keep=False):
             field(value, 305 + 12 * index)
         field(etype, 329)
         if unsupported or etype not in (0x0800, 0x86DD):
-            return header | (1 << 442), b""
+            return result(header | (1 << 442))
         start = cursor
         more = noninitial = False
         if etype == 0x0800:
@@ -88,10 +93,13 @@ def parse(data, malformed_keep=False):
             field(protocol, 288)
             field(1, 300)
             cursor += 40
+            if end == cursor and protocol != 59:
+                return result(header | (1 << 442))
             extensions = 0
+            fragment_seen = False
             while protocol in (0, 43, 60, 44, 51):
                 if extensions == 8:
-                    return header | (1 << 442), b""
+                    return result(header | (1 << 442))
                 require(cursor + 2 <= min(end, len(data), 256))
                 next_protocol = data[cursor]
                 size = (8 if protocol == 44 else
@@ -100,8 +108,10 @@ def parse(data, malformed_keep=False):
                 require(protocol != 51 or size >= 12)
                 require(cursor + size <= end)
                 if cursor + size > 256:
-                    return header | (1 << 442), b""
+                    return result(header | (1 << 442))
                 if protocol == 44:
+                    require(not fragment_seen)
+                    fragment_seen = True
                     frag = u16(cursor + 2)
                     noninitial, more = bool(frag & 0xFFF8), bool(frag & 1)
                 cursor, protocol = cursor + size, next_protocol
@@ -116,21 +126,21 @@ def parse(data, malformed_keep=False):
         field(int(more or noninitial), 302)
         if noninitial:
             if protocol not in (6, 17, 59):
-                return header | (1 << 442), b""
-            return header, b""
+                return result(header | (1 << 442))
+            return result(header)
         if protocol not in (6, 17):
             if etype == 0x86DD and protocol == 59:
-                return header, b""
-            return header | (1 << 442), b""
+                return result(header)
+            return result(header | (1 << 442))
         minimum = 20 if protocol == 6 else 8
         require(cursor + minimum <= min(end, len(data)))
         if cursor + minimum > 256:
-            return header | (1 << 442), b""
+            return result(header | (1 << 442))
         if protocol == 6:
             size = (data[cursor + 12] >> 4) * 4
             require(size >= 20 and cursor + size <= end)
             if cursor + size > 256:
-                return header | (1 << 442), b""
+                return result(header | (1 << 442))
         else:
             size = u16(cursor + 4)
             require(size >= 8 and (more or cursor + size <= end))
@@ -138,7 +148,7 @@ def parse(data, malformed_keep=False):
         field(int.from_bytes(sport, "big"), 256)
         field(int.from_bytes(dport, "big"), 272)
         field(1, 301)
-        return header, b"" if more else src + dst + sport + dport + bytes([protocol])
+        return result(header, b"" if more else src + dst + sport + dport + bytes([protocol]))
     except ValueError:
         return (1 << 441) | (int(unsupported) << 442), b""
 
@@ -204,6 +214,8 @@ def corpus():
         ethernet(payload=400),
         ethernet()[:30],
         ethernet(ipv6=True)[:50],
+        ethernet(vlans=3),
+        ethernet(payload=9200),
     ]
     bad = bytearray(ethernet())
     bad[14] = 0x44
@@ -211,6 +223,18 @@ def corpus():
     bad = bytearray(ethernet(tcp=True))
     bad[46] = 0x40
     packets.append(bytes(bad))
+    for fragment in (0, 1, 8):
+        packet = bytearray(ethernet(ipv6=True))
+        packet[20] = 44
+        packet[18:20] = (16).to_bytes(2, "big")
+        packet[54:54] = bytes([17, 0]) + fragment.to_bytes(2, "big") + bytes(4)
+        packets.append(bytes(packet))
+    bad = bytearray(ethernet())
+    bad[38:40] = b"\x00\x07"
+    packets.append(bytes(bad))
+    bad = bytearray(ethernet(ipv6=True))
+    bad[18:20] = b"\x00\x00"
+    packets.append(bytes(bad[:54]))
     return packets
 
 

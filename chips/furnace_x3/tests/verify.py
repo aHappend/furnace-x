@@ -40,7 +40,7 @@ class Evidence:
             "commands": [], "tools": {}, "repair_of": repair_of,
         }
 
-    def run(self, argv, name, cwd=ROOT, timeout=3600, expect_failure=False):
+    def run(self, argv, name, cwd=ROOT, timeout=3600, expect_failure=False, env=None):
         argv = [str(x) for x in argv]
         stdout, stderr = self.path / f"{name}.stdout.txt", self.path / f"{name}.stderr.txt"
         record = {"argv": argv, "cwd": os.path.relpath(cwd, ROOT),
@@ -51,7 +51,7 @@ class Evidence:
         with stdout.open("wb") as out, stderr.open("wb") as err:
             try:
                 process = subprocess.run(argv, cwd=cwd, stdout=out, stderr=err,
-                                         timeout=timeout, check=False)
+                                         timeout=timeout, check=False, env=env)
                 record.update(exit_code=process.returncode, timed_out=False)
             except subprocess.TimeoutExpired:
                 record.update(exit_code=None, timed_out=True)
@@ -102,7 +102,7 @@ def startup(e):
             raise AssertionError("startup finished without comparisons")
 
 
-def vectors(path, maximum, key=reference.DEFAULT_KEY):
+def vectors(path, maximum, key=reference.DEFAULT_KEY, width=64):
     packets = reference.corpus()
     packets += [bytes((i * 41 + 3) & 255 for i in range(length))
                 for length in (1, 7, 8, 9, 63, 64, 65, 255, 256, 257, 1500, 9216)
@@ -113,7 +113,31 @@ def vectors(path, maximum, key=reference.DEFAULT_KEY):
             header, tuple_bytes = reference.parse(packet)
             hash_value = reference.toeplitz(tuple_bytes, key) if tuple_bytes else 0
             stream.write(f"{packet.hex() or '-'} {crc32:x} {crc64:x} {header:0128x} "
-                         f"{hash_value:x} {int(bool(tuple_bytes))}\n")
+                         f"{hash_value:x} {int(bool(tuple_bytes))} 0 {len(packet)}\n")
+        packet = bytes.fromhex("a5003c")
+        lanes = width >> 3
+        values = []
+        for bits, polynomial in ((32, 0x82F63B78), (64, 0x9A6C9329AC4BC9B5)):
+            mask = (1 << bits) - 1
+            state = reference.crc(packet + bytes(lanes - 3), bits, polynomial) ^ mask
+            for _ in range((lanes - 2) * 8):
+                low = state >> (bits - 1)
+                state = (((state ^ (polynomial if low else 0)) << 1) | low) & mask
+            values.append(state ^ mask)
+        stream.write(f"{packet.hex()} {values[0]:x} {values[1]:x} {1 << 441:0128x} 0 0 1 2\n")
+        packet = b"123456789"
+        crc32, crc64 = reference.checksums(packet)
+        header, _ = reference.parse(packet)
+        stream.write(f"{packet.hex()} {crc32:x} {crc64:x} {header:0128x} 0 0 2 9\n")
+        for mode in (3, 4):
+            wire_bytes = bytearray(lanes + 1)
+            if mode == 3:
+                wire_bytes[0] = 0xA5
+            wire_bytes[-1] = 0x57
+            reported = lanes if mode == 3 else 1
+            crc32, crc64 = reference.checksums(wire_bytes)
+            header, _ = reference.parse(wire_bytes[:reported], malformed_keep=True)
+            stream.write(f"{wire_bytes.hex()} {crc32:x} {crc64:x} {header:0128x} 0 0 {mode} {reported}\n")
 
 
 def compile_sim(e, width, maximum, sg, root=ROOT, label="functional"):
@@ -137,7 +161,7 @@ def compile_sim(e, width, maximum, sg, root=ROOT, label="functional"):
 def functional(e, width, maximum, sg, seeds, mode="matrix", root=ROOT, label="functional"):
     binary = compile_sim(e, width, maximum, sg, root=root, label=label)
     corpus = binary.parent / "vectors.txt"
-    vectors(corpus, maximum)
+    vectors(corpus, maximum, width=width)
     results = []
     for seed in seeds:
         output = e.run([os.path.relpath(binary, root), os.path.relpath(corpus, root),
@@ -154,7 +178,8 @@ def functional(e, width, maximum, sg, seeds, mode="matrix", root=ROOT, label="fu
 def leaf(e, top, root=ROOT, seeds=(17,), label=None, icarus=False):
     label = label or top
     binary = e.path / f"{label}-simulator"
-    sources = ["tests/credits.sv", "rtl/furnace_token_bucket8.sv",
+    sources = ["tests/credits.sv", "tests/ownership.sv", "rtl/furnace_descriptor_rings.sv",
+               "rtl/furnace_token_bucket8.sv",
                "rtl/furnace_drr_scheduler.sv"]
     if icarus:
         e.run(["iverilog", "-g2012", "-Wall", "-s", top, "-o",
@@ -176,10 +201,230 @@ def leaf(e, top, root=ROOT, seeds=(17,), label=None, icarus=False):
     return outputs
 
 
+def portable(e):
+    e.require(["iverilog", "vvp"])
+    crc32, crc64 = reference.checksums(b"\xa5")
+    for width in (64, 512):
+        binary = e.path / f"portable-{width}.vvp"
+        e.run(["iverilog", "-g2012", "-Wall", "-Itests", "-s", "portable_smoke",
+               f"-Pportable_smoke.DATA_WIDTH={width}", "-o", binary.relative_to(ROOT),
+               "tests/portable_smoke.sv", *map(str, sorted(Path("rtl").glob("*.sv")))],
+              f"portable-{width}-compile")
+        output = e.run(["vvp", binary.relative_to(ROOT), f"+c32={crc32:x}", f"+c64={crc64:x}"],
+                       f"portable-{width}-run", timeout=60)
+        if "PORTABLE comparisons=10 legacy=1 dma=1 reads=3" not in output:
+            raise AssertionError("isolated smoke did not execute all public comparisons")
+
+
+def rollover(e):
+    script = e.path / "rollover.ys"
+    assumptions = (
+        "-seq 3 -set-def-inputs -set-init-def -set rst_n 1 "
+        "-set db_producer 0 -set evt_queue 0 -set db_valid 0 -set retire_fire 0 "
+        "-set-at 1 sequence_zero 32'hffffffff -set-at 1 pending_zero 0 "
+        "-set-at 1 enabled_zero 1 -set-at 1 db_ready 1 -set-at 1 db_valid 1 "
+        "-set-at 2 ctl_valid 1 -set-at 2 ctl_code 0 -set-at 2 pending_zero 1 "
+        "-set-at 2 retire_fire 1 "
+    )
+    script.write_text(
+        "read_verilog -sv rtl/furnace_descriptor_rings.sv tests/rollover.sv\n"
+        "hierarchy -check -top rollover\n"
+        "proc; flatten; async2sync; opt; memory_map; opt; dffunmap\n"
+        f"sat {assumptions} -show sequence_zero -show pending_zero -show db_ready "
+        f"-dump_json {e.path.relative_to(ROOT)}/rollover-witness.json\n"
+        f"sat {assumptions} -prove-skip 2 -prove drained_zero 1 -verify "
+        f"-dump_json {e.path.relative_to(ROOT)}/rollover-counterexample.json\n"
+    )
+    output = e.run(["yosys", "-s", script.relative_to(ROOT)], "ring-counter-rollover")
+    if "SUCCESS" not in output or "model found" not in output:
+        raise AssertionError("Yosys did not establish nonvacuity and prove the full-width ring transition")
+    e.record["rollover_scope"] = (
+        "Three-step nonvacuous SAT property of the actual descriptor-rings public outputs. "
+        "Assume a defined arbitrary enabled/drained queue with consumer 0xffffffff, reset "
+        "released, and an observed accepted forward producer doorbell to zero. The resulting "
+        "one-pending-descriptor state becomes consumer zero and drained on retirement. "
+        "SAT separately finds a witness satisfying every assumption. This covers the actual "
+        "32-bit producer/consumer wrap transition, not reset reachability or 2^32 simulated transfers."
+    )
+
+
+def synthesize(e, minimum_only=False):
+    e.require(["yosys"])
+    results = []
+    configs = [("furnace_x3_top", w, m, s) for w in (64, 512)
+               for m, s in ((1, 1), (65, 3), (9216, 16))]
+    configs += [(top, w, None, None) for top in ("furnace_x1_top", "furnace_x2_top")
+                for w in (64, 512)]
+    if minimum_only:
+        configs = configs[:1]
+    for top, width, maximum, sg in configs:
+        name = f"{top}-{width}-{maximum}-{sg}"
+        netlist = e.path / f"{name}.json"
+        script = e.path / f"{name}.ys"
+        parameters = f"chparam -set DATA_WIDTH {width}"
+        if maximum is not None:
+            parameters += f" -set MAX_PACKET_BYTES {maximum} -set MAX_SG {sg}"
+        script.write_text(
+            "read_verilog -sv " + " ".join(map(str, sorted(Path("rtl").glob("*.sv")))) + "\n"
+            + parameters + f" {top}\nhierarchy -check -top {top}\n"
+            "proc; opt_expr; opt_clean; check -assert\n"
+            "memory -nomap; opt_clean; check -assert\n"
+            "select -assert-none t:$dlatch t:$adlatch t:$div t:$mod t:$divfloor t:$modfloor\n"
+            f"stat\nwrite_json {netlist.relative_to(ROOT)}\n"
+        )
+        e.run(["yosys", "-s", script.relative_to(ROOT)], name)
+        design = json.loads(netlist.read_text())
+        modules = design["modules"]
+        counts = {}
+        sequential = memory_bits = 0
+
+        def walk(module_name):
+            nonlocal sequential, memory_bits
+            module = modules[module_name]
+            if module.get("attributes", {}).get("blackbox"):
+                raise AssertionError(f"unresolved black box: {module_name}")
+            hdlname = module.get("attributes", {}).get("hdlname", module_name).split()[0].lstrip("\\")
+            counts[hdlname] = counts.get(hdlname, 0) + 1
+            for cell in module.get("cells", {}).values():
+                kind = cell["type"]
+                if kind in modules:
+                    for direction in ("input", "output"):
+                        ports = [p for p, d in cell["port_directions"].items() if d == direction]
+                        if not any(isinstance(bit, int) for p in ports for bit in cell["connections"][p]):
+                            raise AssertionError(f"disconnected {direction} of {kind}")
+                    walk(kind)
+                elif not kind.startswith("$"):
+                    raise AssertionError(f"unknown synthesis cell: {kind}")
+                if "latch" in kind or kind in ("$div", "$mod", "$divfloor", "$modfloor"):
+                    raise AssertionError(f"forbidden synthesis cell: {kind}")
+                if "dff" in kind:
+                    sequential += len(cell["connections"].get("Q", []))
+                if kind == "$mem_v2":
+                    parameters = cell["parameters"]
+                    memory_bits += int(parameters["SIZE"], 2) * int(parameters["WIDTH"], 2)
+
+        walk(top)
+        required = ["furnace_x1_top", "furnace_crc_beat_pipeline",
+                    "furnace_crc_packet_accumulator", "furnace_crc_tail_pipeline",
+                    "furnace_crc_output_stage"]
+        if top != "furnace_x1_top":
+            required += ["furnace_x2_top", "furnace_header_parser", "furnace_rss_toeplitz",
+                         "furnace_classifier64"]
+        if top == "furnace_x3_top":
+            required += ["furnace_x3_top", "furnace_descriptor_rings", "furnace_drr_scheduler",
+                         "furnace_token_bucket8", "furnace_sg_dma", "furnace_dma_reader"]
+        if any(counts.get(name, 0) != 1 for name in required):
+            raise AssertionError(f"required literal module connectivity absent: {counts}")
+        if sequential < 1000 or (top != "furnace_x1_top" and memory_bits < 64 * 32):
+            raise AssertionError("non-substantive sequential/storage state")
+        results.append({"top": top, "width": width, "maximum": maximum, "sg": sg,
+                        "sequential_bits": sequential, "memory_bits": memory_bits,
+                        "instances": counts, "netlist": str(netlist.relative_to(ROOT))})
+    e.record["synthesis"] = results
+
+
+def defects(e):
+    e.require(["verilator", "make", "g++"])
+    functional(e, 64, 65, 3, [17], label="baseline")
+    leaf(e, "bucket_tb", label="baseline-bucket")
+    leaf(e, "scheduler_tb", label="baseline-scheduler")
+    mutations = [
+        ("crc-polynomial", "furnace_crc_beat_pipeline.sv",
+         "32'h82f63b78", "32'h82f63b79", "functional", "CRC polynomial/bit order mismatch"),
+        ("rss-key-order", "furnace_rss_toeplitz.sv",
+         "accumulator ^ key_shift[327:296]", "accumulator ^ key_shift[326:295]",
+         "functional", "RSS tuple/key order mismatch"),
+        ("classifier-priority", "furnace_classifier64.sv",
+         "wire current_wins = !found && enable_q && equal_q;",
+         "wire current_wins = enable_q && equal_q;", "functional", "classifier priority/action mismatch"),
+        ("drr-debit", "furnace_drr_scheduler.sv",
+         "deficit[evt_queue]<=deficit[evt_queue]-evt_bytes;",
+         "deficit[evt_queue]<=deficit[evt_queue]-(evt_bytes+1'b1);", "scheduler_tb", "DRR visit/debit"),
+        ("token-debit", "furnace_token_bucket8.sv",
+         "balance[q]<=refilled-event_cost;", "balance[q]<=refilled;",
+         "bucket_tb", "TOKEN refill/debit/refund"),
+        ("sg-byte-boundary", "furnace_sg_dma.sv",
+         "output_index<=output_index+1'b1;", "output_index<=output_index+2'd2;",
+         "functional", "packet keep mismatch"),
+        ("ring-wrap", "furnace_descriptor_rings.sv",
+         "physical_index[evt_queue]==entries[evt_queue]-1'b1",
+         "physical_index[evt_queue]==entries[evt_queue]",
+         "functional", "unexpected memory address"),
+    ]
+    killed = []
+    for name, filename, old, new, kind, expected in mutations:
+        root = e.path / f"mutant-{name}-{uuid.uuid4().hex[:8]}"
+        root.mkdir()
+        baseline_hashes = identity()
+        for relative in baseline_hashes:
+            target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / relative, target)
+        path = root / "rtl" / filename
+        text = path.read_text()
+        if text.count(old) != 1:
+            raise AssertionError(f"{name}: injection must identify one concrete source site")
+        path.write_text(text.replace(old, new))
+        if kind == "functional":
+            binary = compile_sim(e, 64, 65, 3, root=root, label=name)
+            corpus = binary.parent / "vectors.txt"
+            vectors(corpus, 65)
+            argv = [os.path.relpath(binary, root), os.path.relpath(corpus, root), "17", "matrix"]
+        else:
+            obj = e.path / f"{name}-compile-{uuid.uuid4().hex[:8]}"
+            e.run(["verilator", "--binary", "--timing", "-Wno-fatal", "-j", "2",
+                   "--top-module", kind, "--Mdir", os.path.relpath(obj, root),
+                   "tests/credits.sv", "rtl/furnace_token_bucket8.sv", "rtl/furnace_drr_scheduler.sv"],
+                  f"{name}-compile", cwd=root)
+            binary = e.path / f"{name}-simulator"
+            shutil.copy2(obj / f"V{kind}", binary)
+            shutil.rmtree(obj)
+            argv = [os.path.relpath(binary, root), "+seed=17"]
+        output = e.run(argv, f"{name}-functional-rejection", cwd=root, expect_failure=True)
+        if "SCOREBOARD" not in output or expected not in output:
+            raise AssertionError(f"{name}: rejection was not the expected functional comparison")
+        first = next(line for line in output.splitlines() if "SCOREBOARD" in line)
+        killed.append({"name": name, "file": f"rtl/{filename}", "old": old, "new": new,
+                       "baseline_hash": baseline_hashes[f"rtl/{filename}"],
+                       "mutant_hash": hashlib.sha256(path.read_bytes()).hexdigest(),
+                       "first_functional_failure": first,
+                       "source_copy": str(root.relative_to(ROOT))})
+    if len(killed) < 6:
+        raise AssertionError("fewer than six compiling, functionally killed mutants")
+    e.record["mutants"] = killed
+
+
+def delivery(e):
+    e.require(["iverilog", "vvp"])
+    isolated = e.path / f"isolated-{uuid.uuid4().hex[:8]}"
+    isolated.mkdir()
+    before = identity()
+    for relative in before:
+        target = isolated / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / relative, target)
+    if identity(isolated) != before:
+        raise AssertionError("isolated source copy differs")
+    environment = {key: value for key, value in os.environ.items()
+                   if key not in ("PYTHONPATH", "PYTHONHOME")}
+    # -I drops inherited import paths; the entrypoint imports only its own siblings.
+    output = e.run(["python3", "-I", "tests/verify.py", "--delivery-smoke"],
+                   "isolated-reproduction", cwd=isolated, env=environment)
+    receipts = list((isolated / "evidence").glob("delivery-smoke-*/receipt.json"))
+    if len(receipts) != 1:
+        raise AssertionError("isolated reproduction receipt missing or ambiguous")
+    receipt = json.loads(receipts[0].read_text())
+    if receipt["exit_code"] != 0 or receipt["source_hashes"] != before:
+        raise AssertionError("isolated reproduction not source-bound and successful")
+    e.record["reproduction"] = {"receipt": str(receipts[0].relative_to(ROOT)),
+                               "scope": "Both widths, compact one legacy packet plus one real DMA packet; not the full matrix"}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=["behavior", "defects", "synthesis", "delivery"])
-    parser.add_argument("--prepare", choices=["startup", "smoke", "cell", "credits"])
+    parser.add_argument("--prepare", choices=["startup", "smoke", "cell", "credits", "portable", "rollover", "synthesis-min"])
+    parser.add_argument("--delivery-smoke", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--width", type=int, choices=[64, 512], default=64)
     parser.add_argument("--maximum", type=int, default=65)
     parser.add_argument("--segments", type=int, default=3)
@@ -188,6 +433,8 @@ def main():
     suites = [args.suite] if args.suite else ["behavior", "defects", "synthesis", "delivery"]
     if args.prepare:
         suites = [args.prepare]
+    if args.delivery_smoke:
+        suites = ["delivery-smoke"]
     reference.self_check()
     for suite in suites:
         e = Evidence(suite, preparation=bool(args.prepare), repair_of=args.repair_of)
@@ -204,6 +451,31 @@ def main():
                 e.require(["verilator", "make", "g++", "iverilog", "vvp"])
                 leaf(e, "bucket_tb", icarus=True)
                 leaf(e, "scheduler_tb")
+                leaf(e, "ownership_tb")
+            elif suite in ("portable", "delivery-smoke"):
+                portable(e)
+            elif suite == "rollover":
+                e.require(["yosys"])
+                rollover(e)
+            elif suite == "synthesis-min":
+                synthesize(e, minimum_only=True)
+            elif suite == "behavior":
+                startup(e)
+                e.require(["verilator", "make", "g++", "yosys"])
+                portable(e)
+                leaf(e, "bucket_tb", seeds=(17, 43, 89), icarus=True)
+                leaf(e, "scheduler_tb", seeds=(17, 43, 89))
+                leaf(e, "ownership_tb")
+                rollover(e)
+                for width in (64, 512):
+                    for maximum, sg in ((1, 1), (65, 3), (9216, 16)):
+                        functional(e, width, maximum, sg, [17, 43, 89])
+            elif suite == "synthesis":
+                synthesize(e)
+            elif suite == "defects":
+                defects(e)
+            elif suite == "delivery":
+                delivery(e)
             else:
                 raise RuntimeError(f"verification implementation incomplete: {suite}")
         except Exception as error:
