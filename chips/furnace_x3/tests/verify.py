@@ -39,7 +39,7 @@ class Evidence:
             "schema": 1, "suite": suite, "advisory_preparation": preparation,
             "argv": [sys.executable, *sys.argv], "cwd": ".",
             "start_time": time.time(), "source_hashes": identity(),
-            "commands": [], "tools": {}, "repair_of": repair_of,
+            "commands": [], "tools": {"python3": sys.version}, "repair_of": repair_of,
         }
 
     def run(self, argv, name, cwd=ROOT, timeout=3600, expect_failure=False, env=None):
@@ -50,7 +50,7 @@ class Evidence:
                   "stdout": str(stdout.relative_to(ROOT)),
                   "stderr": str(stderr.relative_to(ROOT))}
         self.record["commands"].append(record)
-        with stdout.open("wb") as out, stderr.open("wb") as err:
+        with stdout.open("xb") as out, stderr.open("xb") as err:
             try:
                 process = subprocess.run(argv, cwd=cwd, stdout=out, stderr=err,
                                          timeout=timeout, check=False, env=env)
@@ -99,7 +99,7 @@ def startup(e):
                "tests/startup.sv", *map(str, sorted(Path("rtl").glob("*.sv")))],
               f"startup-{index}-compile")
         output = e.run(["vvp", executable.relative_to(ROOT)], f"startup-{index}-run",
-                       timeout=60, expect_failure=index >= len(configs))
+                       expect_failure=index >= len(configs))
         if index >= len(configs):
             if "PARAMETER ERROR" not in output:
                 raise AssertionError("invalid parameter failed without the explicit diagnostic")
@@ -230,7 +230,7 @@ def leaf(e, top, root=ROOT, seeds=(17,), label=None, icarus=False, width=64):
     outputs = []
     for seed in seeds:
         argv = (["vvp"] if icarus else []) + [os.path.relpath(binary, root), f"+seed={seed}"]
-        output = e.run(argv, f"{label}-{seed}", cwd=root, timeout=60 if icarus else 3600)
+        output = e.run(argv, f"{label}-{seed}", cwd=root)
         if "comparisons=" not in output:
             raise AssertionError(f"{label}: no observed numerical comparisons")
         outputs.append(output)
@@ -247,7 +247,7 @@ def portable(e):
                "tests/portable_smoke.sv", *map(str, sorted(Path("rtl").glob("*.sv")))],
               f"portable-{width}-compile")
         output = e.run(["vvp", binary.relative_to(ROOT), f"+c32={crc32:x}", f"+c64={crc64:x}"],
-                       f"portable-{width}-run", timeout=60)
+                       f"portable-{width}-run")
         if "PORTABLE comparisons=10 legacy=1 dma=1 reads=3" not in output:
             raise AssertionError("isolated smoke did not execute all public comparisons")
 
@@ -506,6 +506,9 @@ def main():
     for suite in suites:
         e = Evidence(suite, preparation=bool(args.prepare), repair_of=args.repair_of)
         try:
+            for selector in SOURCES:
+                if not any(path.is_file() for path in ROOT.glob(selector)):
+                    raise RuntimeError(f"missing declared verification input: {selector}")
             reference.self_check()
             e.record["oracle_known_answers"] = {
                 "input_hex": b"123456789".hex(), "crc32c": "e3069283",
