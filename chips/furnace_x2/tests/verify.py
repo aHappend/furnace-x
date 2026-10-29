@@ -18,6 +18,8 @@ It must agree byte-for-byte with stdout events; neither channel replaces missing
 or corrupt observations. This localizes future transport loss, not its cause.
 The bridge flushes at completed event records and checks file-channel I/O errors;
 this is not a remedy for exhausted storage or lost historical evidence.
+Successful functional simulations must also have empty diagnostic stderr; only
+recognized simulator finish notices may accompany their stdout event records.
 """
 import argparse
 from collections import Counter
@@ -284,7 +286,18 @@ def transcript_comparison(stdout, mirror):
             "mirror_bytes": len(duplicate), "first_different_event_byte": mismatch}
 
 
-def parse_top_output(text, records, full=False, sample=False):
+def check_simulator_stderr(stderr):
+    assert not stderr.strip(), f"unexpected simulator stderr: {stderr}"
+
+
+def simulator_finish(line):
+    return re.fullmatch(
+        r"- [^\r\n]*\btb\.sv:\d+: Verilog \$finish"
+        r"|[^\r\n]*\btb\.sv:\d+: \$finish called at \d+ \([^)]+\)", line) is not None
+
+
+def parse_top_output(text, records, full=False, sample=False, stderr=""):
+    check_simulator_stderr(stderr)
     completed, aborted = set(), set()
     coverage = Counter()
     counts_seen = False
@@ -353,8 +366,7 @@ def parse_top_output(text, records, full=False, sample=False):
             values = list(map(int, words[1:]))
             counts_seen = True
             coverage.update(dict(zip(names, values)))
-        elif (line.startswith("- ") or re.fullmatch(r".*tb\.sv:\d+: \$finish called at \d+ \(.+\)", line)
-              or not line.strip()):
+        elif simulator_finish(line) or not line.strip():
             pass
         else:
             raise AssertionError(f"unexpected simulator diagnostic: {line}")
@@ -428,7 +440,7 @@ def top_run(run, width, backend, seed=17, full=False, sample=False, rtl=None, pr
     campaign.close()
     write_json(folder / "expected.json", campaign.records)
     executable = compile_sim(run, folder, backend, width=width, rtl=rtl)
-    text, _, command = run.command(
+    text, errors, command = run.command(
         executable, cwd=folder, timeout=600 if backend == "icarus" else 3600)
     mirror = folder / "transcript.txt"
     assert mirror.is_file(), f"missing simulator transcript channel: {run.rel(mirror)}"
@@ -437,7 +449,8 @@ def top_run(run, width, backend, seed=17, full=False, sample=False, rtl=None, pr
     run.receipt.setdefault("transcript_channels", []).append(channels)
     run.save()
     assert channels["equal"], f"simulator transcript channel disagreement: {channels}"
-    counters = parse_top_output(text, campaign.records, full=full, sample=sample)
+    counters = parse_top_output(text, campaign.records, full=full, sample=sample,
+                                stderr=errors)
     if full:
         for n in range(width // 8 + 1):
             assert counters.get(f"keep_{n}", 0) >= 1
@@ -458,7 +471,8 @@ def leaf_run(run, kind, seed, suffix=""):
     expected = (rss_vectors(folder / "stimulus.txt", seed) if kind == "rss" else
                 classifier_vectors(folder / "stimulus.txt"))
     executable = compile_sim(run, folder, "verilator", kind=kind)
-    text, _, _ = run.command(executable, cwd=folder)
+    text, errors, _ = run.command(executable, cwd=folder)
+    check_simulator_stderr(errors)
     actual = []
     count = None
     for line in text.splitlines():
@@ -469,7 +483,7 @@ def leaf_run(run, kind, seed, suffix=""):
                           (int(parts[2]), int(parts[3]), int(parts[4], 16)))
         elif line.startswith("LEAF_COUNT "):
             count = int(line.split()[1])
-        elif line.startswith("- ") or not line.strip():
+        elif simulator_finish(line) or not line.strip():
             pass
         else:
             raise AssertionError(f"unexpected leaf diagnostic: {line}")

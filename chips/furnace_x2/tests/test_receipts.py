@@ -268,6 +268,30 @@ class ReceiptTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "missing terminal COUNTS"):
             verify.parse_top_output("", {})
 
+    def test_simulator_stderr_rejected_before_records(self):
+        for diagnostic in ("warning: unexpected simulation warning\n",
+                           "DONE 1 synthetic\n", "\x00"):
+            with self.subTest(diagnostic=diagnostic):
+                with self.assertRaisesRegex(AssertionError, "unexpected simulator stderr"):
+                    verify.parse_top_output("", {}, stderr=diagnostic)
+                with self.assertRaisesRegex(AssertionError, "unexpected simulator stderr"):
+                    verify.check_simulator_stderr(diagnostic)
+
+    def test_only_recognized_simulator_finish_notices_are_ignored(self):
+        for line in ("- tb.sv:271: Verilog $finish",
+                     "- evidence/run/verilator-64/tb.sv:271: Verilog $finish",
+                     "evidence/run/icarus-64/tb.sv:271: $finish called at 61585000 (1ps)"):
+            with self.subTest(line=line):
+                self.assertTrue(verify.simulator_finish(line))
+        for line in ("- unexpected simulator diagnostic",
+                     "- tb.sv:271: Verilog $finish warning",
+                     "- tb.sv:271: Verilog $stop",
+                     "- other.sv:271: Verilog $finish"):
+            with self.subTest(line=line):
+                self.assertFalse(verify.simulator_finish(line))
+                with self.assertRaisesRegex(AssertionError, "unexpected simulator diagnostic"):
+                    verify.parse_top_output(line + "\n", {})
+
     def test_complete_synthetic_transcript_measures_events_once(self):
         record = dict.fromkeys(
             ("crc32", "crc64", "header", "length", "hash", "rss", "hit", "index", "action"), 0)
