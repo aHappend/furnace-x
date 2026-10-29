@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import signal
 import subprocess
+import sys
 import time
 import uuid
 
@@ -41,6 +42,7 @@ class Run:
         self.root = Path(root)
         self.receipt = {
             "kind": "verification preparation" if "preparation" in directory.parts else "L1",
+            "argv": [sys.executable, *sys.argv], "cwd": str(Path.cwd()),
             "source_sha256": hashes(root), "start": now(), "commands": [],
             "coverage": {}, "outcome": "running",
         }
@@ -106,6 +108,14 @@ class Run:
             self.command(commands[tool], "version-" + tool)
 
     def finish(self, outcome, error=None):
+        removed = []
+        for directory in self.directory.glob("*-obj"):
+            if directory.is_dir():
+                for pattern in ("*.o", "*.a", "*.gch"):
+                    for path in directory.rglob(pattern):
+                        removed.append(str(path.relative_to(self.directory)))
+                        path.unlink()
+        self.receipt["removed_transient_objects"] = removed
         self.receipt.update(outcome=outcome, end=now())
         if error is not None:
             self.receipt["error"] = str(error)
