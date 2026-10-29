@@ -90,6 +90,18 @@ All modules have `clk,rst_n`. Unless indicated otherwise, ports are unsigned.
 * `furnace_tensor8`: inputs `vector_valid,mode[1:0],first,last,
   weight_data[127:0],activation_data[127:0],result_ready`;
   outputs `vector_ready,result_valid,result[63:0],error[7:0]`.
+* `furnace_fp32_mul4`: inputs `ce,a[31:0],b[31:0]`; output `result[31:0]`.
+  Four enabled rising edges perform product/classification, leading-position
+  detection, normalization/gradual-underflow shift, and RNE respectively.
+* `furnace_fp32_add5`: inputs `ce,a[31:0],b[31:0]`; output `result[31:0]`.
+  Five enabled edges perform classification/order, sticky alignment,
+  add/subtract, normalization, and RNE. Parameter `OUTPUT_REGISTER=1`;
+  setting it to zero leaves the rounding output combinational so the enclosing
+  accumulator's architectural register supplies the fifth edge.
+* `furnace_fp32_round`: combinational internal rounding helper; inputs
+  `sign,significand[26:0],exponent` (signed 12-bit), `special,
+  special_value[31:0]`; output `result[31:0]`. The significand is normalized
+  or already shifted for gradual underflow and carries guard/round/sticky bits.
 * `furnace_command_ring`: parameter `RING_DEPTH=8`; inputs
   `tail_valid,tail_value[31:0],retire`; outputs `tail_ready,tail_error,
   head[31:0],tail[31:0],head_slot[3:0],queued,full`.
@@ -98,12 +110,20 @@ All modules have `clk,rst_n`. Unless indicated otherwise, ports are unsigned.
 * `furnace_csr`: parameter `RING_DEPTH=8`; the complete top AXI-Lite group
   with identical signal names; inputs `busy,queued,ring_full,head[31:0],
   tail[31:0],tail_error,completion_valid,completion_error[7:0],
-  completion_tile_id[31:0]`; outputs `enable,key_valid,key[127:0],
+  completion_tile_id[31:0],completion_irq_requested`; outputs `enable,key_valid,key[127:0],
   ring_base[31:0],tail_valid,tail_value[31:0],irq`.
 * `furnace_axi4_xbar`: `s_axi_*` packed initiator arrays, first dimension
   `[3:0]`, two-bit local IDs; `m_axi_*` target arrays with four-bit IDs.
   Complete AXI4 channels and attributes match the top master group.
   No USER signals. No extra concurrency-observation ports.
+* `furnace_dma128`: independent byte-stream read and write DMA. Inputs
+  `rd_valid,rd_addr[31:0],rd_bytes[31:0],m_ready,rd_done_ready,
+  wr_valid,wr_addr[31:0],wr_bytes[31:0],s_valid,s_data[7:0],s_last,
+  wr_done_ready`; outputs `rd_ready,m_valid,m_data[7:0],m_last,
+  rd_done,rd_error[7:0],wr_ready,s_ready,wr_done,wr_error[7:0]`.
+  The scalar complete `m_axi_*` master group uses two-bit local IDs.
+  Single-beat INCR transfers deliberately trade throughput for simple bounded
+  ownership; zero-byte helper requests complete without bus traffic.
 
 ## LZ4
 
@@ -231,10 +251,14 @@ writes fail SLVERR. All reset configuration is zero.
 
 Key words are little-endian memory words containing key bytes in address order,
 converted explicitly to the AES numeric key. Commit requires all four words
-written since reset/invalidate/previous commit. Key, base and commit changes
+written since reset/invalidate/previous commit; byte strobes track all sixteen
+fresh bytes, so partial writes cannot commit stale key bytes. Key, base and commit changes
 are forbidden while busy or queued. Enable clear stops new fetches but drains
 current work. IRQ is the OR of enabled sticky completion bits, hardware set
-winning over W1C.
+winning over W1C. A requested successful completion sets the success sticky bit;
+every failed completion sets the failure bit and reset-sticky fault, including
+untrusted descriptor-fetch and terminal completion bus faults. Descriptor flag
+bit8 requests the normal success interrupt; failure notification is not suppressed.
 
 HEAD/TAIL are monotonic 32-bit counters; doorbells may advance only by currently
 free slots and less than 2^31. Physical slot wraps explicitly for every depth.
