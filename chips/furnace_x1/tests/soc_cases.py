@@ -7,6 +7,28 @@ from crypto_reference import encrypt_gcm
 from reference import literal_block, lz4_frame, tensor, decode_lz4
 
 
+REQUIRED_INFINITY_OPERANDS = tuple(
+    f"mode{mode}_{source}_{sign}_infinity"
+    for mode, sources in ((1, ("weight", "activation")), (2, ("activation",)))
+    for source in sources for sign in ("positive", "negative")
+)
+
+
+def infinity_operands(mode, weights, activations):
+    """Classify final byte buffers, including ciphertext-selected plaintext."""
+    counts = {}
+    operands = [("activation", activations)] if mode in (1, 2) else []
+    if mode == 1:
+        operands.append(("weight", weights))
+    for source, data in operands:
+        for (word,) in struct.iter_unpack("<H", data):
+            if word in (0x7F80, 0xFF80):
+                sign = "negative" if word & 0x8000 else "positive"
+                category = f"mode{mode}_{source}_{sign}_infinity"
+                counts[category] = counts.get(category, 0) + 1
+    return counts
+
+
 def generate(path, count=24, max_tile=32, depth=1, seed=17, *, content_checksum=False,
              large=False):
     rng = random.Random(seed)
@@ -70,6 +92,15 @@ def generate(path, count=24, max_tile=32, depth=1, seed=17, *, content_checksum=
                     weights = [0x3F80] * 8 if mode == 1 else list(range(8, 16))
                     activations = [0x7FFF, 0x8000, 0, 1, 0xFFFF, 17, 0xFE00, 0x100] if mode == 0 else [
                         0x3F80, 0xBF80, 1, 0x8001, 0x3F81, 0x7F7F, 0, 0x8000]
+                # Successful raw frames preserve these operands; overlap/linked
+                # frames instead select ciphertext and replace generated weights.
+                if index in (4, 5, 16, 17):
+                    infinity = 0x7F80 if index < 16 else 0xFF80
+                    weights = [0x3F80 if mode == 1 else 1] * 8
+                    activations = [0x3F80] * 8
+                    activations[1] = infinity
+                    if mode == 1:
+                        weights[0] = infinity
                 if large:
                     weights = [0x3F00 | rng.randrange(128) for _ in range(8)]
                     activations = [0x3F00 | rng.randrange(128) for _ in range(8)]
@@ -151,6 +182,8 @@ def generate(path, count=24, max_tile=32, depth=1, seed=17, *, content_checksum=
             memory(completion_addr, b"\xa5" * 16, completion, permitted=True)
             records.append(dict(index=index, mode=mode, vectors=vectors, encoding=encoding,
                                 weight_bytes=weight_bytes,
+                                infinity_operands=infinity_operands(
+                                    mode, weights_bytes, activations_bytes),
                                 status=status, tile_id=tile_id, result=f"{accumulator:016x}"))
         # Disabled fetch makes all descriptors genuinely queued, including a full ring.
         write(4, 0)

@@ -10,6 +10,8 @@ Run each command from the project directory:
 
 behavior: compact IEEE smoke; exact AES/GCM, LZ4 and tensor oracles;
           concurrent AXI scoreboards; three seeds at each admitted SoC geometry.
+          Each matrix cell requires compared positive/negative infinity operands
+          in mode-1 weights/activations and mode-2 activations, not just results.
 boundaries: all twenty top parameter tuples; CSR/ring event priorities; bus
             faults, reset epochs, singleton/64-KiB capacity, extended LZ4 history
             and explicit illegal-parameter diagnostics.

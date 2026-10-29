@@ -1,5 +1,6 @@
 """Self-contained admitted suites; no prior evidence or generated build is an input."""
 
+from collections import Counter
 import re
 import shutil
 import sys
@@ -70,8 +71,18 @@ def soc_matrix_cell(run, api, max_tile, depth):
             raise AssertionError("integrated matrix thresholds not met")
         if {r["encoding"] for r in success} != {"literal", "raw", "overlap", "linked"}:
             raise AssertionError("integrated compression matrix not met")
+        # The completed public-pin scoreboard has compared every plaintext byte,
+        # result and completion; only now count successful operand observations.
+        infinity_operands = Counter()
+        for record in success:
+            infinity_operands.update(record["infinity_operands"])
+        missing = [category for category in soc_cases.REQUIRED_INFINITY_OPERANDS
+                   if infinity_operands[category] < 1]
+        if missing:
+            raise AssertionError(f"integrated infinity operand coverage missing: {missing}")
         rows.append(dict(seed=seed, max_tile=max_tile, depth=depth, compared=24,
                          successful=len(success), tag_rejections=len(failed),
+                         infinity_operand_counts=dict(infinity_operands),
                          compared_bytes=int(match[2]), read_beats=int(match[3]),
                          write_beats=int(match[4])))
     run.receipt["coverage"]["integrated_matrix"] = rows
