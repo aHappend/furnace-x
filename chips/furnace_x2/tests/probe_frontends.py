@@ -82,7 +82,7 @@ def main():
     try:
         cell = CELLS[args.cell]
         if args.simulator == "iverilog" and max(cell[:4]) >= 64:
-            cell = CELLS[1]
+            args.simulator = "verilator"
         receipt["configuration"] = cell
         iw, ih, ow, oh, n = cell
         frames = 1 if args.simulator == "iverilog" else 8

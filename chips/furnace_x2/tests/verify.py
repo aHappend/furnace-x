@@ -1,21 +1,9 @@
-"""Portable L1 verification; delivery is not yet verification-complete.
+"""Portable, source-bound FURNACE-X2 L1 checks.
 
-Implemented entry paths:
-  smoke: reference KATs, four public arithmetic kernels, authenticated single-pair
-         complete SoC, corrupted candidate rejection, reset/startup/stall checks.
-  synthesis: procedural Yosys synthesis of three complete configurations, syntax
-             conversion behavioral comparison, literal hierarchy and cell checks.
-
-Saved independent compiled probes additionally cover malformed vision/audio
-streams, mismatched fusion IDs, full record-ring reservation/release, both lead
-directions, authenticated bank retention, and exact three-mode legacy arithmetic.
-They remain advisory until integrated into complete admitted check suites.
-
-Unfinished: the complete 7x3 behavioral matrix with exhaustive per-frame leaf
-vectors; complete legacy/security and CSR/DMA fault matrix; exhaustive QoS,
-protocol and parameter-boundary checks; eight functional mutation kills; and
-fresh-tree reproduction. Unfinished suites deliberately fail, never skip.
-The shared runtime owns native timing and hardware gates and product reporting.
+All mandatory suites execute tools and independent public-pin comparisons.
+Focused --preparation options are diagnostics, never substitutes for a suite.
+See tests/README.md for requirement mapping, numerical rules, bounds and limits.
+The shared runtime owns native timing/hardware gates and product reporting.
 """
 
 import argparse
@@ -147,7 +135,58 @@ def smoke(run):
                  "-p", "test_*_oracle.py"], "independent-reference-selfchecks")
     for kind in range(4):
         kernel_checks.execute(run, kind, 8, "iverilog")
+    import security_checks
+    security_checks.execute(run, 0, simulator="iverilog")
     probe_soc.execute(run, probe_soc.CELLS[1], 17, "iverilog")
+
+
+def compatibility(run):
+    import legacy_soc_checks
+    import ring_checks
+    import security_checks
+    import tensor_checks
+    run.command(["python3", "-m", "unittest", "discover", "-s", "tests",
+                 "-p", "test_*_oracle.py"], "independent-reference-selfchecks")
+    for reference in (False, True):
+        tensor_checks.execute(run, reference=reference)
+        legacy_soc_checks.execute(run, reference=reference)
+        for kind in range(4):
+            security_checks.execute(run, kind, reference=reference)
+    for depth in (1, 3, 16):
+        ring_checks.execute(run, depth, reference=True)
+
+
+def protocol(run):
+    import csr_checks
+    import fusion_checks
+    import parameter_checks
+    import probe_soc
+    import qos_checks
+    import ring_checks
+    parameter_checks.execute(run)
+    csr_checks.execute(run)
+    qos_checks.execute(run)
+    for depth in (1, 3, 16):
+        fusion_checks.execute(run, depth)
+        ring_checks.execute(run, depth)
+    # Each integrated fault/reset case has a separate source-bound namespace.
+    # No check depends on receipts or products from another mandatory suite.
+    for fault in (5, 6, 7, 0):
+        child = Run(f"l1-protocol-soc-{fault}", ["python3", "tests/verify.py", "--suite", "protocol"],
+                    preparation=not run.receipt["acceptance_evidence"])
+        error = None
+        try:
+            probe_soc.execute(child, probe_soc.CELLS[1], 89, "verilator",
+                              fault=fault, reset_stalled=fault == 0)
+        except Exception as caught:
+            error = caught
+            raise
+        finally:
+            child.finish(error)
+            run.receipt.setdefault("integrated_protocol", []).append(
+                dict(fault=fault, receipt=str(child.path/"receipt.json"),
+                     outcome="passed" if error is None else "failed"))
+            run.save()
 
 
 def main():
@@ -172,22 +211,30 @@ def main():
     parser.add_argument("--parameters", action="store_true")
     parser.add_argument("--security-kind", type=int, choices=range(4))
     parser.add_argument("--legacy-soc", action="store_true")
+    parser.add_argument("--legacy-soc-full", action="store_true")
     parser.add_argument("--csr", action="store_true")
+    parser.add_argument("--ring-depth", type=int, choices=(1, 3, 16))
     args = parser.parse_args()
     run = Run(f"l1-{args.suite}", ["python3", *sys.argv],
               preparation=args.preparation, repair_of=args.repair_of)
     error = None
     try:
-        if args.csr:
+        if args.ring_depth is not None:
+            if not args.preparation:
+                raise ValueError("--ring-depth requires --preparation")
+            import ring_checks
+            ring_checks.execute(run, args.ring_depth, args.reference)
+        elif args.csr:
             if not args.preparation:
                 raise ValueError("--csr requires --preparation")
             import csr_checks
             csr_checks.execute(run)
-        elif args.legacy_soc:
+        elif args.legacy_soc or args.legacy_soc_full:
             if not args.preparation:
                 raise ValueError("--legacy-soc requires --preparation")
             import legacy_soc_checks
-            legacy_soc_checks.execute(run, args.reference, args.seed, limit=6)
+            legacy_soc_checks.execute(run, args.reference, args.seed,
+                                      limit=None if args.legacy_soc_full else 6)
         elif args.security_kind is not None:
             if not args.preparation:
                 raise ValueError("--security-kind requires --preparation")
@@ -242,12 +289,13 @@ def main():
         elif args.suite == "mutations":
             import mutation_checks
             mutation_checks.execute(run)
+        elif args.suite == "compatibility":
+            compatibility(run)
+        elif args.suite == "protocol":
+            protocol(run)
         elif args.suite == "reproduction":
             import reproduction_checks
             reproduction_checks.execute(run)
-        else:
-            raise NotImplementedError(
-                f"{args.suite} suite is not yet implemented; no acceptance claimed")
     except Exception as caught:
         error = caught
     finally:

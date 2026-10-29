@@ -111,3 +111,17 @@ def execute(run):
                 run.save()
     if len(ledger) != 21:
         raise AssertionError("incomplete mandatory matrix")
+    child = Run("l1-shared-tensor-contention",
+                ["python3", "tests/verify.py", "--suite", "behavior"],
+                preparation=not run.receipt["acceptance_evidence"])
+    error = None
+    try:
+        probe_soc.execute(child, (1, 1, 1, 1, 8, 16, 3, 4096), 203, "verilator",
+                          frames=64, contention=True)
+    except Exception as caught:
+        error = caught
+        raise
+    finally:
+        child.finish(error)
+        run.receipt["shared_tensor_receipt"] = str(child.path/"receipt.json")
+        run.save()

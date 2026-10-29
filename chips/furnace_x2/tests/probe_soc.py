@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import random
+import re
 from pathlib import Path
 import struct
 import sys
@@ -24,7 +25,7 @@ CELLS = (
 )
 
 
-def stimulus(run, cell, seed, frames, errors=False, fault=0):
+def stimulus(run, cell, seed, frames, errors=False, fault=0, contention=False):
     iw, ih, ow, oh, n, depth, ring, tile = cell
     weights = [-8, -3, 0, 7, 1, -1, 5, -6]
     packed_weights = sum((v & 15) << (4 * i) for i, v in enumerate(weights))
@@ -70,12 +71,42 @@ def stimulus(run, cell, seed, frames, errors=False, fault=0):
         raise AssertionError("independent corrupted-tag frame construction")
     initial[0x8000] = bad_descriptor
     initial[0x2100] = bad_frame
+    heavy_results = []
+    if contention:
+        if tile < 256 or ring < 3:
+            raise ValueError("contention diagnostic requires tile>=256 and ring>=3")
+        for job in range(2):
+            rng = random.Random((seed << 8)+job)
+            ws = [[rng.randrange(-8, 8) for _ in range(8)] for _ in range(64)]
+            acts = [[rng.randrange(-32768, 32768) for _ in range(8)] for _ in range(64)]
+            heavy_plain = b"".join(
+                sum((w & 15) << (4*i) for i, w in enumerate(vector)).to_bytes(4, "little")
+                for vector in ws)
+            heavy_descriptor = bytearray(128)
+            frame_address = 0x2200+0x200*job
+            act_address = 0x4200+0x400*job
+            struct.pack_into("<10I", heavy_descriptor, 0,
+                             1, 0x100, frame_address, 271, 0x3000, act_address,
+                             0x5200+0x100*job, 256, 64, 0x778899AA+job)
+            heavy_nonce = (100+job).to_bytes(12, "big")
+            heavy_descriptor[40:52] = heavy_nonce
+            struct.pack_into("<I", heavy_descriptor, 68, 0x6300+16*job)
+            heavy_cipher, heavy_tag = security.gcm_encrypt(
+                key, heavy_nonce, heavy_plain, bytes(heavy_descriptor[:52]))
+            heavy_descriptor[52:68] = heavy_tag
+            from security_checks import frame as lz4_frame
+            initial[0x8200+0x100*job] = heavy_descriptor
+            initial[frame_address] = lz4_frame(heavy_cipher)
+            initial[act_address] = b"".join(
+                a.to_bytes(2, "little", signed=True) for vector in acts for a in vector)
+            initial[0x9000+0x100*job] = heavy_plain
+            heavy_results.append(sum(mm.tensor_w4(w, a) for w, a in zip(ws, acts)))
     image = "".join(f"@{address:04x}\n" + "".join(f"{v:02x}\n" for v in data)
                     for address, data in initial.items())
     (ROOT / run.path / "memory.hex").write_text(image)
     vi, ai, ve, ae, re = [], [], [], [], []
     for frame in range(frames):
-        ident = (65533 + frame) & 65535
+        ident = ((65530+frame-8) if frame>=8 else (65533+frame)) & 65535
         audio_ident = (ident + 1) & 65535 if errors and frame == 7 else ident
         from matrix_checks import frame_inputs
         pixels, samples = frame_inputs(cell, seed, frame)
@@ -128,7 +159,7 @@ def stimulus(run, cell, seed, frames, errors=False, fault=0):
     run.receipt["stream_axi_fault"] = fault
     run.receipt["expected_correct_consecutive_tail"] = frames-(8 if errors else int(fault != 0))
     run.save()
-    return [f"+IMAGE={run.path}/memory.hex",
+    arguments = [f"+IMAGE={run.path}/memory.hex",
             f"+VISION={run.path}/vision.hex", f"+AUDIO={run.path}/audio.hex",
             f"+VEXPECTED={run.path}/vision-expected.hex",
             f"+AEXPECTED={run.path}/audio-expected.hex",
@@ -138,18 +169,25 @@ def stimulus(run, cell, seed, frames, errors=False, fault=0):
             f"+KEY={int.from_bytes(key, 'little'):032x}",
             f"+WEIGHTS={packed_weights:08x}",
             f"+LEGACY={mm.tensor_w4(weights, activations) & ((1 << 64)-1):016x}"]
+    arguments += [f"+HEAVY{job}={value & ((1 << 64)-1):016x}"
+                  for job, value in enumerate(heavy_results)]
+    return arguments
 
 
-def execute(run, cell, seed, simulator, sources=None, errors=False, frames=None, fault=0):
+def execute(run, cell, seed, simulator, sources=None, errors=False, frames=None, fault=0,
+            reset_stalled=False, contention=False):
+    if simulator == "iverilog" and (errors or contention or reset_stalled or fault or
+                                   max(cell[:4])>=64 or (frames is not None and frames>1)):
+        simulator = "verilator"
     frames = (1 if simulator == "iverilog" else
               frames if frames is not None else max(16, cell[5]+2) if errors else 8)
     if simulator == "iverilog":
         errors = False
-    if simulator == "iverilog" and max(cell[:4]) >= 64:
-        cell = CELLS[1]
-    args = stimulus(run, cell, seed, frames, errors, fault)
+    args = stimulus(run, cell, seed, frames, errors, fault, contention)
     parameters = dict(zip(("IW", "IH", "OW", "OH", "N", "DEPTH", "RING", "TILE"), cell))
-    parameters["FAULT_SWEEP"] = int(simulator == "verilator" and fault == 0)
+    parameters["FAULT_SWEEP"] = int(simulator == "verilator" and fault == 0 and not contention)
+    parameters["RESET_STALLED"] = int(reset_stalled)
+    parameters["CONTENTION"] = int(contention)
     rtl = (sources if sources is not None else
            [str(p.relative_to(ROOT)) for p in sorted(ROOT.glob("rtl/*.sv"))])
     obj = run.path / "compile-obj"
@@ -169,11 +207,29 @@ def execute(run, cell, seed, simulator, sources=None, errors=False, frames=None,
                          "-o", "sim", *[f"-G{k}={v}" for k, v in parameters.items()],
                          *rtl, "tests/soc_probe.sv"], "compile")
             log = run.command([str(obj / "sim"), *args], "simulation")
+        if reset_stalled:
+            if "COMPARED reset_stalled=1 compared_pair=1 consumed_pair=0 zeroized_epoch=1" not in log.read_text():
+                raise AssertionError("missing stalled-reset comparisons")
+            run.receipt["stalled_soc_reset"] = dict(
+                compared_pairs=1, consumed_pairs=0, raw_output=str(log.relative_to(ROOT)))
+            run.save()
+            return
         if "COMPARED legacy=1" not in log.read_text():
             raise AssertionError("missing completed comparison summary")
+        if "COMPARED reset_partial_vision_audio=1 zeroized_epoch=1" not in log.read_text():
+            raise AssertionError("partial-input reset comparisons absent")
         expected_faults = 4 if parameters["FAULT_SWEEP"] else int(fault != 0)
         if f"axi_faults={expected_faults}" not in log.read_text():
             raise AssertionError("required AXI error injection/comparison absent")
+        summary = re.search(r"COMPARED legacy=1[^\n]*", log.read_text()).group()
+        observed_coverage = {key: int(value)
+                             for key, value in re.findall(r"(\w+)=(\d+)", summary)}
+        if contention:
+            if "COMPARED shared_legacy_jobs=2 accepted_activation_reads=128" not in log.read_text():
+                raise AssertionError("shared tensor ownership workload did not complete")
+            run.receipt["shared_tensor_contention"] = dict(
+                legacy_jobs=2, vectors_per_job=64, multimodal_pairs=frames,
+                raw_output=str(log.relative_to(ROOT)))
         run.receipt.setdefault("soc_comparisons", []).append(
             dict(configuration=cell, seed=seed, pairs=frames,
                  successful_legacy_completions=1, rejected_authentication_updates=1,
@@ -182,6 +238,7 @@ def execute(run, cell, seed, simulator, sources=None, errors=False, frames=None,
                  feature_record_data_comparisons=2*frames, result_record_data_comparisons=frames,
                  successful_feature_write_responses=2*frames-int(fault in (5, 6)),
                  successful_result_write_responses=frames-int(fault == 7),
+                 observed_coverage=observed_coverage,
                  raw_output=str(log.relative_to(ROOT))))
         run.save()
     finally:
@@ -197,6 +254,8 @@ def main():
     parser.add_argument("--repair-of")
     parser.add_argument("--errors", action="store_true")
     parser.add_argument("--fault", type=int, choices=(0, 5, 6, 7), default=0)
+    parser.add_argument("--reset-stalled", action="store_true")
+    parser.add_argument("--contention", action="store_true")
     parser.add_argument("--lower-packed", action="store_true",
                         help="Behaviorally exercise the exact Yosys input conversion")
     args = parser.parse_args()
@@ -207,8 +266,11 @@ def main():
         if args.lower_packed:
             from yosys_input import prepare_sources
             sources = prepare_sources(run)
-        execute(run, CELLS[args.cell], args.seed, args.simulator,
-                sources=sources, errors=args.errors, fault=args.fault)
+        cell = (1, 1, 1, 1, 8, 16, 3, 4096) if args.contention else CELLS[args.cell]
+        execute(run, cell, args.seed, args.simulator,
+                sources=sources, errors=args.errors, fault=args.fault,
+                reset_stalled=args.reset_stalled, contention=args.contention,
+                frames=64 if args.contention else None)
     except Exception as caught:
         error = caught
     finally:

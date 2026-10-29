@@ -1,7 +1,5 @@
 """Independent AES/GCM, XXH32 and framed LZ4 RTL transaction comparisons."""
 
-import ctypes
-import ctypes.util
 import hashlib
 import random
 
@@ -94,6 +92,8 @@ def cases(kind, seed=203):
 
 
 def execute(run, kind, reference=False, simulator="verilator"):
+    if simulator == "iverilog" and kind != 0:
+        simulator = "verilator"
     fixtures = cases(kind)
     label = f"security-{kind}-{'parent' if reference else 'deliverable'}"
     inputs, expected, metadata = bytearray(), bytearray(), []
@@ -138,8 +138,6 @@ def execute(run, kind, reference=False, simulator="verilator"):
                          "tests/security_probe.sv"], f"{label}-compile")
             command = [str(obj/"sim")]
         else:
-            if kind != 0:
-                raise ValueError("Icarus security portability probe is compact AES only")
             run.command(["iverilog", "-V"], f"{label}-version")
             run.command(["vvp", "-V"], f"{label}-simulator-version")
             run.command(["iverilog", "-g2012", "-Wall", "-s", "security_probe",

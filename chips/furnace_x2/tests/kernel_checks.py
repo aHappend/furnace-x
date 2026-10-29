@@ -47,6 +47,8 @@ def vectors(kind, n, seed):
 
 def execute(run, kind, n, simulator, seed=17, sources=None, pairs=None):
     pairs = vectors(kind, n, seed) if pairs is None else pairs
+    if simulator == "iverilog" and (n>=64 or len(pairs)>4096):
+        simulator = "verilator"
     label = f"kernel-{kind}-n{n}-{simulator}"
     args = []
     for stem, index in (("input", 0), ("expected", 1)):
