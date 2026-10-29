@@ -479,6 +479,42 @@ def top_run(run, width, backend, seed=17, full=False, sample=False, rtl=None, pr
     return counters
 
 
+def parse_leaf_output(text, expected, kind, stderr=""):
+    """Reject malformed/unknown leaf records before converting public values."""
+    assert kind in ("rss", "classifier"), f"unknown leaf kind: {kind}"
+    check_simulator_stderr(stderr)
+    actual = []
+    count = None
+    for line in text.splitlines():
+        if line.startswith(("LEAF ", "LEAF_COUNT ")):
+            assert count is None, f"event after terminal LEAF_COUNT record: {line}"
+        if line.startswith("LEAF "):
+            parts = line.split()
+            assert len(parts) == (4 if kind == "rss" else 5), (
+                f"malformed LEAF record: {line}")
+            decimal = (1, 3) if kind == "rss" else (1, 2, 3)
+            hexadecimal = 2 if kind == "rss" else 4
+            assert all(re.fullmatch(r"[0-9]+", parts[i]) for i in decimal), (
+                f"nondecimal LEAF field: {line}")
+            assert re.fullmatch(r"[0-9a-fA-F]+", parts[hexadecimal]), (
+                f"nonhexadecimal LEAF field: {line}")
+            assert int(parts[1]) == len(actual), f"duplicate/out-of-order LEAF record: {line}"
+            actual.append((int(parts[2], 16), int(parts[3])) if kind == "rss" else
+                          (int(parts[2]), int(parts[3]), int(parts[4], 16)))
+        elif line.startswith("LEAF_COUNT "):
+            parts = line.split()
+            assert len(parts) == 2 and re.fullmatch(r"[0-9]+", parts[1]), (
+                f"malformed LEAF_COUNT record: {line}")
+            count = int(parts[1])
+        elif simulator_finish(line) or not line.strip():
+            pass
+        else:
+            raise AssertionError(f"unexpected leaf diagnostic: {line}")
+    assert count is not None, "missing terminal LEAF_COUNT record"
+    assert actual == expected and count == len(expected) > 0, "leaf result/count mismatch"
+    return actual
+
+
 def leaf_run(run, kind, seed, suffix=""):
     folder = run.path / (kind + suffix)
     folder.mkdir()
@@ -486,22 +522,8 @@ def leaf_run(run, kind, seed, suffix=""):
                 classifier_vectors(folder / "stimulus.txt"))
     executable = compile_sim(run, folder, "verilator", kind=kind)
     text, errors, _ = execute_sim(run, folder, executable)
-    check_simulator_stderr(errors)
-    actual = []
-    count = None
-    for line in text.splitlines():
-        if line.startswith("LEAF "):
-            parts = line.split()
-            assert int(parts[1]) == len(actual)
-            actual.append((int(parts[2], 16), int(parts[3])) if kind == "rss" else
-                          (int(parts[2]), int(parts[3]), int(parts[4], 16)))
-        elif line.startswith("LEAF_COUNT "):
-            count = int(line.split()[1])
-        elif simulator_finish(line) or not line.strip():
-            pass
-        else:
-            raise AssertionError(f"unexpected leaf diagnostic: {line}")
-    assert actual == expected and count == len(expected) > 0
+    actual = parse_leaf_output(text, expected, kind, stderr=errors)
+    count = len(actual)
     result = {"compared": count, "kind": kind, "seed": seed,
               "threshold": 1056 if kind == "rss" else 3073}
     assert count >= result["threshold"]

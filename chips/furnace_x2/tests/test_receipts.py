@@ -319,6 +319,50 @@ class ReceiptTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "changed transcript channel"):
             self.run.verify_retention()
 
+    def test_leaf_records_compare_complete_public_values(self):
+        for kind, record, expected in (
+                ("rss", "LEAF 0 51ccc178 1", [(0x51ccc178, 1)]),
+                ("classifier", "LEAF 0 1 63 deadbeef", [(1, 63, 0xdeadbeef)])):
+            with self.subTest(kind=kind):
+                text = record + "\nLEAF_COUNT 1\n- tb.sv:1: Verilog $finish\n"
+                self.assertEqual(verify.parse_leaf_output(text, expected, kind), expected)
+                with self.assertRaisesRegex(AssertionError, "leaf result/count mismatch"):
+                    verify.parse_leaf_output(text, [(0, 0)], kind)
+
+    def test_leaf_framing_rejects_splices_unknowns_and_extra_fields(self):
+        for kind, line, diagnostic in (
+                ("rss", "LEAF 0 abcdDONE 1", "nonhexadecimal LEAF field"),
+                ("rss", "LEAF 0 x 1", "nonhexadecimal LEAF field"),
+                ("rss", "LEAF 0 abcd z", "nondecimal LEAF field"),
+                ("rss", "LEAF 0 abcd 1 ignored", "malformed LEAF record"),
+                ("classifier", "LEAF 0 1 3 deadbeef ignored", "malformed LEAF record"),
+                ("classifier", "LEAF 0 1 3 xx", "nonhexadecimal LEAF field"),
+                ("classifier", "LEAF 0 1 z deadbeef", "nondecimal LEAF field")):
+            with self.subTest(kind=kind, line=line):
+                with self.assertRaisesRegex(AssertionError, diagnostic):
+                    verify.parse_leaf_output(line + "\n", [], kind)
+
+    def test_leaf_terminal_record_is_unique_and_final(self):
+        for event in ("LEAF_COUNT 1", "LEAF 1 0 1"):
+            with self.subTest(event=event):
+                with self.assertRaisesRegex(AssertionError, "event after terminal LEAF_COUNT"):
+                    verify.parse_leaf_output(
+                        "LEAF 0 0 1\nLEAF_COUNT 1\n" + event + "\n", [(0, 1)], "rss")
+        for count in ("LEAF_COUNT 1 ignored", "LEAF_COUNT -1", "LEAF_COUNT x"):
+            with self.subTest(count=count):
+                with self.assertRaisesRegex(AssertionError, "malformed LEAF_COUNT"):
+                    verify.parse_leaf_output(count + "\n", [], "rss")
+        with self.assertRaisesRegex(AssertionError, "missing terminal LEAF_COUNT"):
+            verify.parse_leaf_output("LEAF 0 0 1\n", [(0, 1)], "rss")
+
+    def test_leaf_order_diagnostics_and_stderr_remain_failures(self):
+        with self.assertRaisesRegex(AssertionError, "duplicate/out-of-order"):
+            verify.parse_leaf_output("LEAF 0 0 1\nLEAF 0 0 1\n", [(0, 1)], "rss")
+        with self.assertRaisesRegex(AssertionError, "unexpected leaf diagnostic"):
+            verify.parse_leaf_output("warning: synthetic\n", [], "rss")
+        with self.assertRaisesRegex(AssertionError, "unexpected simulator stderr"):
+            verify.parse_leaf_output("", [], "rss", stderr="synthetic warning\n")
+
     def test_simulation_cleanup_preserves_evidence_and_executable(self):
         self.check_simulation_cleanup(0)
 
