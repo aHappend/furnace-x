@@ -14,6 +14,7 @@ import sys
 import time
 import uuid
 
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import reference
 
@@ -78,11 +79,16 @@ class Evidence:
             self.record["tools"][tool] = output
 
     def finish(self, error=None):
+        final_hashes = identity()
+        if final_hashes != self.record["source_hashes"]:
+            self.record["end_source_hashes"] = final_hashes
+            error = (error + "; " if error else "") + "declared inputs changed during execution"
         self.record.update(end_time=time.time(), exit_code=1 if error else 0,
                            outcome="failed" if error else "passed", error=error,
                            timed_out=any(c.get("timed_out", False) for c in self.record["commands"]))
         (self.path / "receipt.json").write_text(json.dumps(self.record, indent=2) + "\n")
         print(f"{self.record['outcome']}: {self.path.relative_to(ROOT)}/receipt.json", flush=True)
+        return error is None
 
 
 def startup(e):
@@ -150,7 +156,7 @@ def vectors(path, maximum, key=reference.DEFAULT_KEY, width=64):
 def compile_sim(e, width, maximum, sg, root=ROOT, label="functional"):
     directory = e.path / f"{label}-{width}-{maximum}-{sg}-{uuid.uuid4().hex[:8]}"
     directory.mkdir()
-    obj = directory / "compile-obj"
+    obj = directory / f"compile-obj-{uuid.uuid4().hex[:8]}"
     obj.mkdir()
     e.run(["verilator", "--cc", "--exe", "--build", "-j", "2",
            "-Wno-fatal", "--top-module", "furnace_x3_top",
@@ -167,7 +173,13 @@ def compile_sim(e, width, maximum, sg, root=ROOT, label="functional"):
 
 
 def functional(e, width, maximum, sg, seeds, mode="matrix", root=ROOT, label="functional"):
-    binary = compile_sim(e, width, maximum, sg, root=root, label=label)
+    try:
+        binary = compile_sim(e, width, maximum, sg, root=root, label=label)
+    except Exception:
+        for row in e.record.get("matrix", []):
+            if (row["width"], row["maximum"], row["sg"]) == (width, maximum, sg):
+                row["status"] = "compilation_failed"
+        raise
     corpus = binary.parent / "vectors.txt"
     vectors(corpus, maximum, width=width)
     results = []
@@ -288,6 +300,8 @@ def rollover(e):
 def synthesize(e, minimum_only=False):
     e.require(["yosys"])
     results = []
+    public_ports = []
+    preserved_ports = {}
     configs = [("furnace_x3_top", w, m, s) for w in (64, 512)
                for m, s in ((1, 1), (65, 3), (9216, 16))]
     configs += [(top, w, None, None) for top in ("furnace_x1_top", "furnace_x2_top")
@@ -322,9 +336,26 @@ def synthesize(e, minimum_only=False):
                 raise AssertionError(f"unresolved black box: {module_name}")
             hdlname = module.get("attributes", {}).get("hdlname", module_name).split()[0].lstrip("\\")
             counts[hdlname] = counts.get(hdlname, 0) + 1
-            for cell in module.get("cells", {}).values():
+            literal = {
+                "furnace_x3_top": {
+                    "x2_core": "furnace_x2_top", "queue_rings": "furnace_descriptor_rings",
+                    "scheduler": "furnace_drr_scheduler", "shaper": "furnace_token_bucket8",
+                    "dma_engine": "furnace_sg_dma"},
+                "furnace_x2_top": {
+                    "crc_core": "furnace_x1_top", "parser": "furnace_header_parser",
+                    "rss": "furnace_rss_toeplitz", "classifier": "furnace_classifier64"},
+                "furnace_x1_top": {
+                    "beat_pipeline": "furnace_crc_beat_pipeline",
+                    "packet_accumulator": "furnace_crc_packet_accumulator",
+                    "tail_pipeline": "furnace_crc_tail_pipeline",
+                    "output_stage": "furnace_crc_output_stage"},
+            }.get(hdlname, {})
+            actual_instances = {}
+            for cell_name, cell in module.get("cells", {}).items():
                 kind = cell["type"]
                 if kind in modules:
+                    actual_instances[cell_name.lstrip("\\").split(".")[-1]] = (
+                        modules[kind].get("attributes", {}).get("hdlname", kind).split()[0].lstrip("\\"))
                     for direction in ("input", "output"):
                         ports = [p for p, d in cell["port_directions"].items() if d == direction]
                         if not any(isinstance(bit, int) for p in ports for bit in cell["connections"][p]):
@@ -339,6 +370,9 @@ def synthesize(e, minimum_only=False):
                 if kind == "$mem_v2":
                     parameters = cell["parameters"]
                     memory_bits += int(parameters["SIZE"], 2) * int(parameters["WIDTH"], 2)
+            for instance_name, expected_type in literal.items():
+                if actual_instances.get(instance_name) != expected_type:
+                    raise AssertionError(f"required literal instance missing: {hdlname}.{instance_name}")
 
         walk(top)
         required = ["furnace_x1_top", "furnace_crc_beat_pipeline",
@@ -352,11 +386,24 @@ def synthesize(e, minimum_only=False):
                          "furnace_token_bucket8", "furnace_sg_dma", "furnace_dma_reader"]
         if any(counts.get(name, 0) != 1 for name in required):
             raise AssertionError(f"required literal module connectivity absent: {counts}")
-        if sequential < 1000 or (top != "furnace_x1_top" and memory_bits < 64 * 32):
+        minimum_memory = 0 if top == "furnace_x1_top" else 64 * (512 + 512 + 32) + 256 * 8
+        if top == "furnace_x3_top":
+            minimum_memory += maximum * 8 + 8 * sg * (64 + 32)
+        if sequential < 1000 or memory_bits < minimum_memory:
             raise AssertionError("non-substantive sequential/storage state")
+        ports = {name: (p["direction"], len(p["bits"])) for name, p in modules[top]["ports"].items()}
+        if top == "furnace_x3_top":
+            public_ports.append((width, ports))
+        if top == "furnace_x2_top":
+            preserved_ports[width] = ports
         results.append({"top": top, "width": width, "maximum": maximum, "sg": sg,
                         "sequential_bits": sequential, "memory_bits": memory_bits,
                         "instances": counts, "netlist": str(netlist.relative_to(ROOT))})
+    if not minimum_only:
+        for width, ports in public_ports:
+            for name, shape in preserved_ports[width].items():
+                if ports.get(name) != shape:
+                    raise AssertionError(f"X2 public port ABI changed on X3: {width}/{name}")
     e.record["synthesis"] = results
 
 
@@ -566,13 +613,14 @@ def main():
             elif suite == "delivery":
                 delivery(e)
             else:
-                raise RuntimeError(f"verification implementation incomplete: {suite}")
+                raise RuntimeError(f"unsupported verification suite: {suite}")
         except Exception as error:
             e.finish(f"{type(error).__name__}: {error}")
             print(str(error), file=sys.stderr)
             failed = True
         else:
-            e.finish()
+            if not e.finish():
+                failed = True
     return 1 if failed else 0
 
 
