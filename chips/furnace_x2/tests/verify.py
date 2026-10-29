@@ -13,6 +13,9 @@ the same output root; completion seals bind finished receipts. These are local
 detection safeguards, not backups, authenticated storage or historical recovery.
 Explicit repair links must name a retained failed receipt with intact artifacts;
 their receipt hash is bound before execution and rechecked at completion.
+Top simulations also retain a separate file-channel copy of public observations.
+It must agree byte-for-byte with stdout events; neither channel replaces missing
+or corrupt observations. This localizes future transport loss, not its cause.
 """
 import argparse
 from collections import Counter
@@ -110,6 +113,12 @@ class Run:
             assert journal.is_file(), f"missing command journal: {record['journal']}"
             assert json.loads(journal.read_text()) == record, (
                 f"changed command journal: {record['journal']}")
+        for channels in receipt.get("transcript_channels", []):
+            for stream in ("stdout", "mirror"):
+                artifact = ROOT / channels[stream]
+                assert artifact.is_file(), f"missing transcript channel: {channels[stream]}"
+                assert digest(artifact) == channels[stream + "_sha256"], (
+                    f"changed transcript channel: {channels[stream]}")
 
     def verify_repair_reference(self):
         reference = self.receipt["repair_of"]
@@ -259,12 +268,31 @@ def compile_sim(run, folder, backend, width=None, kind="top", rtl=None):
     return ["obj/sim"]
 
 
+def transcript_comparison(stdout, mirror):
+    raw = stdout.read_bytes()
+    events = b"".join(line for line in raw.splitlines(keepends=True)
+                      if line.startswith((b"DONE ", b"ABORT ", b"COUNTS ")))
+    duplicate = mirror.read_bytes()
+    equal = events == duplicate
+    limit = min(len(events), len(duplicate))
+    mismatch = None if equal else next(
+        (i for i in range(limit) if events[i] != duplicate[i]), limit)
+    return {"equal": equal, "stdout_sha256": digest(stdout),
+            "mirror_sha256": digest(mirror), "stdout_event_bytes": len(events),
+            "mirror_bytes": len(duplicate), "first_different_event_byte": mismatch}
+
+
 def parse_top_output(text, records, full=False, sample=False):
     completed, aborted = set(), set()
     coverage = Counter()
     for line in text.splitlines():
         if line.startswith("DONE "):
             words = line.split()
+            assert len(words) == 12, f"malformed DONE record ({len(words)} fields): {line}"
+            assert all(re.fullmatch(r"[0-9]+", words[i]) for i in (1, 2, 6, 8, 9, 10)), (
+                f"nondecimal DONE field: {line}")
+            assert all(re.fullmatch(r"[0-9a-fA-F]+", words[i]) for i in (3, 4, 5, 7, 11)), (
+                f"nonhexadecimal DONE field: {line}")
             ident, count = map(int, words[1:3])
             if ident in completed or ident not in records:
                 raise AssertionError(f"duplicate/unissued packet: {line}")
@@ -385,7 +413,15 @@ def top_run(run, width, backend, seed=17, full=False, sample=False, rtl=None, pr
     campaign.close()
     write_json(folder / "expected.json", campaign.records)
     executable = compile_sim(run, folder, backend, width=width, rtl=rtl)
-    text, _, _ = run.command(executable, cwd=folder, timeout=600 if backend == "icarus" else 3600)
+    text, _, command = run.command(
+        executable, cwd=folder, timeout=600 if backend == "icarus" else 3600)
+    mirror = folder / "transcript.txt"
+    assert mirror.is_file(), f"missing simulator transcript channel: {run.rel(mirror)}"
+    channels = transcript_comparison(ROOT / command["stdout"], mirror)
+    channels.update(stdout=command["stdout"], mirror=run.rel(mirror))
+    run.receipt.setdefault("transcript_channels", []).append(channels)
+    run.save()
+    assert channels["equal"], f"simulator transcript channel disagreement: {channels}"
     counters = parse_top_output(text, campaign.records, full=full, sample=sample)
     if full:
         for n in range(width // 8 + 1):

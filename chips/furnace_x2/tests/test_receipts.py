@@ -187,6 +187,53 @@ class ReceiptTests(unittest.TestCase):
                 with self.assertRaisesRegex(AssertionError, "must be project-relative"):
                     successor.verify_history()
 
+    def transcripts(self, stdout, mirror):
+        output = self.root / "synthetic.stdout"
+        duplicate = self.root / "synthetic.transcript"
+        output.write_bytes(stdout)
+        duplicate.write_bytes(mirror)
+        return verify.transcript_comparison(output, duplicate)
+
+    def test_equal_transcript_channels(self):
+        events = b"DONE 1 synthetic\nABORT 2 synthetic\nCOUNTS synthetic\n"
+        measured = self.transcripts(events + b"- tb.sv:1: Verilog $finish\n", events)
+        self.assertTrue(measured["equal"])
+        self.assertIsNone(measured["first_different_event_byte"])
+        self.assertEqual(measured["stdout_event_bytes"], len(events))
+
+    def test_buffer_boundary_splice_localized(self):
+        original = b"DONE 1 " + b"a" * 110000 + b"\nCOUNTS synthetic\n"
+        damaged = original[:102400] + b"DONE 664 synthetic\n" + original[108000:]
+        measured = self.transcripts(damaged, original)
+        self.assertFalse(measured["equal"])
+        self.assertEqual(measured["first_different_event_byte"], 102400)
+
+    def test_missing_and_duplicate_transcript_events_rejected(self):
+        events = b"DONE 1 synthetic\nCOUNTS synthetic\n"
+        for damaged in (b"COUNTS synthetic\n", events + b"DONE 1 synthetic\n", b""):
+            with self.subTest(damaged=damaged):
+                self.assertFalse(self.transcripts(damaged, events)["equal"])
+
+    def test_mirror_loss_is_not_replaced_by_stdout(self):
+        self.assertFalse(self.transcripts(b"DONE 1 synthetic\n", b"")["equal"])
+
+    def test_malformed_done_framing_has_explicit_diagnostic(self):
+        with self.assertRaisesRegex(AssertionError, "malformed DONE record"):
+            verify.parse_top_output("DONE 530 1 abcdDONE 664 1\n", {})
+        with self.assertRaisesRegex(AssertionError, "nonhexadecimal DONE field"):
+            verify.parse_top_output("DONE 530 1 abcd 0 0DONE 14 0 0 0 0 0\n", {})
+
+    def test_changed_mirror_rejected_by_retention(self):
+        events = b"DONE 1 synthetic\n"
+        channels = self.transcripts(events, events)
+        channels.update(stdout="synthetic.stdout", mirror="synthetic.transcript")
+        self.run.receipt["transcript_channels"] = [channels]
+        self.run.save()
+        self.run.verify_retention()
+        (self.root / channels["mirror"]).write_bytes(b"changed synthetic record\n")
+        with self.assertRaisesRegex(AssertionError, "changed transcript channel"):
+            self.run.verify_retention()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)

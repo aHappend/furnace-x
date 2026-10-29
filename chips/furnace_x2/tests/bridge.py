@@ -48,7 +48,7 @@ parent_x1_top #(.DATA_WIDTH(W)) parent (
  .m_axis_tlast(p_last),.m_axis_tready(m_axis_tready),
  .m_crc_valid(p_cv),.m_crc_ready(m_crc_ready),.m_crc32c(p_c32),
  .m_crc64_nvme(p_c64),.m_crc_mismatch(p_mm),.m_crc_protocol_error(p_pe));
-integer fd,rc,cmd,id=0,n=0,i,j,cycle=0,deadline=0,final_edge=-1;
+integer fd,transcript,rc,cmd,id=0,n=0,i,j,cycle=0,deadline=0,final_edge=-1;
 integer sent=0,received=0,crc_received=0,meta_received=0,first_meta=0;
 integer active=0,mode=0,abort_kind=0,bubble=0,packet_count=0,beat_count=0;
 integer stalls_b=0,stalls_c=0,stalls_m=0,simultaneous=0,resets=0,configs=0;
@@ -81,6 +81,11 @@ reg [615:0] hold_m;
 wire [W+L:0] now_b={m_axis_tdata,m_axis_tkeep,m_axis_tlast};
 wire [98:0] now_c={m_crc32c,m_crc64_nvme,m_crc_mismatch,m_crc_protocol_error};
 wire [615:0] now_m={m_header,m_packet_bytes,m_rss_hash,m_rss_valid,m_rule_hit,m_rule_index,m_action};
+task automatic report(input string record);
+begin
+ $display("%s",record);
+ $fdisplay(transcript,"%s",record);
+end endtask
 task automatic reset_check;
 begin
  if ({s_axis_tready,cfg_ready,m_axis_tdata,m_axis_tkeep,m_axis_tvalid,m_axis_tlast,
@@ -193,6 +198,8 @@ initial begin
  #1; reset_check();
 `endif
  tick(); tick(); rst_n=1;
+ transcript=$fopen("transcript.txt","w");
+ if (!transcript) $fatal(1,"NO_TRANSCRIPT");
  fd=$fopen("stimulus.txt","r");
  if (!fd) $fatal(1,"NO_STIMULUS");
  while (!$feof(fd)) begin
@@ -245,16 +252,16 @@ initial begin
      if ((abort_kind==1 && sent>0 && sent<n) ||
          (abort_kind==2 && final_edge>=0 && cycle-final_edge==300) ||
          (abort_kind==3 && first_meta)) begin
-      $display("ABORT %0d %0d %0d %0d",id,abort_kind,sent,received);
+      report($sformatf("ABORT %0d %0d %0d %0d",id,abort_kind,sent,received));
       reset_dut(); received=n;crc_received=1;meta_received=1;
      end
     end
     if(cycle>=deadline) $fatal(1,"LOST_RESULT id=%0d",id);
     s_axis_tvalid=0;
     if(!abort_kind) begin
-     $display("DONE %0d %0d %h %h %h %0d %h %0d %0d %0d %h",
+     report($sformatf("DONE %0d %0d %h %h %h %0d %h %0d %0d %0d %h",
        id,n,observed_c32,observed_c64,observed_header,observed_length,
-       observed_hash,observed_rss,observed_hit,observed_index,observed_action);
+       observed_hash,observed_rss,observed_hit,observed_index,observed_action));
      packet_count=packet_count+1;
     end
     active=0;
@@ -270,8 +277,9 @@ initial begin
  end
  s_axis_tvalid=0;cfg_valid=0;m_axis_tready=1;m_crc_ready=1;m_meta_ready=1;
  repeat(20) tick();
- $display("COUNTS %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d",packet_count,beat_count,
-   stalls_b,stalls_c,stalls_m,simultaneous,resets,configs,ingress_bubbles,deferred_count,priority_count);
+ report($sformatf("COUNTS %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d",packet_count,beat_count,
+   stalls_b,stalls_c,stalls_m,simultaneous,resets,configs,ingress_bubbles,deferred_count,priority_count));
+ $fclose(transcript);
  $finish;
 end
 endmodule
