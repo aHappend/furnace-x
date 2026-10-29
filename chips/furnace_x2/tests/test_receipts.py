@@ -223,6 +223,67 @@ class ReceiptTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "nonhexadecimal DONE field"):
             verify.parse_top_output("DONE 530 1 abcd 0 0DONE 14 0 0 0 0 0\n", {})
 
+    def test_abort_framing_rejected_before_numeric_conversion(self):
+        for line, diagnostic in (
+                ("ABORT 1 2 3\n", "malformed ABORT record"),
+                ("ABORT 1 2 3 0DONE\n", "nondecimal ABORT field"),
+                ("ABORT 1 2 -3 0\n", "nondecimal ABORT field")):
+            with self.subTest(line=line):
+                with self.assertRaisesRegex(AssertionError, diagnostic):
+                    verify.parse_top_output(line, {})
+
+    def test_counts_framing_rejected_before_numeric_conversion(self):
+        for line, diagnostic in (
+                ("COUNTS 1 2\n", "malformed public-event counters"),
+                ("COUNTS 1 2 3 4 5 6 7 8 9 10 11DONE\n", "nondecimal COUNTS field"),
+                ("COUNTS 1 2 3 4 5 6 7 8 9 10 -11\n", "nondecimal COUNTS field")):
+            with self.subTest(line=line):
+                with self.assertRaisesRegex(AssertionError, diagnostic):
+                    verify.parse_top_output(line, {})
+
+    def test_duplicate_terminal_counts_cannot_inflate_coverage(self):
+        counts = "COUNTS 1 1 1 1 1 1 1 1 1 1 1\n"
+        with self.assertRaisesRegex(AssertionError, "event after terminal COUNTS"):
+            verify.parse_top_output(counts + counts, {})
+
+    def test_packet_event_after_terminal_counts_rejected(self):
+        counts = "COUNTS 1 1 1 1 1 1 1 1 1 1 1\n"
+        for event in ("DONE 1 1 0 0 0 0 0 0 0 0 0\n", "ABORT 1 1 1 0\n"):
+            with self.subTest(event=event):
+                with self.assertRaisesRegex(AssertionError, "event after terminal COUNTS"):
+                    verify.parse_top_output(counts + event, {})
+
+    def test_duplicate_abort_cannot_inflate_reset_coverage(self):
+        records = {1: {"abort": 1}}
+        with self.assertRaises(AssertionError):
+            verify.parse_top_output("ABORT 1 1 1 0\nABORT 1 1 1 0\n", records)
+
+    def test_equal_channels_do_not_certify_record_validity(self):
+        damaged = b"COUNTS 1 2 3 4 5 6 7 8 9 10 11DONE\n"
+        self.assertTrue(self.transcripts(damaged, damaged)["equal"])
+        with self.assertRaisesRegex(AssertionError, "nondecimal COUNTS field"):
+            verify.parse_top_output(damaged.decode("ascii"), {})
+
+    def test_missing_terminal_counts_rejected_explicitly(self):
+        with self.assertRaisesRegex(AssertionError, "missing terminal COUNTS"):
+            verify.parse_top_output("", {})
+
+    def test_complete_synthetic_transcript_measures_events_once(self):
+        record = dict.fromkeys(
+            ("crc32", "crc64", "header", "length", "hash", "rss", "hit", "index", "action"), 0)
+        record.update(beats=1, abort=0, fields={}, labels=["synthetic"])
+        text = ("DONE 1 1 0 0 0 0 0 0 0 0 0\n"
+                "ABORT 2 1 1 0\n"
+                "COUNTS 1 1 1 1 1 1 1 1 1 1 2\n")
+        for trailer in ("", "- tb.sv:1: Verilog $finish\n"):
+            with self.subTest(trailer=trailer):
+                coverage = verify.parse_top_output(
+                    text + trailer, {1: record, 2: {"abort": 1}})
+                self.assertEqual(coverage["compared_packets"], 1)
+                self.assertEqual(coverage["compared_beats"], 1)
+                self.assertEqual(coverage["reset_observed_1"], 1)
+                self.assertEqual(coverage["synthetic"], 1)
+
     def test_changed_mirror_rejected_by_retention(self):
         events = b"DONE 1 synthetic\n"
         channels = self.transcripts(events, events)

@@ -287,7 +287,10 @@ def transcript_comparison(stdout, mirror):
 def parse_top_output(text, records, full=False, sample=False):
     completed, aborted = set(), set()
     coverage = Counter()
+    counts_seen = False
     for line in text.splitlines():
+        if line.startswith(("DONE ", "ABORT ", "COUNTS ")):
+            assert not counts_seen, f"event after terminal COUNTS record: {line}"
         if line.startswith("DONE "):
             words = line.split()
             assert len(words) == 12, f"malformed DONE record ({len(words)} fields): {line}"
@@ -329,23 +332,33 @@ def parse_top_output(text, records, full=False, sample=False):
                     coverage[f"observed_protocol_{fields['proto']}"] += 1
                 coverage[f"observed_vlans_{fields.get('vlans', 0)}"] += 1
         elif line.startswith("ABORT "):
-            ident, kind, sent, received = map(int, line.split()[1:])
+            words = line.split()
+            assert len(words) == 5, f"malformed ABORT record: {line}"
+            assert all(re.fullmatch(r"[0-9]+", word) for word in words[1:]), (
+                f"nondecimal ABORT field: {line}")
+            ident, kind, sent, received = map(int, words[1:])
             assert ident in records and ident not in aborted and records[ident]["abort"] == kind
+            assert kind in (1, 2, 3) and ident not in completed
             assert sent > 0 and received <= sent
             aborted.add(ident)
             coverage[f"reset_observed_{kind}"] += 1
         elif line.startswith("COUNTS "):
-            values = list(map(int, line.split()[1:]))
+            words = line.split()
             names = ("packets", "beats", "payload_stall_cycles", "crc_stall_cycles",
                      "meta_stall_cycles", "simultaneous_terminal", "resets", "configs",
                      "ingress_bubbles", "deferred_configs", "priority_configs")
-            assert len(values) == len(names), "malformed public-event counters"
+            assert len(words) == len(names) + 1, "malformed public-event counters"
+            assert all(re.fullmatch(r"[0-9]+", word) for word in words[1:]), (
+                f"nondecimal COUNTS field: {line}")
+            values = list(map(int, words[1:]))
+            counts_seen = True
             coverage.update(dict(zip(names, values)))
         elif (line.startswith("- ") or re.fullmatch(r".*tb\.sv:\d+: \$finish called at \d+ \(.+\)", line)
               or not line.strip()):
             pass
         else:
             raise AssertionError(f"unexpected simulator diagnostic: {line}")
+    assert counts_seen, "missing terminal COUNTS record"
     assert completed == {i for i, r in records.items() if not r["abort"]}, "missing completed packets"
     assert aborted == {i for i, r in records.items() if r["abort"]}, "missing reset-aborted packets"
     assert coverage["packets"] == len(completed) > 0
