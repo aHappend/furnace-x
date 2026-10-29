@@ -20,6 +20,8 @@ The bridge flushes at completed event records and checks file-channel I/O errors
 this is not a remedy for exhausted storage or lost historical evidence.
 Successful functional simulations must also have empty diagnostic stderr; only
 recognized simulator finish notices may accompany their stdout event records.
+New simulations remove only disposable Verilator object/archive/PCH files after
+execution, including rejected mutants; generated sources and binaries stay retained.
 """
 import argparse
 from collections import Counter
@@ -272,6 +274,18 @@ def compile_sim(run, folder, backend, width=None, kind="top", rtl=None):
     return ["obj/sim"]
 
 
+def execute_sim(run, folder, executable, **kwargs):
+    try:
+        return run.command(executable, cwd=folder, **kwargs)
+    finally:
+        # Leave executable, generated sources and all diagnostic evidence intact.
+        objects = folder / "obj"
+        for pattern in ("*.o", "*.a", "*.gch"):
+            for artifact in objects.glob(pattern):
+                if artifact.is_file() and not artifact.is_symlink():
+                    artifact.unlink()
+
+
 def transcript_comparison(stdout, mirror):
     raw = stdout.read_bytes()
     events = b"".join(line for line in raw.splitlines(keepends=True)
@@ -440,8 +454,8 @@ def top_run(run, width, backend, seed=17, full=False, sample=False, rtl=None, pr
     campaign.close()
     write_json(folder / "expected.json", campaign.records)
     executable = compile_sim(run, folder, backend, width=width, rtl=rtl)
-    text, errors, command = run.command(
-        executable, cwd=folder, timeout=600 if backend == "icarus" else 3600)
+    text, errors, command = execute_sim(
+        run, folder, executable, timeout=600 if backend == "icarus" else 3600)
     mirror = folder / "transcript.txt"
     assert mirror.is_file(), f"missing simulator transcript channel: {run.rel(mirror)}"
     channels = transcript_comparison(ROOT / command["stdout"], mirror)
@@ -471,7 +485,7 @@ def leaf_run(run, kind, seed, suffix=""):
     expected = (rss_vectors(folder / "stimulus.txt", seed) if kind == "rss" else
                 classifier_vectors(folder / "stimulus.txt"))
     executable = compile_sim(run, folder, "verilator", kind=kind)
-    text, errors, _ = run.command(executable, cwd=folder)
+    text, errors, _ = execute_sim(run, folder, executable)
     check_simulator_stderr(errors)
     actual = []
     count = None
@@ -670,7 +684,7 @@ def defects(run, probe=False):
         write_json(folder / "mutation.json", {"name": name, "source_sha256": hashes,
                                             "expected_checker": marker})
         executable = compile_sim(run, sim, "verilator", width=64, rtl=rtl)
-        text, err, rec = run.command(executable, cwd=sim, expect=None)
+        text, err, rec = execute_sim(run, sim, executable, expect=None)
         assert rec["exit"] != 0 and not rec["timeout"], f"surviving mutant: {name}"
         assert marker in text + err, f"wrong rejection for {name}: {text[-1600:]} {err[-1600:]}"
         assert "Error-" in text + err or "Assertion failed" in text + err

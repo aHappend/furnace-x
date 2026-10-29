@@ -319,6 +319,37 @@ class ReceiptTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "changed transcript channel"):
             self.run.verify_retention()
 
+    def test_simulation_cleanup_preserves_evidence_and_executable(self):
+        self.check_simulation_cleanup(0)
+
+    def test_rejected_simulation_still_cleans_build_intermediates(self):
+        self.check_simulation_cleanup(7)
+
+    def check_simulation_cleanup(self, exit_code):
+        folder = self.run.path / "simulation"
+        objects = folder / "obj"
+        objects.mkdir(parents=True)
+        disposable = ("model.o", "model.a", "model.fast.gch")
+        retained = ("sim", "model.cpp", "model.h", "model.mk")
+        for name in disposable + retained:
+            (objects / name).write_text("synthetic build fixture\n")
+        (folder / "stimulus.txt").write_text("synthetic input\n")
+        executable = [
+            sys.executable, "-c",
+            f"import sys; print('synthetic simulation'); sys.exit({exit_code})"]
+        if exit_code:
+            with self.assertRaisesRegex(AssertionError, "tool execution failed"):
+                verify.execute_sim(self.run, folder, executable)
+        else:
+            verify.execute_sim(self.run, folder, executable)
+        for name in disposable:
+            self.assertFalse((objects / name).exists())
+        for name in retained:
+            self.assertEqual((objects / name).read_text(), "synthetic build fixture\n")
+        self.assertEqual((folder / "stimulus.txt").read_text(), "synthetic input\n")
+        self.assertEqual(self.run.commands[-1]["exit"], exit_code)
+        self.run.verify_retention()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
