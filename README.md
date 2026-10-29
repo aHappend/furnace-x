@@ -23,6 +23,8 @@
     <a href="https://github.com/aHappend/rivet-h">Rivet-H (SHA/HMAC)</a> ·
     <a href="https://github.com/aHappend/swage-s">Swage-S (ISP)</a> ·
     <a href="https://github.com/aHappend/bellows-l">Bellows-L (LZ4)</a> ·
+    <a href="https://github.com/aHappend/bellows-n">Bellows-N (Network)</a> ·
+    <a href="https://github.com/aHappend/hammer-v">Hammer-V (RISC-V)</a> ·
     <a href="https://github.com/aHappend/crucible-g">Crucible-G (3D)</a> ·
     <a href="https://github.com/aHappend/furnace-x">Furnace-X (SoC)</a> ·
     <a href="README.zh-CN.md"><strong>中文文档</strong></a>
