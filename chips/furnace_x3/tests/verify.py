@@ -6,6 +6,8 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import resource
+import re
 import shutil
 import subprocess
 import sys
@@ -65,6 +67,8 @@ class Evidence:
 
     def require(self, tools):
         for tool in tools:
+            if tool in self.record["tools"]:
+                continue
             if shutil.which(tool) is None:
                 raise RuntimeError(f"missing executable: {tool}")
             flag = "-V" if tool in ("iverilog", "vvp") else "--version"
@@ -75,7 +79,8 @@ class Evidence:
 
     def finish(self, error=None):
         self.record.update(end_time=time.time(), exit_code=1 if error else 0,
-                           outcome="failed" if error else "passed", error=error)
+                           outcome="failed" if error else "passed", error=error,
+                           timed_out=any(c.get("timed_out", False) for c in self.record["commands"]))
         (self.path / "receipt.json").write_text(json.dumps(self.record, indent=2) + "\n")
         print(f"{self.record['outcome']}: {self.path.relative_to(ROOT)}/receipt.json", flush=True)
 
@@ -98,8 +103,10 @@ def startup(e):
         if index >= len(configs):
             if "PARAMETER ERROR" not in output:
                 raise AssertionError("invalid parameter failed without the explicit diagnostic")
-        elif "STARTUP comparisons=9" not in output:
-            raise AssertionError("startup finished without comparisons")
+        else:
+            count = re.findall(r"STARTUP comparisons=(\d+)", output)
+            if len(count) != 1 or int(count[0]) < 8:
+                raise AssertionError("startup finished without all required reset edge comparisons")
 
 
 def vectors(path, maximum, key=reference.DEFAULT_KEY, width=64):
@@ -144,14 +151,15 @@ def compile_sim(e, width, maximum, sg, root=ROOT, label="functional"):
     directory = e.path / f"{label}-{width}-{maximum}-{sg}-{uuid.uuid4().hex[:8]}"
     directory.mkdir()
     obj = directory / "compile-obj"
+    obj.mkdir()
     e.run(["verilator", "--cc", "--exe", "--build", "-j", "2",
            "-Wno-fatal", "--top-module", "furnace_x3_top",
            f"-GDATA_WIDTH={width}", f"-GMAX_PACKET_BYTES={maximum}", f"-GMAX_SG={sg}",
            "-CFLAGS", f"-DTEST_WIDTH={width} -DTEST_MAX={maximum} -DTEST_SG={sg}",
-           "--Mdir", os.path.relpath(obj, root),
-           *[str(p.relative_to(root)) for p in sorted((root / "rtl").glob("*.sv"))],
-           str((root / "tests/driver.cpp").resolve())],
-          f"{label}-{width}-{maximum}-{sg}-compile", cwd=root)
+           "--Mdir", ".",
+           *[os.path.relpath(p, obj) for p in sorted((root / "rtl").glob("*.sv"))],
+           os.path.relpath(root / "tests/driver.cpp", obj)],
+          f"{label}-{width}-{maximum}-{sg}-compile", cwd=obj)
     binary = directory / "simulator"
     shutil.copy2(obj / "Vfurnace_x3_top", binary)
     shutil.rmtree(obj)
@@ -164,21 +172,48 @@ def functional(e, width, maximum, sg, seeds, mode="matrix", root=ROOT, label="fu
     vectors(corpus, maximum, width=width)
     results = []
     for seed in seeds:
-        output = e.run([os.path.relpath(binary, root), os.path.relpath(corpus, root),
-                        str(seed), mode], f"{label}-{width}-{maximum}-{sg}-{seed}", cwd=root)
+        row = next((r for r in e.record.get("matrix", [])
+                    if (r["width"], r["maximum"], r["sg"], r["seed"]) ==
+                    (width, maximum, sg, seed)), None)
+        if row is not None:
+            row["status"] = "running"
+        try:
+            output = e.run([os.path.relpath(binary, root), os.path.relpath(corpus, root),
+                            str(seed), mode], f"{label}-{width}-{maximum}-{sg}-{seed}", cwd=root)
+        except Exception:
+            if row is not None:
+                row["status"] = "failed"
+            raise
         records = [json.loads(line[7:]) for line in output.splitlines() if line.startswith("RESULT ")]
         if len(records) != 1:
             raise AssertionError("simulator did not emit exactly one structured coverage record")
+        observed = records[0]
+        if mode == "matrix":
+            if observed["dma_successes"] < 64 or observed["legacy_packets"] < 16:
+                raise AssertionError("observed successful packet thresholds not met")
+            if len(observed["queue_successes"]) != 8 or min(observed["queue_successes"]) < 1:
+                raise AssertionError("missing observed queue success")
+            if len(observed["stall_cycles"]) != 6 or min(observed["stall_cycles"]) < 1:
+                raise AssertionError("missing independent channel backpressure")
+            for capacity in ([1, 3, 8, 256] if maximum == 9216 else [1, 3]):
+                if observed["physical_wraps"][str(capacity)] < 2:
+                    raise AssertionError("missing two actual physical wraps")
+            if observed["reset_cases"] != 5:
+                raise AssertionError("reset case denominator mismatch")
+        if row is not None:
+            row.update(status="passed", observed=observed,
+                       log=str((e.path / f"{label}-{width}-{maximum}-{sg}-{seed}.stdout.txt").relative_to(ROOT)))
         results.append({"width": width, "maximum": maximum, "sg": sg, "seed": seed,
                         "mode": mode, **records[0]})
     e.record.setdefault("runs", []).extend(results)
     return results
 
 
-def leaf(e, top, root=ROOT, seeds=(17,), label=None, icarus=False):
+def leaf(e, top, root=ROOT, seeds=(17,), label=None, icarus=False, width=64):
     label = label or top
     binary = e.path / f"{label}-simulator"
-    sources = ["tests/credits.sv", "tests/ownership.sv", "rtl/furnace_descriptor_rings.sv",
+    sources = ["tests/credits.sv", "tests/ownership.sv", "tests/dma_contract.sv",
+               "rtl/furnace_sg_dma.sv", "rtl/furnace_dma_reader.sv", "rtl/furnace_descriptor_rings.sv",
                "rtl/furnace_token_bucket8.sv",
                "rtl/furnace_drr_scheduler.sv"]
     if icarus:
@@ -187,7 +222,8 @@ def leaf(e, top, root=ROOT, seeds=(17,), label=None, icarus=False):
     else:
         obj = e.path / f"{label}-compile-{uuid.uuid4().hex[:8]}"
         e.run(["verilator", "--binary", "--timing", "-Wno-fatal", "-j", "2",
-               "--top-module", top, "--Mdir", os.path.relpath(obj, root), *sources],
+               "--top-module", top, "--Mdir", os.path.relpath(obj, root),
+               *([f"-GDATA_WIDTH={width}"] if top == "dma_contract_tb" else []), *sources],
               f"{label}-compile", cwd=root)
         shutil.copy2(obj / f"V{top}", binary)
         shutil.rmtree(obj)
@@ -219,20 +255,21 @@ def portable(e):
 def rollover(e):
     script = e.path / "rollover.ys"
     assumptions = (
-        "-seq 3 -set-def-inputs -set-init-def -set rst_n 1 "
+        "-set-def-inputs -set-init-def -set rst_n 1 "
         "-set db_producer 0 -set evt_queue 0 -set db_valid 0 -set retire_fire 0 "
         "-set-at 1 sequence_zero 32'hffffffff -set-at 1 pending_zero 0 "
         "-set-at 1 enabled_zero 1 -set-at 1 db_ready 1 -set-at 1 db_valid 1 "
-        "-set-at 2 ctl_valid 1 -set-at 2 ctl_code 0 -set-at 2 pending_zero 1 "
+        "-set-at 2 ctl_valid 1 -set-at 2 ctl_code 0 "
         "-set-at 2 retire_fire 1 "
     )
     script.write_text(
         "read_verilog -sv rtl/furnace_descriptor_rings.sv tests/rollover.sv\n"
         "hierarchy -check -top rollover\n"
         "proc; flatten; async2sync; opt; memory_map; opt; dffunmap\n"
-        f"sat {assumptions} -show sequence_zero -show pending_zero -show db_ready "
+        f"sat -seq 3 {assumptions} -show sequence_zero -show pending_zero -show db_ready "
         f"-dump_json {e.path.relative_to(ROOT)}/rollover-witness.json\n"
-        f"sat {assumptions} -prove-skip 2 -prove drained_zero 1 -verify "
+        f"sat -seq 2 {assumptions} -prove-skip 1 -prove wrapped_post 1 -verify\n"
+        f"sat -seq 3 {assumptions} -prove-skip 2 -prove drained_zero 1 -verify "
         f"-dump_json {e.path.relative_to(ROOT)}/rollover-counterexample.json\n"
     )
     output = e.run(["yosys", "-s", script.relative_to(ROOT)], "ring-counter-rollover")
@@ -394,6 +431,35 @@ def defects(e):
     e.record["mutants"] = killed
 
 
+def sensitivity_probe(e):
+    e.require(["verilator", "make", "g++"])
+    functional(e, 64, 1, 1, [17], mode="smoke", label="crc-baseline")
+    root = e.path / f"crc-mutant-{uuid.uuid4().hex[:8]}"
+    root.mkdir()
+    before = identity()
+    for relative in before:
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / relative, target)
+    path = root / "rtl/furnace_crc_beat_pipeline.sv"
+    text = path.read_text()
+    if text.count("32'h82f63b78") != 1:
+        raise AssertionError("CRC mutation site not unique")
+    path.write_text(text.replace("32'h82f63b78", "32'h82f63b79"))
+    binary = compile_sim(e, 64, 1, 1, root=root, label="crc-mutant")
+    corpus = binary.parent / "vectors.txt"
+    vectors(corpus, 1)
+    output = e.run([os.path.relpath(binary, root), os.path.relpath(corpus, root), "17", "smoke"],
+                   "crc-mutant-rejection", cwd=root, expect_failure=True)
+    if "SCOREBOARD CRC polynomial/bit order mismatch" not in output:
+        raise AssertionError("CRC mutant did not fail the independent numerical comparison")
+    e.record["sensitivity_probe"] = {
+        "scope": "One CRC defect only, not the admitted seven-mutant suite",
+        "baseline_hash": before["rtl/furnace_crc_beat_pipeline.sv"],
+        "mutant_hash": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "first_failure": next(line for line in output.splitlines() if "SCOREBOARD" in line)}
+
+
 def delivery(e):
     e.require(["iverilog", "vvp"])
     isolated = e.path / f"isolated-{uuid.uuid4().hex[:8]}"
@@ -423,22 +489,27 @@ def delivery(e):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=["behavior", "defects", "synthesis", "delivery"])
-    parser.add_argument("--prepare", choices=["startup", "smoke", "cell", "credits", "portable", "rollover", "synthesis-min"])
+    parser.add_argument("--prepare", choices=["startup", "smoke", "cell", "credits", "portable", "rollover", "synthesis-min", "sensitivity"])
     parser.add_argument("--delivery-smoke", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--width", type=int, choices=[64, 512], default=64)
     parser.add_argument("--maximum", type=int, default=65)
     parser.add_argument("--segments", type=int, default=3)
     parser.add_argument("--repair-of")
     args = parser.parse_args()
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     suites = [args.suite] if args.suite else ["behavior", "defects", "synthesis", "delivery"]
     if args.prepare:
         suites = [args.prepare]
     if args.delivery_smoke:
         suites = ["delivery-smoke"]
-    reference.self_check()
+    failed = False
     for suite in suites:
         e = Evidence(suite, preparation=bool(args.prepare), repair_of=args.repair_of)
         try:
+            reference.self_check()
+            e.record["oracle_known_answers"] = {
+                "input_hex": b"123456789".hex(), "crc32c": "e3069283",
+                "crc64_nvme": "ae8b14860a799888", "matched": True}
             if suite == "startup":
                 startup(e)
             elif suite == "smoke":
@@ -452,6 +523,8 @@ def main():
                 leaf(e, "bucket_tb", icarus=True)
                 leaf(e, "scheduler_tb")
                 leaf(e, "ownership_tb")
+                leaf(e, "dma_contract_tb", label="dma-contract-64")
+                leaf(e, "dma_contract_tb", label="dma-contract-512", width=512)
             elif suite in ("portable", "delivery-smoke"):
                 portable(e)
             elif suite == "rollover":
@@ -459,13 +532,26 @@ def main():
                 rollover(e)
             elif suite == "synthesis-min":
                 synthesize(e, minimum_only=True)
+            elif suite == "sensitivity":
+                sensitivity_probe(e)
             elif suite == "behavior":
+                e.record["matrix"] = [
+                    {"width": w, "maximum": m, "sg": s, "seed": seed,
+                     "status": "not_executed",
+                     "required": {"dma_successes": 64, "legacy_packets": 16,
+                                  "queues": 8, "physical_wraps_per_capacity": 2},
+                     "observed": None}
+                    for w in (64, 512) for m, s in ((1, 1), (65, 3), (9216, 16))
+                    for seed in (17, 43, 89)
+                ]
                 startup(e)
                 e.require(["verilator", "make", "g++", "yosys"])
                 portable(e)
                 leaf(e, "bucket_tb", seeds=(17, 43, 89), icarus=True)
                 leaf(e, "scheduler_tb", seeds=(17, 43, 89))
                 leaf(e, "ownership_tb")
+                leaf(e, "dma_contract_tb", label="dma-contract-64")
+                leaf(e, "dma_contract_tb", label="dma-contract-512", width=512)
                 rollover(e)
                 for width in (64, 512):
                     for maximum, sg in ((1, 1), (65, 3), (9216, 16)):
@@ -481,9 +567,10 @@ def main():
         except Exception as error:
             e.finish(f"{type(error).__name__}: {error}")
             print(str(error), file=sys.stderr)
-            return 1
-        e.finish()
-    return 0
+            failed = True
+        else:
+            e.finish()
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
