@@ -1,0 +1,334 @@
+{
+  "gate": "quartus-sta",
+  "timestamp_utc": "2026-10-29T23:28:23.012688+00:00",
+  "project_dir": "/data/sufeng/furnace-soc2-line/workspace/project/.vulcan/engineering/run-0001/quartus_sta_work",
+  "revision": "top",
+  "clock_filter": "clk_main",
+  "min_setup_slack_ns": 0.0,
+  "min_hold_slack_ns": 0.0,
+  "status": "passed",
+  "map_summary": {
+    "exists": true,
+    "path": "/data/sufeng/furnace-soc2-line/workspace/project/.vulcan/engineering/run-0001/quartus_sta_work/top.map.rpt",
+    "error_count": 0,
+    "errors": [],
+    "lpm_divide_error_count": 0,
+    "lpm_divide_errors": [],
+    "warning_10268_count": 0,
+    "warning_10268": [],
+    "uninferred_ram_count": 0,
+    "uninferred_rams": []
+  },
+  "sta_summary": {
+    "exit_code": 0,
+    "netlist_mode": "post_fit",
+    "clocks": [
+      {
+        "name": "clk_main",
+        "period_ns": 10.0
+      }
+    ],
+    "wns_setup_ns": 0.846,
+    "wns_hold_ns": 0.037,
+    "unconstrained_setup_paths": 0,
+    "unconstrained_functional_endpoints": 0,
+    "unapproved_timing_exceptions": 0,
+    "failing_setup_count": 0,
+    "failing_hold_count": 0,
+    "setup_paths": [
+      {
+        "slack_ns": 0.846,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.mm_result_base[18]"
+      },
+      {
+        "slack_ns": 0.853,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.mm_result_base[29]"
+      },
+      {
+        "slack_ns": 0.853,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.mm_result_base[30]"
+      },
+      {
+        "slack_ns": 0.853,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.mm_result_base[17]"
+      },
+      {
+        "slack_ns": 0.853,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.mm_result_base[31]"
+      },
+      {
+        "slack_ns": 0.9,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.qos_value[17]"
+      },
+      {
+        "slack_ns": 0.916,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[126]"
+      },
+      {
+        "slack_ns": 0.916,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[123]"
+      },
+      {
+        "slack_ns": 0.916,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[125]"
+      },
+      {
+        "slack_ns": 0.916,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[127]"
+      },
+      {
+        "slack_ns": 0.916,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[122]"
+      },
+      {
+        "slack_ns": 0.916,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[124]"
+      },
+      {
+        "slack_ns": 0.916,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[92]"
+      },
+      {
+        "slack_ns": 0.926,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.mm_result_base[21]"
+      },
+      {
+        "slack_ns": 0.926,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.mm_result_base[28]"
+      },
+      {
+        "slack_ns": 0.926,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.mm_result_base[26]"
+      },
+      {
+        "slack_ns": 0.936,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[88]"
+      },
+      {
+        "slack_ns": 0.936,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[24]"
+      },
+      {
+        "slack_ns": 0.936,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[93]"
+      },
+      {
+        "slack_ns": 0.936,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_csr:soc.control",
+        "to_node": "registers.aw_address[12]|furnace_x2_csr:soc.control|registers.key_committed[91]"
+      }
+    ],
+    "hold_paths": [
+      {
+        "slack_ns": 0.037,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[336]",
+        "to_node": "soc.descriptor[336]"
+      },
+      {
+        "slack_ns": 0.037,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_lz4_frontend:soc.decompressor",
+        "to_node": "furnace_xxh32:decoder.content_checksum|cursor[2]|furnace_lz4_frontend:soc.decompressor|furnace_xxh32:decoder.content_checksum|cursor[2]"
+      },
+      {
+        "slack_ns": 0.038,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[338]",
+        "to_node": "soc.descriptor[338]"
+      },
+      {
+        "slack_ns": 0.038,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[340]",
+        "to_node": "soc.descriptor[340]"
+      },
+      {
+        "slack_ns": 0.038,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[342]",
+        "to_node": "soc.descriptor[342]"
+      },
+      {
+        "slack_ns": 0.038,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[333]",
+        "to_node": "soc.descriptor[333]"
+      },
+      {
+        "slack_ns": 0.038,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[335]",
+        "to_node": "soc.descriptor[335]"
+      },
+      {
+        "slack_ns": 0.038,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[363]",
+        "to_node": "soc.descriptor[363]"
+      },
+      {
+        "slack_ns": 0.038,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_x2_mm_control:soc.multimodal_control",
+        "to_node": "control.feature_slot[1][3]|furnace_x2_mm_control:soc.multimodal_control|control.feature_slot[1][3]"
+      },
+      {
+        "slack_ns": 0.039,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[331]",
+        "to_node": "soc.descriptor[331]"
+      },
+      {
+        "slack_ns": 0.039,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[322]",
+        "to_node": "soc.descriptor[322]"
+      },
+      {
+        "slack_ns": 0.039,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[419]",
+        "to_node": "soc.descriptor[419]"
+      },
+      {
+        "slack_ns": 0.04,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "furnace_lz4_frontend:soc.decompressor",
+        "to_node": "decoder.content_size[55]|furnace_lz4_frontend:soc.decompressor|decoder.content_size[55]"
+      },
+      {
+        "slack_ns": 0.04,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[325]",
+        "to_node": "soc.descriptor[325]"
+      },
+      {
+        "slack_ns": 0.04,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[326]",
+        "to_node": "soc.descriptor[326]"
+      },
+      {
+        "slack_ns": 0.04,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[361]",
+        "to_node": "soc.descriptor[361]"
+      },
+      {
+        "slack_ns": 0.041,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[4]",
+        "to_node": "soc.descriptor[4]"
+      },
+      {
+        "slack_ns": 0.041,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[461]",
+        "to_node": "soc.descriptor[461]"
+      },
+      {
+        "slack_ns": 0.041,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[459]",
+        "to_node": "soc.descriptor[459]"
+      },
+      {
+        "slack_ns": 0.041,
+        "from_clock": "clk_main",
+        "to_clock": "clk_main",
+        "from_node": "soc.descriptor[457]",
+        "to_node": "soc.descriptor[457]"
+      }
+    ],
+    "stderr_tail": []
+  },
+  "detail": "Timing closed: Setup WNS = 0.846 ns",
+  "top_module": "furnace_x2_top",
+  "clock_port": "clk",
+  "clock_period_ns": 10.0,
+  "target_frequency_mhz": 100.0,
+  "fmax_mhz": 109.24,
+  "critical_path_delay_ns": 9.154,
+  "parameters": {},
+  "source_sha256": "01f1c3667da92e56f15a868d3e9b6b22523b9035f3eb1e8f53a2daee6b9e1354",
+  "applicable": true
+}
