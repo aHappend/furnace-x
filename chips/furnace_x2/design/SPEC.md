@@ -4,17 +4,25 @@
 
 The admitted work order defines the product contract. This document records its
 implementation-facing boundaries; it does not replace or relax that contract.
-Engineering acceptance remains subject to independent review and closure of
-the provenance, timing-scope and hardware-evidence limitations below.
+Engineering acceptance remains subject to independent review of the reconciled
+provenance and closure of the timing-scope and hardware-evidence limitations below.
 `design/GENERATIONAL_HANDOFF.md` is now readable and has been read. Its observed
 SHA256 is `502585e7732b741a2e6ee74e634742943d23c7e4f3d28a86e2ad51b4769973c5`.
-That hash identifies content, not restoration authenticity: no separate
-restoration receipt or linked intake source index has been identified.
-Authentic provenance reconciliation and independently reviewed resolution of
-conflicts remain mandatory **before engineering acceptance**.
+The existing shared-runtime restoration receipt explicitly attributes the
+fourteen inherited modules to completed FURNACE-X1 and binds this handoff hash.
+Coordinator reconciliation confirmed that the handoff and every reference and
+deliverable parent module match that receipt. Attribution therefore comes from
+the supplied runtime record, not from matching hashes alone. No separate linked
+parent source index was supplied in the available intake: repository intake is
+null, neither the receipt nor the handoff links one, and
+`furnace_x1_reference/` contains only the fourteen RTL inputs. The receipt's
+module inventory supplies attribution; no additional index was read or created.
+This reconciliation and resolution of any conflicts remain subject to
+independent review **before engineering acceptance**. The private-path
+restoration record is not a portable deliverable or verification dependency.
 
-The handoff reports historical parent Quartus 17.1 setup/hold slack of
-1.464/0.038 ns at 10.0 ns and a deterministic parent PCIe HIL pass.
+The restoration receipt and handoff agree on historical parent Quartus 17.1
+setup/hold slack of 1.464/0.038 ns at 10.0 ns and a deterministic parent PCIe HIL pass.
 These are attributed historical claims, not fresh X2 verification or
 independently reconstructed parent evidence.
 

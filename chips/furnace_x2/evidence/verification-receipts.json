@@ -2,13 +2,13 @@
   "chip": "Furnace-X2",
   "passed_checks": {
     "check:l1-clean-portable-reproduction": {
-      "attempt_id": 143,
-      "duration_s": 81.12695313198492,
-      "stdout_preview": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/receipt.json: exit=0\n",
+      "attempt_id": 152,
+      "duration_s": 81.96416584891267,
+      "stdout_preview": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/receipt.json: exit=0\n",
       "receipt_count": 1,
       "receipts": [
         {
-          "path": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/receipt.json",
+          "path": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/receipt.json",
           "data": {
             "schema": 1,
             "acceptance_evidence": true,
@@ -19,7 +19,7 @@
               "reproduction"
             ],
             "cwd": ".",
-            "started_at": "2026-10-30T11:04:35.471684+00:00",
+            "started_at": "2026-10-30T12:06:54.239826+00:00",
             "source_sha256": {
               "design/ARCHITECTURE.md": "2c84a161d275b2d8a0fcbb3588ad1e6e731198cb281bf3e072b092ee074fc00b",
               "design/GENERATIONAL_HANDOFF.md": "502585e7732b741a2e6ee74e634742943d23c7e4f3d28a86e2ad51b4769973c5",
@@ -107,14 +107,14 @@
                   "--suite",
                   "smoke"
                 ],
-                "cwd": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-project-da88920629d9",
-                "started_at": "2026-10-30T11:04:35.513504+00:00",
+                "cwd": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-project-d83ed0d51fe8",
+                "started_at": "2026-10-30T12:06:54.284969+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-smoke.stdout.txt",
-                "stderr": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-smoke.stderr.txt",
+                "stdout": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-smoke.stdout.txt",
+                "stderr": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-smoke.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:04:40.738543+00:00"
+                "ended_at": "2026-10-30T12:06:59.414894+00:00"
               },
               {
                 "argv": [
@@ -123,18 +123,18 @@
                   "--suite",
                   "synthesis"
                 ],
-                "cwd": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-project-da88920629d9",
-                "started_at": "2026-10-30T11:04:40.741086+00:00",
+                "cwd": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-project-d83ed0d51fe8",
+                "started_at": "2026-10-30T12:06:59.418245+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-synthesis.stdout.txt",
-                "stderr": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-synthesis.stderr.txt",
+                "stdout": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-synthesis.stdout.txt",
+                "stderr": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-synthesis.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:05:56.391814+00:00"
+                "ended_at": "2026-10-30T12:08:15.974414+00:00"
               }
             ],
             "reproduction": {
-              "project": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-project-da88920629d9",
+              "project": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-project-d83ed0d51fe8",
               "copied_sha256": {
                 "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
                 "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
@@ -218,20 +218,20 @@
                 {
                   "suite": "smoke",
                   "receipts": [
-                    "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-project-da88920629d9/evidence/l1-smoke-20261030T110435Z-1d6ed52a9e9a/receipt.json"
+                    "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-project-d83ed0d51fe8/evidence/l1-smoke-20261030T120654Z-2770272a9483/receipt.json"
                   ],
-                  "raw_output": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-smoke.stdout.txt"
+                  "raw_output": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-smoke.stdout.txt"
                 },
                 {
                   "suite": "synthesis",
                   "receipts": [
-                    "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-project-da88920629d9/evidence/l1-synthesis-20261030T110440Z-6eb5bb789ccd/receipt.json"
+                    "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-project-d83ed0d51fe8/evidence/l1-synthesis-20261030T120659Z-c8b4fca4a6c9/receipt.json"
                   ],
-                  "raw_output": "evidence/l1-reproduction-20261030T110435Z-f676f6f96121/fresh-synthesis.stdout.txt"
+                  "raw_output": "evidence/l1-reproduction-20261030T120654Z-f902bedec348/fresh-synthesis.stdout.txt"
                 }
               ]
             },
-            "ended_at": "2026-10-30T11:05:56.395297+00:00",
+            "ended_at": "2026-10-30T12:08:15.978365+00:00",
             "exit_code": 0
           }
         }
@@ -16179,13 +16179,13 @@
       ]
     },
     "check:l1-portability-smoke": {
-      "attempt_id": 146,
-      "duration_s": 5.016160245984793,
-      "stdout_preview": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/receipt.json: exit=0\n",
+      "attempt_id": 156,
+      "duration_s": 4.748690174892545,
+      "stdout_preview": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/receipt.json: exit=0\n",
       "receipt_count": 1,
       "receipts": [
         {
-          "path": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/receipt.json",
+          "path": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/receipt.json",
           "data": {
             "schema": 1,
             "acceptance_evidence": true,
@@ -16196,11 +16196,11 @@
               "smoke"
             ],
             "cwd": ".",
-            "started_at": "2026-10-30T11:09:30.769801+00:00",
+            "started_at": "2026-10-30T12:12:16.256612+00:00",
             "source_sha256": {
-              "design/ARCHITECTURE.md": "2c84a161d275b2d8a0fcbb3588ad1e6e731198cb281bf3e072b092ee074fc00b",
+              "design/ARCHITECTURE.md": "75c61fd1eae1b263c72b7fe29e4f4290e67675ee331b72d6458464afdfda39dd",
               "design/GENERATIONAL_HANDOFF.md": "502585e7732b741a2e6ee74e634742943d23c7e4f3d28a86e2ad51b4769973c5",
-              "design/SPEC.md": "110bebc0c0c8916a829d56cbb4b0097cee7662f57558fcf46f9bc616dfe1a2f7",
+              "design/SPEC.md": "036f302c57fb0626169dc415dcb028a0533622d3d5685f917d5c34e1d92339f2",
               "furnace_x1_reference/rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
               "furnace_x1_reference/rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
               "furnace_x1_reference/rtl/furnace_axi4_xbar.sv": "403b8ef98a25e8bf11072456db876ae8f9c39de50609c169bc8bae930eb5a5ed",
@@ -16283,13 +16283,13 @@
                   "-V"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:30.796101+00:00",
+                "started_at": "2026-10-30T12:12:16.284115+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/iverilog-version.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/iverilog-version.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/iverilog-version.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/iverilog-version.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:30.813886+00:00"
+                "ended_at": "2026-10-30T12:12:16.301634+00:00"
               },
               {
                 "argv": [
@@ -16297,13 +16297,13 @@
                   "-V"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:30.815531+00:00",
+                "started_at": "2026-10-30T12:12:16.302149+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/vvp-version.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/vvp-version.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/vvp-version.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/vvp-version.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:30.824309+00:00"
+                "ended_at": "2026-10-30T12:12:16.310955+00:00"
               },
               {
                 "argv": [
@@ -16317,13 +16317,13 @@
                   "test_*_oracle.py"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:30.824784+00:00",
+                "started_at": "2026-10-30T12:12:16.311412+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/independent-reference-selfchecks.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/independent-reference-selfchecks.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/independent-reference-selfchecks.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/independent-reference-selfchecks.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:33.346766+00:00"
+                "ended_at": "2026-10-30T12:12:18.581536+00:00"
               },
               {
                 "argv": [
@@ -16333,7 +16333,7 @@
                   "-s",
                   "kernel_probe",
                   "-o",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog.vvp",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog.vvp",
                   "-Pkernel_probe.KIND=0",
                   "-Pkernel_probe.N=8",
                   "rtl/furnace_bilinear_pipe.sv",
@@ -16343,31 +16343,31 @@
                   "tests/kernel_probe.sv"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:33.352254+00:00",
+                "started_at": "2026-10-30T12:12:18.586846+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog-compile.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog-compile.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog-compile.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog-compile.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:33.386049+00:00"
+                "ended_at": "2026-10-30T12:12:18.620150+00:00"
               },
               {
                 "argv": [
                   "vvp",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog.vvp",
-                  "+INPUT=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog-input.hex",
-                  "+EXPECTED=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog-expected.hex",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog.vvp",
+                  "+INPUT=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog-input.hex",
+                  "+EXPECTED=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog-expected.hex",
                   "+COUNT=256",
                   "+SEED=17"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:33.386702+00:00",
+                "started_at": "2026-10-30T12:12:18.620924+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog-simulation.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog-simulation.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog-simulation.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog-simulation.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:33.502331+00:00"
+                "ended_at": "2026-10-30T12:12:18.736151+00:00"
               },
               {
                 "argv": [
@@ -16377,7 +16377,7 @@
                   "-s",
                   "kernel_probe",
                   "-o",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog.vvp",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog.vvp",
                   "-Pkernel_probe.KIND=1",
                   "-Pkernel_probe.N=8",
                   "rtl/furnace_bilinear_pipe.sv",
@@ -16387,31 +16387,31 @@
                   "tests/kernel_probe.sv"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:33.511183+00:00",
+                "started_at": "2026-10-30T12:12:18.745769+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog-compile.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog-compile.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog-compile.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog-compile.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:33.545181+00:00"
+                "ended_at": "2026-10-30T12:12:18.779437+00:00"
               },
               {
                 "argv": [
                   "vvp",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog.vvp",
-                  "+INPUT=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog-input.hex",
-                  "+EXPECTED=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog-expected.hex",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog.vvp",
+                  "+INPUT=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog-input.hex",
+                  "+EXPECTED=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog-expected.hex",
                   "+COUNT=256",
                   "+SEED=17"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:33.546358+00:00",
+                "started_at": "2026-10-30T12:12:18.780420+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog-simulation.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog-simulation.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog-simulation.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog-simulation.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:33.662026+00:00"
+                "ended_at": "2026-10-30T12:12:18.896461+00:00"
               },
               {
                 "argv": [
@@ -16421,7 +16421,7 @@
                   "-s",
                   "kernel_probe",
                   "-o",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog.vvp",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog.vvp",
                   "-Pkernel_probe.KIND=2",
                   "-Pkernel_probe.N=8",
                   "rtl/furnace_bilinear_pipe.sv",
@@ -16431,31 +16431,31 @@
                   "tests/kernel_probe.sv"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:33.665222+00:00",
+                "started_at": "2026-10-30T12:12:18.899757+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog-compile.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog-compile.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog-compile.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog-compile.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:33.698924+00:00"
+                "ended_at": "2026-10-30T12:12:18.933090+00:00"
               },
               {
                 "argv": [
                   "vvp",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog.vvp",
-                  "+INPUT=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog-input.hex",
-                  "+EXPECTED=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog-expected.hex",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog.vvp",
+                  "+INPUT=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog-input.hex",
+                  "+EXPECTED=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog-expected.hex",
                   "+COUNT=40",
                   "+SEED=17"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:33.699719+00:00",
+                "started_at": "2026-10-30T12:12:18.933975+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog-simulation.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog-simulation.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog-simulation.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog-simulation.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:33.765130+00:00"
+                "ended_at": "2026-10-30T12:12:18.999417+00:00"
               },
               {
                 "argv": [
@@ -16465,7 +16465,7 @@
                   "-s",
                   "kernel_probe",
                   "-o",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog.vvp",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog.vvp",
                   "-Pkernel_probe.KIND=3",
                   "-Pkernel_probe.N=8",
                   "rtl/furnace_bilinear_pipe.sv",
@@ -16475,31 +16475,31 @@
                   "tests/kernel_probe.sv"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:33.795582+00:00",
+                "started_at": "2026-10-30T12:12:19.029929+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog-compile.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog-compile.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog-compile.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog-compile.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:33.829509+00:00"
+                "ended_at": "2026-10-30T12:12:19.063698+00:00"
               },
               {
                 "argv": [
                   "vvp",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog.vvp",
-                  "+INPUT=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog-input.hex",
-                  "+EXPECTED=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog-expected.hex",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog.vvp",
+                  "+INPUT=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog-input.hex",
+                  "+EXPECTED=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog-expected.hex",
                   "+COUNT=40",
                   "+SEED=17"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:33.830357+00:00",
+                "started_at": "2026-10-30T12:12:19.064791+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog-simulation.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog-simulation.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog-simulation.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog-simulation.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:33.945819+00:00"
+                "ended_at": "2026-10-30T12:12:19.180540+00:00"
               },
               {
                 "argv": [
@@ -16507,13 +16507,13 @@
                   "-V"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:33.980445+00:00",
+                "started_at": "2026-10-30T12:12:19.216019+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-version.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-version.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-version.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-version.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:34.014430+00:00"
+                "ended_at": "2026-10-30T12:12:19.234322+00:00"
               },
               {
                 "argv": [
@@ -16521,13 +16521,13 @@
                   "-V"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:34.015330+00:00",
+                "started_at": "2026-10-30T12:12:19.235278+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-simulator-version.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-simulator-version.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-simulator-version.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-simulator-version.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:34.024875+00:00"
+                "ended_at": "2026-10-30T12:12:19.244492+00:00"
               },
               {
                 "argv": [
@@ -16537,7 +16537,7 @@
                   "-s",
                   "security_probe",
                   "-o",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable.vvp",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable.vvp",
                   "-Psecurity_probe.KIND=0",
                   "rtl/furnace_aes128_block.sv",
                   "rtl/furnace_aes128_gcm.sv",
@@ -16547,33 +16547,33 @@
                   "tests/security_probe.sv"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:34.025814+00:00",
+                "started_at": "2026-10-30T12:12:19.245351+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-compile.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-compile.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-compile.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-compile.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:34.059239+00:00"
+                "ended_at": "2026-10-30T12:12:19.279071+00:00"
               },
               {
                 "argv": [
                   "vvp",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable.vvp",
-                  "+META=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-meta.hex",
-                  "+INPUT=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-input.hex",
-                  "+EXPECTED=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-expected.hex",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable.vvp",
+                  "+META=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-meta.hex",
+                  "+INPUT=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-input.hex",
+                  "+EXPECTED=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-expected.hex",
                   "+CASES=32",
                   "+INPUT_SIZE=512",
                   "+OUTPUT_SIZE=512"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:34.060175+00:00",
+                "started_at": "2026-10-30T12:12:19.280160+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-simulation.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-simulation.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-simulation.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-simulation.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:34.326890+00:00"
+                "ended_at": "2026-10-30T12:12:19.545927+00:00"
               },
               {
                 "argv": [
@@ -16581,13 +16581,13 @@
                   "-V"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:34.346267+00:00",
+                "started_at": "2026-10-30T12:12:19.562412+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/compiler-version.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/compiler-version.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/compiler-version.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/compiler-version.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:34.364200+00:00"
+                "ended_at": "2026-10-30T12:12:19.596337+00:00"
               },
               {
                 "argv": [
@@ -16595,13 +16595,13 @@
                   "-V"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:34.365047+00:00",
+                "started_at": "2026-10-30T12:12:19.597297+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/simulator-version.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/simulator-version.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/simulator-version.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/simulator-version.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:34.374455+00:00"
+                "ended_at": "2026-10-30T12:12:19.606454+00:00"
               },
               {
                 "argv": [
@@ -16611,7 +16611,7 @@
                   "-s",
                   "soc_probe",
                   "-o",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/sim.vvp",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/sim.vvp",
                   "-Psoc_probe.IW=1",
                   "-Psoc_probe.IH=1",
                   "-Psoc_probe.OW=1",
@@ -16652,24 +16652,24 @@
                   "tests/soc_probe.sv"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:34.375301+00:00",
+                "started_at": "2026-10-30T12:12:19.607542+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/compile.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/compile.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/compile.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/compile.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:34.590997+00:00"
+                "ended_at": "2026-10-30T12:12:19.823696+00:00"
               },
               {
                 "argv": [
                   "vvp",
-                  "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/sim.vvp",
-                  "+IMAGE=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/memory.hex",
-                  "+VISION=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/vision.hex",
-                  "+AUDIO=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/audio.hex",
-                  "+VEXPECTED=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/vision-expected.hex",
-                  "+AEXPECTED=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/audio-expected.hex",
-                  "+REXPECTED=evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/result-expected.hex",
+                  "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/sim.vvp",
+                  "+IMAGE=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/memory.hex",
+                  "+VISION=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/vision.hex",
+                  "+AUDIO=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/audio.hex",
+                  "+VEXPECTED=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/vision-expected.hex",
+                  "+AEXPECTED=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/audio-expected.hex",
+                  "+REXPECTED=evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/result-expected.hex",
                   "+VC=1",
                   "+AC=8",
                   "+FRAMES=1",
@@ -16680,33 +16680,33 @@
                   "+LEGACY=00000000000289f1"
                 ],
                 "cwd": ".",
-                "started_at": "2026-10-30T11:09:34.592208+00:00",
+                "started_at": "2026-10-30T12:12:19.825061+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/simulation.stdout.txt",
-                "stderr": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/simulation.stderr.txt",
+                "stdout": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/simulation.stdout.txt",
+                "stderr": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/simulation.stderr.txt",
                 "exit_code": 0,
                 "timeout": false,
-                "ended_at": "2026-10-30T11:09:35.561743+00:00"
+                "ended_at": "2026-10-30T12:12:20.793428+00:00"
               }
             ],
             "stimulus_sha256": {
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog-expected.hex": "9025cf1a226112ed193672b908a9f333fadc627aef06147139e12c1bb75208e1",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-meta.hex": "bb588cdeedf74d105e66bb8c84aedf6cc9902e3b22df61e97af22efa1f1bafd0",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/memory.hex": "d047e039dd263b2163e7e6fef6dab765335707767b1bd0476c05750751b011a8",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-expected.hex": "b7bc9eeeef2d5d2e1ef30b954a57f3ef316cc4157e28fe471bd505fa0fcb145b",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog-expected.hex": "140dbf1b3cf85301fccfe1f45b517ab6414bc301bb1eed98b2369e5e9bff74b8",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog-input.hex": "b459b67d75a9f6319c17945b2995bb61235ee9192dbb8ef086c8b78c2f2e7501",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/vision.hex": "1e240015393e9735b445bc57f9272d981ecf00a7bb190706516116ecb5561585",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/audio-expected.hex": "7c8727acb6ce1398670f59b0d08d2f4e584600f2f1878374f425f658b3752523",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog-input.hex": "dabb807795b3c587a10f881577cc69b6e8d6e12ed9709cae57207d8e664e91b1",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-input.hex": "b684438e82951ef88760357799a03e903041ce75cc24ca9c852d85f8c644e62a",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog-expected.hex": "b642d8ec0b0c01055706c6298a4dc521bc2968182342f682ee33b1bc6b7846c3",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog-input.hex": "b8f77408d4df92dd17f608125337f96c56753595e8c08f6dc0f8c1625e49d620",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog-expected.hex": "1a3c81e14c237480c03ce2e3ed9190867ed598822ea66065d7caf1569033d081",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/audio.hex": "2d3acb1aa634fdc0ec1a705fbec9e23156a175c38c4daf0cc36bd4d55bf189ff",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/result-expected.hex": "433338bf3fa50dc05a6ceb376a0a1284eedf8a1c8ae9e9c22d28e6223865c277",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/vision-expected.hex": "92aee5d830022ba2f5b7aab6327a85f788785f978e3feb79885615b2de82465d",
-              "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog-input.hex": "fc3ce705524b6be9906ceae1b3ec090d51dd552c443aa76faf3bdeb43a302727"
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog-expected.hex": "9025cf1a226112ed193672b908a9f333fadc627aef06147139e12c1bb75208e1",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-meta.hex": "bb588cdeedf74d105e66bb8c84aedf6cc9902e3b22df61e97af22efa1f1bafd0",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/memory.hex": "d047e039dd263b2163e7e6fef6dab765335707767b1bd0476c05750751b011a8",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-expected.hex": "b7bc9eeeef2d5d2e1ef30b954a57f3ef316cc4157e28fe471bd505fa0fcb145b",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog-expected.hex": "140dbf1b3cf85301fccfe1f45b517ab6414bc301bb1eed98b2369e5e9bff74b8",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog-input.hex": "b459b67d75a9f6319c17945b2995bb61235ee9192dbb8ef086c8b78c2f2e7501",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/vision.hex": "1e240015393e9735b445bc57f9272d981ecf00a7bb190706516116ecb5561585",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/audio-expected.hex": "7c8727acb6ce1398670f59b0d08d2f4e584600f2f1878374f425f658b3752523",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog-input.hex": "dabb807795b3c587a10f881577cc69b6e8d6e12ed9709cae57207d8e664e91b1",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-input.hex": "b684438e82951ef88760357799a03e903041ce75cc24ca9c852d85f8c644e62a",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog-expected.hex": "b642d8ec0b0c01055706c6298a4dc521bc2968182342f682ee33b1bc6b7846c3",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog-input.hex": "b8f77408d4df92dd17f608125337f96c56753595e8c08f6dc0f8c1625e49d620",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog-expected.hex": "1a3c81e14c237480c03ce2e3ed9190867ed598822ea66065d7caf1569033d081",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/audio.hex": "2d3acb1aa634fdc0ec1a705fbec9e23156a175c38c4daf0cc36bd4d55bf189ff",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/result-expected.hex": "433338bf3fa50dc05a6ceb376a0a1284eedf8a1c8ae9e9c22d28e6223865c277",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/vision-expected.hex": "92aee5d830022ba2f5b7aab6327a85f788785f978e3feb79885615b2de82465d",
+              "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog-input.hex": "fc3ce705524b6be9906ceae1b3ec090d51dd552c443aa76faf3bdeb43a302727"
             },
             "kernel_comparisons": [
               {
@@ -16716,7 +16716,7 @@
                 "comparisons": 512,
                 "latency_checked": true,
                 "reset_abort_checked": true,
-                "raw_output": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-0-n8-iverilog-simulation.stdout.txt"
+                "raw_output": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-0-n8-iverilog-simulation.stdout.txt"
               },
               {
                 "kind": 1,
@@ -16725,7 +16725,7 @@
                 "comparisons": 512,
                 "latency_checked": true,
                 "reset_abort_checked": true,
-                "raw_output": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-1-n8-iverilog-simulation.stdout.txt"
+                "raw_output": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-1-n8-iverilog-simulation.stdout.txt"
               },
               {
                 "kind": 2,
@@ -16734,7 +16734,7 @@
                 "comparisons": 80,
                 "latency_checked": true,
                 "reset_abort_checked": true,
-                "raw_output": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-2-n8-iverilog-simulation.stdout.txt"
+                "raw_output": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-2-n8-iverilog-simulation.stdout.txt"
               },
               {
                 "kind": 3,
@@ -16743,7 +16743,7 @@
                 "comparisons": 80,
                 "latency_checked": true,
                 "reset_abort_checked": true,
-                "raw_output": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/kernel-3-n8-iverilog-simulation.stdout.txt"
+                "raw_output": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/kernel-3-n8-iverilog-simulation.stdout.txt"
               }
             ],
             "security_comparisons": [
@@ -16752,7 +16752,7 @@
                 "reference": false,
                 "cases": 32,
                 "expected_bytes": 512,
-                "raw_output": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/security-0-deliverable-simulation.stdout.txt"
+                "raw_output": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/security-0-deliverable-simulation.stdout.txt"
               }
             ],
             "configuration": [
@@ -16812,10 +16812,10 @@
                   "correct_tail": 1,
                   "cycles": 2488
                 },
-                "raw_output": "evidence/l1-smoke-20261030T110930Z-c6342a0f0b95/simulation.stdout.txt"
+                "raw_output": "evidence/l1-smoke-20261030T121216Z-3e1ba684eb25/simulation.stdout.txt"
               }
             ],
-            "ended_at": "2026-10-30T11:09:35.566832+00:00",
+            "ended_at": "2026-10-30T12:12:20.798369+00:00",
             "exit_code": 0
           }
         }
