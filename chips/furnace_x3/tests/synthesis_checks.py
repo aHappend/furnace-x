@@ -9,6 +9,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lower_packed import lower
 from record import Experiment, ROOT
+from matrix_checks import CELLS, PARAMETERS
 
 
 def inspect_netlist(path, top):
@@ -49,6 +50,7 @@ def inspect_netlist(path, top):
     if top == "furnace_x3_top":
         required = ("furnace_rv64im_core", "furnace_dma512", "furnace_x3_local_memory",
                     "furnace_x3_control", "furnace_hw_semaphores", "furnace_mailboxes",
+                    "furnace_x3_cpu_axi_bridge", "furnace_x3_axi512_arb", "furnace_x3_mmio_arb",
                     "furnace_interrupt_aggregator", "furnace_x2_top", "furnace_tensor8",
                     "furnace_aes128_gcm", "furnace_lz4_frontend",
                     "furnace_x2_vision", "furnace_x2_audio", "furnace_fusion_buffer")
@@ -71,6 +73,23 @@ def inspect_netlist(path, top):
                          if path.startswith(f"{top}.local_memory"))
         if local_rams < 2:
             raise AssertionError("local IMEM/DMEM were not preserved as memories")
+        if sum(bits for path, bits in memory_bits.items()
+               if path.startswith(f"{top}.local_memory")) < 2*16384*8:
+            raise AssertionError("local instruction/data storage is smaller than the frozen ABI")
+        direct = {"control_cpu": "furnace_rv64im_core", "control": "furnace_x3_control",
+                  "local_memory": "furnace_x3_local_memory", "mmio_arbiter": "furnace_x3_mmio_arb",
+                  "legacy_soc": "furnace_x2_top", "burst_dma": "furnace_dma512",
+                  "semaphores": "furnace_hw_semaphores", "mailboxes": "furnace_mailboxes",
+                  "interrupts": "furnace_interrupt_aggregator",
+                  "cpu_memory_bridge": "furnace_x3_cpu_axi_bridge",
+                  "memory_arbiter": "furnace_x3_axi512_arb"}
+        for instance, identity in direct.items():
+            cell = modules[top]["cells"].get(instance)
+            if cell is None or cell["type"] not in modules:
+                raise AssertionError(f"missing named direct boundary: {instance}")
+            actual = modules[cell["type"]]["attributes"].get("hdlname", cell["type"])
+            if actual.split()[0].lstrip("\\") != identity:
+                raise AssertionError(f"incorrect named direct boundary: {instance}/{actual}")
     return {"instance_counts": dict(counts), "state_bits_by_instance": dict(states),
             "memory_cells_by_instance": dict(memories),
             "memory_bits_by_instance": dict(memory_bits)}
@@ -80,9 +99,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--top", choices=("furnace_x3_top", "furnace_x2_top", "furnace_x1_top"),
                         default="furnace_x3_top")
-    parser.add_argument("--minimum", action="store_true")
+    geometry = parser.add_mutually_exclusive_group()
+    geometry.add_argument("--minimum", action="store_true")
+    geometry.add_argument("--cell", choices=CELLS)
     parser.add_argument("--repair-of")
     args = parser.parse_args()
+    if args.cell and args.top != "furnace_x3_top":
+        parser.error("--cell selects a complete X3 geometry")
     experiment = Experiment("complete-hierarchy-synthesis", args.repair_of)
     try:
         experiment.command(["yosys", "-V"], "yosys-version", version=True)
@@ -105,6 +128,10 @@ def main():
             mapping.append(record)
         (experiment.path / "lowering-map.json").write_text(json.dumps(mapping, indent=2) + "\n")
         config = ""
+        if args.cell:
+            config = (f"chparam " + " ".join(
+                f"-set {name} {value}" for name, value in zip(PARAMETERS, CELLS[args.cell])) +
+                f" {args.top}\n")
         if args.minimum:
             config = f"chparam -set MAX_TILE_BYTES 64 -set RING_DEPTH 1 {args.top}\n"
             if args.top != "furnace_x1_top":
@@ -125,7 +152,7 @@ def main():
                            "synthesize")
         result = inspect_netlist(netlist, args.top)
         (experiment.path / "structural.json").write_text(json.dumps(result, indent=2) + "\n")
-        print(f"YOSYS_STRUCTURAL_PASS top={args.top} minimum={args.minimum}")
+        print(f"YOSYS_STRUCTURAL_PASS top={args.top} minimum={args.minimum} cell={args.cell}")
     except Exception as error:
         experiment.finish(error)
         raise

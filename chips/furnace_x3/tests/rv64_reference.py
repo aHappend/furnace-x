@@ -70,6 +70,7 @@ class CPU:
         try:
             return self.bus.read(address, size, instruction)
         except BusFault as error:
+            self.bus.core_bus_error()
             raise ArchitecturalTrap(1 if instruction else 5, address) from error
 
     def store(self, address, size, value):
@@ -78,6 +79,7 @@ class CPU:
         try:
             self.bus.write(address, size, value & ((1 << (size * 8)) - 1))
         except BusFault as error:
+            self.bus.core_bus_error()
             raise ArchitecturalTrap(7, address) from error
 
     def step(self):

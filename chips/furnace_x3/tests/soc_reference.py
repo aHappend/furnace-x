@@ -80,6 +80,9 @@ class SoC:
     def trap_event(self):
         self.pending |= 1 << 9
 
+    def core_bus_error(self):
+        self.errors |= 8
+
     def region(self, address, size, instruction=False):
         if 0x10000 <= address and address + size <= 0x14000:
             return self.imem, address - 0x10000

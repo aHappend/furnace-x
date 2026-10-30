@@ -141,11 +141,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--lowered", action="store_true")
-    parser.add_argument("--engines", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--engines", action="store_true")
     parser.add_argument("--tile-bytes", type=int, choices=(1, 64), default=64)
     parser.add_argument("--preflight", action="store_true")
+    parser.add_argument("--repair-of")
+    mode.add_argument("--host-running", action="store_true")
     args = parser.parse_args()
-    experiment = Experiment("x3-firmware-smoke")
+    if args.engines and args.tile_bytes == 1:
+        parser.error("one-byte tiles use the DMA/barrier workload, not a four-byte tensor descriptor")
+    experiment = Experiment("x3-firmware-smoke", args.repair_of)
     try:
         experiment.command(["iverilog", "-V"], "iverilog-version", version=True)
         experiment.command(["vvp", "-V"], "vvp-version", version=True)
@@ -182,8 +187,10 @@ def main():
             f"+expected={(experiment.path / 'expected.hex').relative_to(ROOT)}",
             f"+engines={int(args.engines)}",
             f"+preflight={int(args.preflight)}",
+            f"+host_running={int(args.host_running)}",
             f"+seed={args.seed}"], "simulate")
-        if "X3_FIRMWARE_SMOKE_PASS" not in output:
+        expected_summary = "HOST_RUNNING_ACCESS_PASS" if args.host_running else "X3_FIRMWARE_SMOKE_PASS"
+        if expected_summary not in output:
             raise AssertionError("missing firmware comparisons")
         print(output.strip())
     except Exception as error:

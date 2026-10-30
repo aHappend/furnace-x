@@ -295,6 +295,9 @@ class TraceBus:
     def external_irq(self):
         return self.irq
 
+    def core_bus_error(self):
+        pass
+
     def transaction(self, write, instruction, address, size, data=0, response=0, error=False):
         flag = int(write and address in (0x800001e0, 0x800001e8))
         self.rows.append(
@@ -346,6 +349,10 @@ def generate(seed):
         bus.cpu_store_value = cpu.x[rs2]
         old_pc = cpu.pc
         cpu.step()
+        if (instruction & 127 == 0x73 and instruction >> 20 == 0xb00 and
+                (instruction >> 12) & 7 in (1, 2, 3, 5, 6, 7) and
+                ((instruction >> 12) & 3 == 1 or (instruction >> 15) & 31 != 0)):
+            bus.rows.append(f"C {cpu.csrs[0xb00]:016x}")
         if instruction & 127 == 0x63:
             bus.branches[f"{(instruction >> 12) & 7}-{'taken' if cpu.pc != old_pc+4 else 'not-taken'}"] += 1
         steps += 1
@@ -359,8 +366,32 @@ def generate(seed):
     for cause in (0, 1, 2, 3, 4, 5, 6, 7, 11, (1 << 63) | 11):
         if not causes[str(cause)]:
             raise AssertionError(f"missing trap cause {cause}")
-    return bus.rows, {"instructions": cpu.instructions, "steps": steps,
+    guarded, halt_cases = [], set()
+    for row in bus.rows:
+        if row.startswith("B "):
+            fields = row.split()
+            write, instruction = int(fields[1]), int(fields[2])
+            fetched = int(fields[7], 16)
+            label, phase = None, 1
+            if instruction and "fetch" not in halt_cases:
+                label = "fetch"
+            elif not instruction and not write and "load" not in halt_cases:
+                label = "load"
+            elif not instruction and write and "store" not in halt_cases:
+                label = "store"
+            elif instruction and fetched & 127 in (0x33, 0x3b) and fetched >> 25 == 1:
+                candidate = "m-word" if fetched & 127 == 0x3b else "m-64"
+                if candidate not in halt_cases:
+                    label, phase = candidate, 2
+            if label is not None:
+                guarded.append(f"H {phase}")
+                halt_cases.add(label)
+        guarded.append(row)
+    if len(halt_cases) != 5:
+        raise AssertionError(f"missing halt-drain phases {halt_cases}")
+    return guarded, {"instructions": cpu.instructions, "steps": steps,
                       "trap_causes": dict(causes), "branch_outcomes": dict(bus.branches),
+                      "halt_drain_cases": sorted(halt_cases),
                       "directed_cases": dict(program.coverage)}
 
 

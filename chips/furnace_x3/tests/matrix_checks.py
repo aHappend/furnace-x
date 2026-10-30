@@ -54,6 +54,10 @@ def run_seed(experiment, cell, seed, binary, image, metadata, batch):
         raise AssertionError("matrix comparisons/observed events missing")
     actual = dict(zip(("graphs", "descriptors", "frames", "mailboxes", "legacy_reads",
                        "legacy_writes", "overlap", "multibeat"), map(int, match.groups())))
+    schedule = re.search(r"X3_STALL_SCHEDULE seed=(\d+) digest=([0-9a-f]+) "
+                         r"ar_stalls=(\d+) aw_stalls=(\d+) w_stalls=(\d+)", output)
+    if not schedule or int(schedule[1]) != seed or any(int(v) == 0 for v in schedule.groups()[2:]):
+        raise AssertionError("missing seed-bound observed backpressure")
     thresholds = {"graphs": 2, "descriptors": 2*ring+1, "frames": 2*fusion+1,
                   "mailboxes": 2*mailbox+1, "legacy_reads": 1, "legacy_writes": 1}
     if max_dma > 1:
@@ -65,8 +69,10 @@ def run_seed(experiment, cell, seed, binary, image, metadata, batch):
         "cell": cell, "seed": seed, "required": thresholds, "actual": actual,
         "numerical_comparison": "bit-exact complete DDR byte image after every graph",
         "input_parameters": dict(zip(PARAMETERS, CELLS[cell])),
+        "schedule_digest": schedule[2],
     }, indent=2) + "\n")
     print(output.strip(), flush=True)
+    return schedule[2]
 
 
 def main():
@@ -96,8 +102,12 @@ def main():
                             "-MAKEFLAGS", "OPT_FAST=-O3",
                             "--Mdir", str(obj.relative_to(ROOT)), "-o", "matrix-sim",
                             *sources, "tests/x3_smoke_tb.sv"], "compile")
+        digests = []
         for seed in ((17, 89, 2027) if args.all_seeds else (args.seed,)):
-            run_seed(experiment, args.cell, seed, obj / "matrix-sim", image, metadata, args.all_seeds)
+            digests.append(run_seed(experiment, args.cell, seed, obj / "matrix-sim",
+                                   image, metadata, args.all_seeds))
+        if len(set(digests)) != len(digests):
+            raise AssertionError("different seeds exercised identical memory stall schedules")
     except Exception as error:
         experiment.finish(error)
         raise
