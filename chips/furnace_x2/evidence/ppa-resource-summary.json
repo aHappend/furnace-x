@@ -1,16 +1,6 @@
 {
   "chip": "Furnace-X2",
-  "fitter_resources": {
-    "alms_used": 29663,
-    "alms_total": 427200,
-    "alms_pct": "7 %",
-    "total_registers": 23765,
-    "block_memory_bits": 558052,
-    "m20k_ram_blocks": 42,
-    "m20k_ram_blocks_total": 2713,
-    "dsp_blocks": 114,
-    "virtual_pins": 1979
-  },
+  "fitter_resources": {},
   "timing": {
     "device": "10AX115N2F45E1SG",
     "netlist_mode": "post_fit",
