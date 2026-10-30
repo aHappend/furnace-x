@@ -119,6 +119,113 @@ def raw_lz4_frame(data):
         struct.pack("<I", 0x80000000 | len(data)) + data + bytes(4))
 
 
+class FrameError(ValueError):
+    def __init__(self, message, code=2):
+        super().__init__(message)
+        self.code = code
+
+
+def lz4_decode(frame, maximum=131072):
+    """Parse framing/checksums and decode sequences with a byte-history oracle."""
+    cursor = 0
+
+    def take(count):
+        nonlocal cursor
+        if cursor + count > len(frame):
+            raise FrameError("truncated frame")
+        data = frame[cursor:cursor + count]
+        cursor += count
+        return data
+
+    if take(4) != b"\x04\x22\x4d\x18":
+        raise FrameError("magic")
+    flags, descriptor = take(2)
+    if flags >> 6 != 1 or flags & 3 or descriptor != 0x40:
+        raise FrameError("unsupported flags/descriptor")
+    header = bytes((flags, descriptor))
+    content_size = None
+    if flags & 8:
+        size = take(8)
+        header += size
+        content_size = int.from_bytes(size, "little")
+    if take(1)[0] != ((xxh32(header) >> 8) & 255):
+        raise FrameError("header checksum")
+    output = bytearray()
+    while True:
+        length = int.from_bytes(take(4), "little")
+        if length == 0:
+            break
+        raw = bool(length & 0x80000000)
+        length &= 0x7fffffff
+        if not 0 < length <= 65536:
+            raise FrameError("block size")
+        block = take(length)
+        if flags & 16 and int.from_bytes(take(4), "little") != xxh32(block):
+            raise FrameError("block checksum")
+        start = len(output)
+        if raw:
+            output += block
+        else:
+            position, had_match, last_match = 0, False, 0
+            while position < len(block):
+                token = block[position]
+                position += 1
+
+                def extended(initial):
+                    nonlocal position
+                    result = initial
+                    if initial == 15:
+                        while True:
+                            if position >= len(block):
+                                raise FrameError("truncated length extension")
+                            value = block[position]
+                            position += 1
+                            result += value
+                            if value != 255:
+                                break
+                    return result
+
+                literals = extended(token >> 4)
+                if position + literals > len(block):
+                    raise FrameError("literal overrun")
+                output += block[position:position + literals]
+                position += literals
+                if position == len(block):
+                    if had_match and (literals < 5 or len(output) - start - last_match < 12):
+                        raise FrameError("final literal/match constraints")
+                    break
+                if position + 2 > len(block):
+                    raise FrameError("truncated offset")
+                offset = int.from_bytes(block[position:position + 2], "little")
+                position += 2
+                available = len(output) - start if flags & 32 else min(65536, len(output))
+                if offset == 0 or offset > available:
+                    raise FrameError("unavailable offset", 3)
+                length = extended(token & 15) + 4
+                last_match = len(output) - start
+                had_match = True
+                for _ in range(length):
+                    output.append(output[-offset])
+            else:
+                raise FrameError("missing final sequence")
+        if len(output) - start > 65536 or len(output) > maximum:
+            raise FrameError("decoded/history limit")
+    if flags & 4 and int.from_bytes(take(4), "little") != xxh32(output):
+        raise FrameError("content checksum")
+    if cursor != len(frame) or (content_size is not None and content_size != len(output)):
+        raise FrameError("frame/content length")
+    return bytes(output)
+
+
+def gcm_decrypt(key, nonce, aad, ciphertext, tag):
+    stream, _ = gcm_encrypt(key, nonce, aad, bytes(len(ciphertext)))
+    plaintext = bytes(a ^ b for a, b in zip(ciphertext, stream))
+    actual_ciphertext, actual_tag = gcm_encrypt(key, nonce, aad, plaintext)
+    if actual_ciphertext != ciphertext or actual_tag != tag:
+        raise ValueError("GCM authentication")
+    return plaintext
+
+
 def known_answers():
     assert aes128(bytes.fromhex("000102030405060708090a0b0c0d0e0f"),
                   bytes.fromhex("00112233445566778899aabbccddeeff")).hex() == (

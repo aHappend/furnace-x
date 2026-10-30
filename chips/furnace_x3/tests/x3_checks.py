@@ -142,6 +142,7 @@ def main():
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--lowered", action="store_true")
     parser.add_argument("--engines", action="store_true")
+    parser.add_argument("--tile-bytes", type=int, choices=(1, 64), default=64)
     args = parser.parse_args()
     experiment = Experiment("x3-firmware-smoke")
     try:
@@ -170,6 +171,7 @@ def main():
                 json.dumps(mappings, indent=2) + "\n")
             sources = [str(p.relative_to(ROOT)) for p in sorted(lowered.glob("*.sv"))]
         experiment.command(["iverilog", "-g2012", "-Wall", "-s", "x3_smoke_tb",
+                            f"-Px3_smoke_tb.MAX_TILE_BYTES={args.tile_bytes}",
                             "-o", str(binary.relative_to(ROOT)), *sources,
                             "tests/x3_smoke_tb.sv"], "compile")
         output = experiment.command([

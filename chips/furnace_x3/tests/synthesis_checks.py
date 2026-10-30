@@ -52,6 +52,18 @@ def inspect_netlist(path, top):
                 raise AssertionError(f"missing required hierarchy {kind}")
         if counts["furnace_axi128_to512"] != 4:
             raise AssertionError("missing four retained legacy memory adapters")
+        for instance, minimum in (("control_cpu", 2048), ("burst_dma", 1),
+                                  ("local_memory", 1), ("legacy_soc", 1),
+                                  ("semaphores", 256), ("mailboxes", 1), ("interrupts", 32)):
+            prefix = f"{top}.{instance}"
+            state_bits = sum(bits for path, bits in states.items()
+                             if path == prefix or path.startswith(prefix + "."))
+            if state_bits < minimum:
+                raise AssertionError(f"insubstantial sequential state at {instance}: {state_bits}")
+        local_rams = sum(count for path, count in memories.items()
+                         if path.startswith(f"{top}.local_memory"))
+        if local_rams < 2:
+            raise AssertionError("local IMEM/DMEM were not preserved as memories")
     return {"instance_counts": dict(counts), "state_bits_by_instance": dict(states),
             "memory_cells_by_instance": dict(memories)}
 
@@ -66,6 +78,16 @@ def main():
     experiment = Experiment("complete-hierarchy-synthesis", args.repair_of)
     try:
         experiment.command(["yosys", "-V"], "yosys-version", version=True)
+        original = experiment.command(
+            ["python3", "tests/x3_checks.py", "--engines", "--seed", "17"],
+            "original-behavior")
+        lowered_behavior = experiment.command(
+            ["python3", "tests/x3_checks.py", "--engines", "--lowered", "--seed", "17"],
+            "lowered-behavior")
+        original_summary = [line for line in original.splitlines() if line.startswith("X3_")]
+        lowered_summary = [line for line in lowered_behavior.splitlines() if line.startswith("X3_")]
+        if not original_summary or original_summary != lowered_summary:
+            raise AssertionError("original/lowered public-interface behavioral differences")
         sources = experiment.path / "lowered"
         sources.mkdir()
         mapping = []
