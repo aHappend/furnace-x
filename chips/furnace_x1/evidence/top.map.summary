@@ -1,0 +1,14 @@
+Analysis & Synthesis Status : Successful - Thu Oct 29 11:23:04 2026
+Quartus Prime Version : 17.1.0 Build 590 10/25/2017 SJ Standard Edition
+Revision Name : top
+Top-level Entity Name : furnace_x1_top
+Family : Arria 10
+Logic utilization (in ALMs) : N/A
+Total registers : 18414
+Total pins : 0
+Total virtual pins : 1,827
+Total block memory bits : 557,056
+Total DSP Blocks : 100
+Total HSSI RX channels : 0
+Total HSSI TX channels : 0
+Total PLLs : 0

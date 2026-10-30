@@ -1,0 +1,3388 @@
+{
+  "chip": "Furnace-X1",
+  "passed_checks": {
+    "check:behavior": {
+      "attempt_id": 11,
+      "duration_s": 159.62247923202813,
+      "stdout_preview": "L1 COMPLETED evidence/behavior-20261029T183902987869Z-d607a76e/receipt.json\n",
+      "receipt_count": 1,
+      "receipts": [
+        {
+          "path": "evidence/behavior-20261029T183902987869Z-d607a76e/receipt.json",
+          "data": {
+            "kind": "L1",
+            "argv": [
+              "/usr/bin/python3",
+              "tests/verify.py",
+              "--suite",
+              "behavior"
+            ],
+            "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+            "source_sha256": {
+              "design/ARCHITECTURE.md": "2a3b92b5174b16d891fc632e547326a1a2faeb5727bd9c4e4d673f8892d21e20",
+              "design/SPEC.md": "96b41e28466dfbf0e1f9c56d8108d6f83dd45f7cc6a516591dc166f80f84aef2",
+              "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
+              "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
+              "rtl/furnace_axi4_xbar.sv": "403b8ef98a25e8bf11072456db876ae8f9c39de50609c169bc8bae930eb5a5ed",
+              "rtl/furnace_command_ring.sv": "a7e7c886652e194e0c556be33f364e464dc4bee5866d76a3b11fab83ba60df5c",
+              "rtl/furnace_csr.sv": "778a5e3cf3f07e733ff31df3da79e9418c0e66d25cfd2ddd25f2178cee617e2a",
+              "rtl/furnace_dma128.sv": "4b896d0f4c857ec9ec524a5897f0ce9078ba219a4ea781bf8a88f81e23bce12c",
+              "rtl/furnace_fp32_add5.sv": "4805a009a2314fa4079e364dd8320a3491d62b9dbe913c29d2a7d1f3feed0cfd",
+              "rtl/furnace_fp32_mul4.sv": "ba224aa2d85fe71aea5151d345750b4169d39df0d32f4cca4c0ecf703f7cc98d",
+              "rtl/furnace_fp32_round.sv": "11ba7438c65add73d63b3ce154110fbef6b9f2af4df3ef6632a6029cd8f71fe7",
+              "rtl/furnace_ghash_mul.sv": "410a0bb113e4d52bee8982cdcd68cb7d33177577f364790154a5f05a9e98941c",
+              "rtl/furnace_lz4_frontend.sv": "e1119bdcece22f0fe30f7b2d0a2079f6b2f94aea3face7bd4d405ebf24ab7156",
+              "rtl/furnace_tensor8.sv": "0f3df239bda3d5297e8eca0d17d4afcf9ae96cc42749f8e56805d491b96bed5b",
+              "rtl/furnace_x1_top.sv": "7667f36aada79d3df98383bb85a651ec07ec97ed01ef2d6d2bca38b88a143388",
+              "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
+              "tests/aes_tb.sv": "528ee6687db620588423846a7c16aee86d1ef868bd46e965d7bedad7e5bab5f9",
+              "tests/crypto_cases.py": "85c8d34599dcbb6e36fb495a0e8e9441f20d9156bbec81c58edb6fdb1bbf892c",
+              "tests/crypto_reference.py": "ddb673a54e4b3adfdf9a2949fa7fce1b75d6cb24bbdc065b1a8b93bf527cabdb",
+              "tests/csr_tb.sv": "df71c87f136674058ca732f8d99a55cc39240bf0f7bf75ad758f3e6228721196",
+              "tests/execution.py": "93a1d8177142e33cf1869a13ef5c6f9f7bc554bb6ce4e4671127351ecbcdb6c5",
+              "tests/gcm_tb.sv": "7b1867f9fae6d24daf45da9d3965edf4f5acb08e4d86aca7bca026984fbd814b",
+              "tests/interfaces.py": "32fe86b86b4f21da834be504357e18640482d2441f0d14934e77e12816216661",
+              "tests/lz4_cases.py": "8911955bc714e15c085fb7306bacf1f58757c9ae58330f02455706d3b13b833b",
+              "tests/lz4_tb.sv": "edd310d66d85ae7926b764ef02633693b4e9afd836f09d3a4bd29cbdc7aee68e",
+              "tests/mutations.py": "0ceddecd16701cc37365c9921cab97f4939fef73b37e3a2661005063759bc1cc",
+              "tests/reference.py": "1e11198dd598c170b5e49127e219d9023e3b8c2398c7b7a95d05d66368c92f46",
+              "tests/ring_tb.sv": "156954d983c60dfe4250e59a1024bcb8a59e239453087ffc1d502db49a2cd947",
+              "tests/soc_boundaries.py": "38c55c6b839bfc9649839e1c55559f378d42f25f85239ca77c9afc65700d9f76",
+              "tests/soc_cases.py": "1080fc07875c261127018b80b8371d2330623a3647194b85245a04d6619dbd81",
+              "tests/soc_tb.sv": "f29d638fa8d997e0b3c9fb56e1866db315051ff98afa262462712240cb25151e",
+              "tests/suites.py": "21490d96c270dc8d1b7e444c2a861a004a36b842eaed67db5793b05bd2122f94",
+              "tests/synthesis.py": "b1351456502892fcd7922dbb3a15af5d6e5769740be5ec7b2297c0f355312588",
+              "tests/tensor_tb.sv": "5eed5804877f990603bde783ffd2af25bff26a2a2298b47616a2268e837bdced",
+              "tests/verify.py": "ba0c39f4198407deb34c7bdd6415aca158e334ba4e2f1fad093a7a9cfeba917f",
+              "tests/xbar_tb.sv": "9ccef6a3e33d6a5442270a32bb923073e307f2868d5b1a5e4e15d5e91df76fd1",
+              "tests/yosys_packed.py": "e0925d13c932f46836ec6b9c659f0a721feccbb2cc76507ac9dc8b7ba4659a94"
+            },
+            "start": "2026-10-29T18:39:02.994744+00:00",
+            "commands": [
+              {
+                "name": "version-python3",
+                "argv": [
+                  "python3",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:39:03.018584+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-python3.stdout.txt",
+                "stderr": "version-python3.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:39:03.024516+00:00",
+                "duration_s": 0.005580466007813811
+              },
+              {
+                "name": "version-iverilog",
+                "argv": [
+                  "iverilog",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:39:03.025118+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-iverilog.stdout.txt",
+                "stderr": "version-iverilog.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:39:03.058732+00:00",
+                "duration_s": 0.03325695195235312
+              },
+              {
+                "name": "version-vvp",
+                "argv": [
+                  "vvp",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:39:03.059332+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-vvp.stdout.txt",
+                "stderr": "version-vvp.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:39:03.068798+00:00",
+                "duration_s": 0.009064919082447886
+              },
+              {
+                "name": "version-verilator",
+                "argv": [
+                  "verilator",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:39:03.069396+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-verilator.stdout.txt",
+                "stderr": "version-verilator.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:39:03.185318+00:00",
+                "duration_s": 0.11547522805631161
+              },
+              {
+                "name": "version-make",
+                "argv": [
+                  "make",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:39:03.186191+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-make.stdout.txt",
+                "stderr": "version-make.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:39:03.191979+00:00",
+                "duration_s": 0.005272601032629609
+              },
+              {
+                "name": "version-g++",
+                "argv": [
+                  "g++",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:39:03.192755+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-g++.stdout.txt",
+                "stderr": "version-g++.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:39:03.198444+00:00",
+                "duration_s": 0.005177804036065936
+              }
+            ],
+            "coverage": {},
+            "outcome": "passed",
+            "runs": [
+              {
+                "label": "icarus-tensor",
+                "outcome": "passed",
+                "receipt": "evidence/icarus-tensor-20261029T183903199244Z-b061be50/receipt.json",
+                "coverage": {
+                  "tensor_vectors_per_mode": {
+                    "0": 8,
+                    "1": 8,
+                    "2": 8
+                  },
+                  "tensor_compared_results": 24,
+                  "tensor_transferred_categories": {
+                    "w4_codes": {
+                      "0": [
+                        0,
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                        12,
+                        13,
+                        14
+                      ],
+                      "2": [
+                        0,
+                        1
+                      ]
+                    },
+                    "lane_distinct_modes": [
+                      0
+                    ],
+                    "directed_results": [
+                      {
+                        "mode": 1,
+                        "index": 0,
+                        "expected": "3f800000"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 0,
+                        "expected": "3f800000"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "label": "icarus-crypto",
+                "outcome": "passed",
+                "receipt": "evidence/icarus-crypto-20261029T183903555970Z-d488bcab/receipt.json",
+                "coverage": {
+                  "crypto": {
+                    "aes_cases": 8,
+                    "aes_published_kats": 8,
+                    "gcm_cases": 8,
+                    "successes": 6,
+                    "failures": 2,
+                    "tag_bits": [
+                      0
+                    ],
+                    "optional_library": {
+                      "name": "cryptography",
+                      "version": "41.0.7"
+                    },
+                    "library_comparisons": 8
+                  }
+                }
+              },
+              {
+                "label": "icarus-lz4",
+                "outcome": "passed",
+                "receipt": "evidence/icarus-lz4-20261029T183905320675Z-3f3a78aa/receipt.json",
+                "coverage": {
+                  "lz4_distinct_success_categories": [
+                    "compact-literals",
+                    "overlap1",
+                    "recovery-singleton"
+                  ],
+                  "lz4_distinct_error_categories": [
+                    "header-checksum"
+                  ],
+                  "lz4_valid_cases": 6,
+                  "lz4_completed_cases": 7
+                }
+              },
+              {
+                "label": "icarus-soc",
+                "outcome": "passed",
+                "receipt": "evidence/icarus-soc-20261029T183905483457Z-85958206/receipt.json",
+                "coverage": {
+                  "soc_compared_descriptors": 5
+                }
+              },
+              {
+                "label": "tensor",
+                "outcome": "passed",
+                "receipt": "evidence/tensor-20261029T183909111535Z-54cfb0fc/receipt.json",
+                "coverage": {
+                  "tensor_vectors_per_mode": {
+                    "0": 256,
+                    "1": 256,
+                    "2": 256
+                  },
+                  "tensor_compared_results": 264,
+                  "tensor_transferred_categories": {
+                    "w4_codes": {
+                      "0": [
+                        0,
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                        12,
+                        13,
+                        14,
+                        15
+                      ],
+                      "2": [
+                        0,
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                        12,
+                        13,
+                        14,
+                        15
+                      ]
+                    },
+                    "lane_distinct_modes": [
+                      0,
+                      1,
+                      2
+                    ],
+                    "directed_results": [
+                      {
+                        "mode": 1,
+                        "index": 0,
+                        "expected": "3f800000"
+                      },
+                      {
+                        "mode": 1,
+                        "index": 21,
+                        "expected": "00000000"
+                      },
+                      {
+                        "mode": 1,
+                        "index": 22,
+                        "expected": "7f800000"
+                      },
+                      {
+                        "mode": 1,
+                        "index": 23,
+                        "expected": "7fc00000"
+                      },
+                      {
+                        "mode": 1,
+                        "index": 24,
+                        "expected": "7fc00000"
+                      },
+                      {
+                        "mode": 1,
+                        "index": 25,
+                        "expected": "3f800000"
+                      },
+                      {
+                        "mode": 1,
+                        "index": 26,
+                        "expected": "00010000"
+                      },
+                      {
+                        "mode": 1,
+                        "index": 27,
+                        "expected": "00000000"
+                      },
+                      {
+                        "mode": 1,
+                        "index": 28,
+                        "expected": "00000002"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 0,
+                        "expected": "3f800000"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 21,
+                        "expected": "00000000"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 22,
+                        "expected": "7f800000"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 23,
+                        "expected": "7fc00000"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 24,
+                        "expected": "7fc00000"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 25,
+                        "expected": "3f800000"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 26,
+                        "expected": "807f0000"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 27,
+                        "expected": "80800000"
+                      },
+                      {
+                        "mode": 2,
+                        "index": 28,
+                        "expected": "3f800000"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "label": "crypto",
+                "outcome": "passed",
+                "receipt": "evidence/crypto-20261029T183919150243Z-905c9fdf/receipt.json",
+                "coverage": {
+                  "crypto": {
+                    "aes_cases": 40,
+                    "aes_published_kats": 8,
+                    "gcm_cases": 304,
+                    "successes": 175,
+                    "failures": 129,
+                    "tag_bits": [
+                      0,
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8,
+                      9,
+                      10,
+                      11,
+                      12,
+                      13,
+                      14,
+                      15,
+                      16,
+                      17,
+                      18,
+                      19,
+                      20,
+                      21,
+                      22,
+                      23,
+                      24,
+                      25,
+                      26,
+                      27,
+                      28,
+                      29,
+                      30,
+                      31,
+                      32,
+                      33,
+                      34,
+                      35,
+                      36,
+                      37,
+                      38,
+                      39,
+                      40,
+                      41,
+                      42,
+                      43,
+                      44,
+                      45,
+                      46,
+                      47,
+                      48,
+                      49,
+                      50,
+                      51,
+                      52,
+                      53,
+                      54,
+                      55,
+                      56,
+                      57,
+                      58,
+                      59,
+                      60,
+                      61,
+                      62,
+                      63,
+                      64,
+                      65,
+                      66,
+                      67,
+                      68,
+                      69,
+                      70,
+                      71,
+                      72,
+                      73,
+                      74,
+                      75,
+                      76,
+                      77,
+                      78,
+                      79,
+                      80,
+                      81,
+                      82,
+                      83,
+                      84,
+                      85,
+                      86,
+                      87,
+                      88,
+                      89,
+                      90,
+                      91,
+                      92,
+                      93,
+                      94,
+                      95,
+                      96,
+                      97,
+                      98,
+                      99,
+                      100,
+                      101,
+                      102,
+                      103,
+                      104,
+                      105,
+                      106,
+                      107,
+                      108,
+                      109,
+                      110,
+                      111,
+                      112,
+                      113,
+                      114,
+                      115,
+                      116,
+                      117,
+                      118,
+                      119,
+                      120,
+                      121,
+                      122,
+                      123,
+                      124,
+                      125,
+                      126,
+                      127
+                    ],
+                    "optional_library": {
+                      "name": "cryptography",
+                      "version": "41.0.7"
+                    },
+                    "library_comparisons": 304
+                  }
+                }
+              },
+              {
+                "label": "lz4",
+                "outcome": "passed",
+                "receipt": "evidence/lz4-20261029T183957432161Z-a00127e4/receipt.json",
+                "coverage": {
+                  "lz4_distinct_success_categories": [
+                    "B1-offset65535",
+                    "B1-offset65535-size",
+                    "B2-linked-at65536",
+                    "B2-linked-at65536-size",
+                    "B3-overwritten-history",
+                    "B3-overwritten-history-size",
+                    "exact131072",
+                    "exact131072-size",
+                    "flags-0000-raw0-n0",
+                    "flags-0000-raw0-n1",
+                    "flags-0000-raw0-n15",
+                    "flags-0000-raw0-n16",
+                    "flags-0000-raw0-n271",
+                    "flags-0000-raw0-n800",
+                    "flags-0000-raw1-n0",
+                    "flags-0000-raw1-n1",
+                    "flags-0000-raw1-n15",
+                    "flags-0000-raw1-n16",
+                    "flags-0000-raw1-n271",
+                    "flags-0000-raw1-n800",
+                    "flags-0001-raw0-n0",
+                    "flags-0001-raw0-n1",
+                    "flags-0001-raw0-n15",
+                    "flags-0001-raw0-n16",
+                    "flags-0001-raw0-n271",
+                    "flags-0001-raw0-n800",
+                    "flags-0001-raw1-n0",
+                    "flags-0001-raw1-n1",
+                    "flags-0001-raw1-n15",
+                    "flags-0001-raw1-n16",
+                    "flags-0001-raw1-n271",
+                    "flags-0001-raw1-n800",
+                    "flags-0010-raw0-n0",
+                    "flags-0010-raw0-n1",
+                    "flags-0010-raw0-n15",
+                    "flags-0010-raw0-n16",
+                    "flags-0010-raw0-n271",
+                    "flags-0010-raw0-n800",
+                    "flags-0010-raw1-n0",
+                    "flags-0010-raw1-n1",
+                    "flags-0010-raw1-n15",
+                    "flags-0010-raw1-n16",
+                    "flags-0010-raw1-n271",
+                    "flags-0010-raw1-n800",
+                    "flags-0011-raw0-n0",
+                    "flags-0011-raw0-n1",
+                    "flags-0011-raw0-n15",
+                    "flags-0011-raw0-n16",
+                    "flags-0011-raw0-n271",
+                    "flags-0011-raw0-n800",
+                    "flags-0011-raw1-n0",
+                    "flags-0011-raw1-n1",
+                    "flags-0011-raw1-n15",
+                    "flags-0011-raw1-n16",
+                    "flags-0011-raw1-n271",
+                    "flags-0011-raw1-n800",
+                    "flags-0100-raw0-n0",
+                    "flags-0100-raw0-n1",
+                    "flags-0100-raw0-n15",
+                    "flags-0100-raw0-n16",
+                    "flags-0100-raw0-n271",
+                    "flags-0100-raw0-n800",
+                    "flags-0100-raw1-n0",
+                    "flags-0100-raw1-n1",
+                    "flags-0100-raw1-n15",
+                    "flags-0100-raw1-n16",
+                    "flags-0100-raw1-n271",
+                    "flags-0100-raw1-n800",
+                    "flags-0101-raw0-n0",
+                    "flags-0101-raw0-n1",
+                    "flags-0101-raw0-n15",
+                    "flags-0101-raw0-n16",
+                    "flags-0101-raw0-n271",
+                    "flags-0101-raw0-n800",
+                    "flags-0101-raw1-n0",
+                    "flags-0101-raw1-n1",
+                    "flags-0101-raw1-n15",
+                    "flags-0101-raw1-n16",
+                    "flags-0101-raw1-n271",
+                    "flags-0101-raw1-n800",
+                    "flags-0110-raw0-n0",
+                    "flags-0110-raw0-n1",
+                    "flags-0110-raw0-n15",
+                    "flags-0110-raw0-n16",
+                    "flags-0110-raw0-n271",
+                    "flags-0110-raw0-n800",
+                    "flags-0110-raw1-n0",
+                    "flags-0110-raw1-n1",
+                    "flags-0110-raw1-n15",
+                    "flags-0110-raw1-n16",
+                    "flags-0110-raw1-n271",
+                    "flags-0110-raw1-n800",
+                    "flags-0111-raw0-n0",
+                    "flags-0111-raw0-n1",
+                    "flags-0111-raw0-n15",
+                    "flags-0111-raw0-n16",
+                    "flags-0111-raw0-n271",
+                    "flags-0111-raw0-n800",
+                    "flags-0111-raw1-n0",
+                    "flags-0111-raw1-n1",
+                    "flags-0111-raw1-n15",
+                    "flags-0111-raw1-n16",
+                    "flags-0111-raw1-n271",
+                    "flags-0111-raw1-n800",
+                    "flags-1000-raw0-n0",
+                    "flags-1000-raw0-n1",
+                    "flags-1000-raw0-n15",
+                    "flags-1000-raw0-n16",
+                    "flags-1000-raw0-n271",
+                    "flags-1000-raw0-n800",
+                    "flags-1000-raw1-n0",
+                    "flags-1000-raw1-n1",
+                    "flags-1000-raw1-n15",
+                    "flags-1000-raw1-n16",
+                    "flags-1000-raw1-n271",
+                    "flags-1000-raw1-n800",
+                    "flags-1001-raw0-n0",
+                    "flags-1001-raw0-n1",
+                    "flags-1001-raw0-n15",
+                    "flags-1001-raw0-n16",
+                    "flags-1001-raw0-n271",
+                    "flags-1001-raw0-n800",
+                    "flags-1001-raw1-n0",
+                    "flags-1001-raw1-n1",
+                    "flags-1001-raw1-n15",
+                    "flags-1001-raw1-n16",
+                    "flags-1001-raw1-n271",
+                    "flags-1001-raw1-n800",
+                    "flags-1010-raw0-n0",
+                    "flags-1010-raw0-n1",
+                    "flags-1010-raw0-n15",
+                    "flags-1010-raw0-n16",
+                    "flags-1010-raw0-n271",
+                    "flags-1010-raw0-n800",
+                    "flags-1010-raw1-n0",
+                    "flags-1010-raw1-n1",
+                    "flags-1010-raw1-n15",
+                    "flags-1010-raw1-n16",
+                    "flags-1010-raw1-n271",
+                    "flags-1010-raw1-n800",
+                    "flags-1011-raw0-n0",
+                    "flags-1011-raw0-n1",
+                    "flags-1011-raw0-n15",
+                    "flags-1011-raw0-n16",
+                    "flags-1011-raw0-n271",
+                    "flags-1011-raw0-n800",
+                    "flags-1011-raw1-n0",
+                    "flags-1011-raw1-n1",
+                    "flags-1011-raw1-n15",
+                    "flags-1011-raw1-n16",
+                    "flags-1011-raw1-n271",
+                    "flags-1011-raw1-n800",
+                    "flags-1100-raw0-n0",
+                    "flags-1100-raw0-n1",
+                    "flags-1100-raw0-n15",
+                    "flags-1100-raw0-n16",
+                    "flags-1100-raw0-n271",
+                    "flags-1100-raw0-n800",
+                    "flags-1100-raw1-n0",
+                    "flags-1100-raw1-n1",
+                    "flags-1100-raw1-n15",
+                    "flags-1100-raw1-n16",
+                    "flags-1100-raw1-n271",
+                    "flags-1100-raw1-n800",
+                    "flags-1101-raw0-n0",
+                    "flags-1101-raw0-n1",
+                    "flags-1101-raw0-n15",
+                    "flags-1101-raw0-n16",
+                    "flags-1101-raw0-n271",
+                    "flags-1101-raw0-n800",
+                    "flags-1101-raw1-n0",
+                    "flags-1101-raw1-n1",
+                    "flags-1101-raw1-n15",
+                    "flags-1101-raw1-n16",
+                    "flags-1101-raw1-n271",
+                    "flags-1101-raw1-n800",
+                    "flags-1110-raw0-n0",
+                    "flags-1110-raw0-n1",
+                    "flags-1110-raw0-n15",
+                    "flags-1110-raw0-n16",
+                    "flags-1110-raw0-n271",
+                    "flags-1110-raw0-n800",
+                    "flags-1110-raw1-n0",
+                    "flags-1110-raw1-n1",
+                    "flags-1110-raw1-n15",
+                    "flags-1110-raw1-n16",
+                    "flags-1110-raw1-n271",
+                    "flags-1110-raw1-n800",
+                    "flags-1111-raw0-n0",
+                    "flags-1111-raw0-n1",
+                    "flags-1111-raw0-n15",
+                    "flags-1111-raw0-n16",
+                    "flags-1111-raw0-n271",
+                    "flags-1111-raw0-n800",
+                    "flags-1111-raw1-n0",
+                    "flags-1111-raw1-n1",
+                    "flags-1111-raw1-n15",
+                    "flags-1111-raw1-n16",
+                    "flags-1111-raw1-n271",
+                    "flags-1111-raw1-n800",
+                    "match-extension255-chain",
+                    "minimum-match4",
+                    "overlap-offset1",
+                    "overlap-offset2",
+                    "overlap-offset3",
+                    "recovery-singleton"
+                  ],
+                  "lz4_distinct_error_categories": [
+                    "accepted131072-but-frame-excess",
+                    "bd-256k",
+                    "bd-4m",
+                    "block-checksum",
+                    "block-over64k",
+                    "block-zero-raw",
+                    "concatenated-frame",
+                    "concealed-excess",
+                    "content-checksum",
+                    "content-size-mismatch",
+                    "decoded131073-start-reject",
+                    "dictionary-id",
+                    "early-last",
+                    "frame-start-too-large",
+                    "header-checksum",
+                    "independent-block-history-invalidated",
+                    "last-match-too-near-end",
+                    "literal-extension-truncated",
+                    "literal-overrun",
+                    "magic-byte0",
+                    "magic-byte1",
+                    "magic-byte2",
+                    "magic-byte3",
+                    "match-extension-truncated",
+                    "missing-last",
+                    "new-frame-has-no-history",
+                    "no-final-literals",
+                    "offset-truncated",
+                    "reserved-bd",
+                    "reserved-flg",
+                    "short-final-literals",
+                    "skippable-frame",
+                    "trailing-byte",
+                    "truncated-at-declared-length",
+                    "unavailable-offset",
+                    "version00",
+                    "version10",
+                    "version11",
+                    "zero-frame-start",
+                    "zero-offset"
+                  ],
+                  "lz4_valid_cases": 246,
+                  "lz4_completed_cases": 286
+                }
+              },
+              {
+                "label": "xbar",
+                "outcome": "passed",
+                "receipt": "evidence/xbar-20261029T184009570019Z-4dd0dc61/receipt.json",
+                "coverage": {
+                  "xbar_read_transactions": 184,
+                  "xbar_write_transactions": 184,
+                  "xbar_concurrent_targets_per_direction": 4
+                }
+              },
+              {
+                "label": "soc-32-1",
+                "outcome": "passed",
+                "receipt": "evidence/soc-32-1-20261029T184023617496Z-82121b74/receipt.json",
+                "coverage": {
+                  "integrated_matrix": [
+                    {
+                      "seed": 17,
+                      "max_tile": 32,
+                      "depth": 1,
+                      "compared": 24,
+                      "successful": 20,
+                      "tag_rejections": 4,
+                      "infinity_operand_counts": {
+                        "mode1_activation_positive_infinity": 2,
+                        "mode1_weight_positive_infinity": 2,
+                        "mode2_activation_positive_infinity": 2,
+                        "mode1_activation_negative_infinity": 1,
+                        "mode1_weight_negative_infinity": 1,
+                        "mode2_activation_negative_infinity": 1
+                      },
+                      "compared_bytes": 7152,
+                      "read_beats": 417,
+                      "write_beats": 78
+                    },
+                    {
+                      "seed": 89,
+                      "max_tile": 32,
+                      "depth": 1,
+                      "compared": 24,
+                      "successful": 20,
+                      "tag_rejections": 4,
+                      "infinity_operand_counts": {
+                        "mode1_activation_positive_infinity": 2,
+                        "mode1_weight_positive_infinity": 2,
+                        "mode2_activation_positive_infinity": 2,
+                        "mode1_activation_negative_infinity": 1,
+                        "mode1_weight_negative_infinity": 1,
+                        "mode2_activation_negative_infinity": 1
+                      },
+                      "compared_bytes": 7152,
+                      "read_beats": 417,
+                      "write_beats": 78
+                    },
+                    {
+                      "seed": 2026,
+                      "max_tile": 32,
+                      "depth": 1,
+                      "compared": 24,
+                      "successful": 20,
+                      "tag_rejections": 4,
+                      "infinity_operand_counts": {
+                        "mode1_activation_positive_infinity": 2,
+                        "mode1_weight_positive_infinity": 2,
+                        "mode2_activation_positive_infinity": 2,
+                        "mode1_activation_negative_infinity": 1,
+                        "mode1_weight_negative_infinity": 1,
+                        "mode2_activation_negative_infinity": 1
+                      },
+                      "compared_bytes": 7152,
+                      "read_beats": 417,
+                      "write_beats": 78
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "soc-257-3",
+                "outcome": "passed",
+                "receipt": "evidence/soc-257-3-20261029T184049008202Z-be53c7c8/receipt.json",
+                "coverage": {
+                  "integrated_matrix": [
+                    {
+                      "seed": 17,
+                      "max_tile": 257,
+                      "depth": 3,
+                      "compared": 24,
+                      "successful": 20,
+                      "tag_rejections": 4,
+                      "infinity_operand_counts": {
+                        "mode1_activation_positive_infinity": 2,
+                        "mode1_weight_positive_infinity": 2,
+                        "mode2_activation_positive_infinity": 2,
+                        "mode1_activation_negative_infinity": 1,
+                        "mode1_weight_negative_infinity": 1,
+                        "mode2_activation_negative_infinity": 1
+                      },
+                      "compared_bytes": 7296,
+                      "read_beats": 426,
+                      "write_beats": 81
+                    },
+                    {
+                      "seed": 89,
+                      "max_tile": 257,
+                      "depth": 3,
+                      "compared": 24,
+                      "successful": 20,
+                      "tag_rejections": 4,
+                      "infinity_operand_counts": {
+                        "mode1_activation_positive_infinity": 2,
+                        "mode1_weight_positive_infinity": 2,
+                        "mode2_activation_positive_infinity": 2,
+                        "mode1_activation_negative_infinity": 1,
+                        "mode1_weight_negative_infinity": 1,
+                        "mode2_activation_negative_infinity": 1
+                      },
+                      "compared_bytes": 7296,
+                      "read_beats": 426,
+                      "write_beats": 81
+                    },
+                    {
+                      "seed": 2026,
+                      "max_tile": 257,
+                      "depth": 3,
+                      "compared": 24,
+                      "successful": 20,
+                      "tag_rejections": 4,
+                      "infinity_operand_counts": {
+                        "mode1_activation_positive_infinity": 2,
+                        "mode1_weight_positive_infinity": 2,
+                        "mode2_activation_positive_infinity": 2,
+                        "mode1_activation_negative_infinity": 1,
+                        "mode1_weight_negative_infinity": 1,
+                        "mode2_activation_negative_infinity": 1
+                      },
+                      "compared_bytes": 7296,
+                      "read_beats": 426,
+                      "write_beats": 81
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "soc-4096-8",
+                "outcome": "passed",
+                "receipt": "evidence/soc-4096-8-20261029T184115137018Z-9aeacbd4/receipt.json",
+                "coverage": {
+                  "integrated_matrix": [
+                    {
+                      "seed": 17,
+                      "max_tile": 4096,
+                      "depth": 8,
+                      "compared": 24,
+                      "successful": 20,
+                      "tag_rejections": 4,
+                      "infinity_operand_counts": {
+                        "mode1_activation_positive_infinity": 2,
+                        "mode1_weight_positive_infinity": 2,
+                        "mode2_activation_positive_infinity": 2,
+                        "mode1_activation_negative_infinity": 1,
+                        "mode1_weight_negative_infinity": 1,
+                        "mode2_activation_negative_infinity": 1
+                      },
+                      "compared_bytes": 7296,
+                      "read_beats": 426,
+                      "write_beats": 81
+                    },
+                    {
+                      "seed": 89,
+                      "max_tile": 4096,
+                      "depth": 8,
+                      "compared": 24,
+                      "successful": 20,
+                      "tag_rejections": 4,
+                      "infinity_operand_counts": {
+                        "mode1_activation_positive_infinity": 2,
+                        "mode1_weight_positive_infinity": 2,
+                        "mode2_activation_positive_infinity": 2,
+                        "mode1_activation_negative_infinity": 1,
+                        "mode1_weight_negative_infinity": 1,
+                        "mode2_activation_negative_infinity": 1
+                      },
+                      "compared_bytes": 7296,
+                      "read_beats": 426,
+                      "write_beats": 81
+                    },
+                    {
+                      "seed": 2026,
+                      "max_tile": 4096,
+                      "depth": 8,
+                      "compared": 24,
+                      "successful": 20,
+                      "tag_rejections": 4,
+                      "infinity_operand_counts": {
+                        "mode1_activation_positive_infinity": 2,
+                        "mode1_weight_positive_infinity": 2,
+                        "mode2_activation_positive_infinity": 2,
+                        "mode1_activation_negative_infinity": 1,
+                        "mode1_weight_negative_infinity": 1,
+                        "mode2_activation_negative_infinity": 1
+                      },
+                      "compared_bytes": 7296,
+                      "read_beats": 426,
+                      "write_beats": 81
+                    }
+                  ]
+                }
+              }
+            ],
+            "removed_transient_objects": [],
+            "end": "2026-10-29T18:41:42.341016+00:00"
+          }
+        }
+      ]
+    },
+    "check:boundaries": {
+      "attempt_id": 12,
+      "duration_s": 238.89986747317016,
+      "stdout_preview": "L1 COMPLETED evidence/boundaries-20261029T184147342210Z-41c6bc55/receipt.json\n",
+      "receipt_count": 1,
+      "receipts": [
+        {
+          "path": "evidence/boundaries-20261029T184147342210Z-41c6bc55/receipt.json",
+          "data": {
+            "kind": "L1",
+            "argv": [
+              "/usr/bin/python3",
+              "tests/verify.py",
+              "--suite",
+              "boundaries"
+            ],
+            "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+            "source_sha256": {
+              "design/ARCHITECTURE.md": "2a3b92b5174b16d891fc632e547326a1a2faeb5727bd9c4e4d673f8892d21e20",
+              "design/SPEC.md": "96b41e28466dfbf0e1f9c56d8108d6f83dd45f7cc6a516591dc166f80f84aef2",
+              "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
+              "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
+              "rtl/furnace_axi4_xbar.sv": "403b8ef98a25e8bf11072456db876ae8f9c39de50609c169bc8bae930eb5a5ed",
+              "rtl/furnace_command_ring.sv": "a7e7c886652e194e0c556be33f364e464dc4bee5866d76a3b11fab83ba60df5c",
+              "rtl/furnace_csr.sv": "778a5e3cf3f07e733ff31df3da79e9418c0e66d25cfd2ddd25f2178cee617e2a",
+              "rtl/furnace_dma128.sv": "4b896d0f4c857ec9ec524a5897f0ce9078ba219a4ea781bf8a88f81e23bce12c",
+              "rtl/furnace_fp32_add5.sv": "4805a009a2314fa4079e364dd8320a3491d62b9dbe913c29d2a7d1f3feed0cfd",
+              "rtl/furnace_fp32_mul4.sv": "ba224aa2d85fe71aea5151d345750b4169d39df0d32f4cca4c0ecf703f7cc98d",
+              "rtl/furnace_fp32_round.sv": "11ba7438c65add73d63b3ce154110fbef6b9f2af4df3ef6632a6029cd8f71fe7",
+              "rtl/furnace_ghash_mul.sv": "410a0bb113e4d52bee8982cdcd68cb7d33177577f364790154a5f05a9e98941c",
+              "rtl/furnace_lz4_frontend.sv": "e1119bdcece22f0fe30f7b2d0a2079f6b2f94aea3face7bd4d405ebf24ab7156",
+              "rtl/furnace_tensor8.sv": "0f3df239bda3d5297e8eca0d17d4afcf9ae96cc42749f8e56805d491b96bed5b",
+              "rtl/furnace_x1_top.sv": "7667f36aada79d3df98383bb85a651ec07ec97ed01ef2d6d2bca38b88a143388",
+              "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
+              "tests/aes_tb.sv": "528ee6687db620588423846a7c16aee86d1ef868bd46e965d7bedad7e5bab5f9",
+              "tests/crypto_cases.py": "85c8d34599dcbb6e36fb495a0e8e9441f20d9156bbec81c58edb6fdb1bbf892c",
+              "tests/crypto_reference.py": "ddb673a54e4b3adfdf9a2949fa7fce1b75d6cb24bbdc065b1a8b93bf527cabdb",
+              "tests/csr_tb.sv": "df71c87f136674058ca732f8d99a55cc39240bf0f7bf75ad758f3e6228721196",
+              "tests/execution.py": "93a1d8177142e33cf1869a13ef5c6f9f7bc554bb6ce4e4671127351ecbcdb6c5",
+              "tests/gcm_tb.sv": "7b1867f9fae6d24daf45da9d3965edf4f5acb08e4d86aca7bca026984fbd814b",
+              "tests/interfaces.py": "32fe86b86b4f21da834be504357e18640482d2441f0d14934e77e12816216661",
+              "tests/lz4_cases.py": "8911955bc714e15c085fb7306bacf1f58757c9ae58330f02455706d3b13b833b",
+              "tests/lz4_tb.sv": "edd310d66d85ae7926b764ef02633693b4e9afd836f09d3a4bd29cbdc7aee68e",
+              "tests/mutations.py": "0ceddecd16701cc37365c9921cab97f4939fef73b37e3a2661005063759bc1cc",
+              "tests/reference.py": "1e11198dd598c170b5e49127e219d9023e3b8c2398c7b7a95d05d66368c92f46",
+              "tests/ring_tb.sv": "156954d983c60dfe4250e59a1024bcb8a59e239453087ffc1d502db49a2cd947",
+              "tests/soc_boundaries.py": "38c55c6b839bfc9649839e1c55559f378d42f25f85239ca77c9afc65700d9f76",
+              "tests/soc_cases.py": "1080fc07875c261127018b80b8371d2330623a3647194b85245a04d6619dbd81",
+              "tests/soc_tb.sv": "f29d638fa8d997e0b3c9fb56e1866db315051ff98afa262462712240cb25151e",
+              "tests/suites.py": "21490d96c270dc8d1b7e444c2a861a004a36b842eaed67db5793b05bd2122f94",
+              "tests/synthesis.py": "b1351456502892fcd7922dbb3a15af5d6e5769740be5ec7b2297c0f355312588",
+              "tests/tensor_tb.sv": "5eed5804877f990603bde783ffd2af25bff26a2a2298b47616a2268e837bdced",
+              "tests/verify.py": "ba0c39f4198407deb34c7bdd6415aca158e334ba4e2f1fad093a7a9cfeba917f",
+              "tests/xbar_tb.sv": "9ccef6a3e33d6a5442270a32bb923073e307f2868d5b1a5e4e15d5e91df76fd1",
+              "tests/yosys_packed.py": "e0925d13c932f46836ec6b9c659f0a721feccbb2cc76507ac9dc8b7ba4659a94"
+            },
+            "start": "2026-10-29T18:41:47.348957+00:00",
+            "commands": [
+              {
+                "name": "version-python3",
+                "argv": [
+                  "python3",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:41:47.372749+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-python3.stdout.txt",
+                "stderr": "version-python3.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:41:47.378386+00:00",
+                "duration_s": 0.00516262580640614
+              },
+              {
+                "name": "version-iverilog",
+                "argv": [
+                  "iverilog",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:41:47.379142+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-iverilog.stdout.txt",
+                "stderr": "version-iverilog.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:41:47.396601+00:00",
+                "duration_s": 0.01691754604689777
+              },
+              {
+                "name": "version-vvp",
+                "argv": [
+                  "vvp",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:41:47.397357+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-vvp.stdout.txt",
+                "stderr": "version-vvp.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:41:47.406581+00:00",
+                "duration_s": 0.008689118083566427
+              },
+              {
+                "name": "version-verilator",
+                "argv": [
+                  "verilator",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:41:47.407342+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-verilator.stdout.txt",
+                "stderr": "version-verilator.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:41:47.523333+00:00",
+                "duration_s": 0.11539925611577928
+              },
+              {
+                "name": "version-make",
+                "argv": [
+                  "make",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:41:47.524470+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-make.stdout.txt",
+                "stderr": "version-make.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:41:47.530585+00:00",
+                "duration_s": 0.0054273398127406836
+              },
+              {
+                "name": "version-g++",
+                "argv": [
+                  "g++",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:41:47.531510+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-g++.stdout.txt",
+                "stderr": "version-g++.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:41:47.537154+00:00",
+                "duration_s": 0.004942754982039332
+              }
+            ],
+            "coverage": {},
+            "outcome": "passed",
+            "runs": [
+              {
+                "label": "csr-icarus",
+                "outcome": "passed",
+                "receipt": "evidence/csr-icarus-20261029T184147538131Z-7d578a3a/receipt.json",
+                "coverage": {
+                  "csr_comparisons": 71
+                }
+              },
+              {
+                "label": "csr-verilator",
+                "outcome": "passed",
+                "receipt": "evidence/csr-verilator-20261029T184147661927Z-6c71071c/receipt.json",
+                "coverage": {
+                  "csr_comparisons": 71
+                }
+              },
+              {
+                "label": "ring-1",
+                "outcome": "passed",
+                "receipt": "evidence/ring-1-20261029T184206805359Z-5b03b131/receipt.json",
+                "coverage": {
+                  "ring": {
+                    "depth": 1,
+                    "comparisons": 52,
+                    "wraps": 8,
+                    "pre_edge_capacity_collisions": 16
+                  }
+                }
+              },
+              {
+                "label": "ring-3",
+                "outcome": "passed",
+                "receipt": "evidence/ring-3-20261029T184206909919Z-061e1f57/receipt.json",
+                "coverage": {
+                  "ring": {
+                    "depth": 3,
+                    "comparisons": 68,
+                    "wraps": 8,
+                    "pre_edge_capacity_collisions": 16
+                  }
+                }
+              },
+              {
+                "label": "ring-8",
+                "outcome": "passed",
+                "receipt": "evidence/ring-8-20261029T184207012972Z-ed8dcbb1/receipt.json",
+                "coverage": {
+                  "ring": {
+                    "depth": 8,
+                    "comparisons": 108,
+                    "wraps": 8,
+                    "pre_edge_capacity_collisions": 16
+                  }
+                }
+              },
+              {
+                "label": "ring-16",
+                "outcome": "passed",
+                "receipt": "evidence/ring-16-20261029T184207119511Z-d8202c64/receipt.json",
+                "coverage": {
+                  "ring": {
+                    "depth": 16,
+                    "comparisons": 172,
+                    "wraps": 8,
+                    "pre_edge_capacity_collisions": 16
+                  }
+                }
+              },
+              {
+                "label": "boundary-1-1",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-1-1-20261029T184207226668Z-9b1f0cbf/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 3
+                }
+              },
+              {
+                "label": "boundary-1-3",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-1-3-20261029T184209394612Z-a0f5d870/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 3
+                }
+              },
+              {
+                "label": "boundary-1-8",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-1-8-20261029T184211565100Z-ba7e1302/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 3
+                }
+              },
+              {
+                "label": "boundary-1-16",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-1-16-20261029T184213786342Z-80902c3b/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 3
+                }
+              },
+              {
+                "label": "boundary-16-1",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-16-1-20261029T184216003963Z-edc26760/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-16-3",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-16-3-20261029T184218873299Z-d72ade31/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-16-8",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-16-8-20261029T184221691842Z-122acaad/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-16-16",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-16-16-20261029T184224560237Z-e4d0f145/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-257-1",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-257-1-20261029T184226527782Z-f9bbda85/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-257-3",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-257-3-20261029T184228497760Z-0e88fb20/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-257-8",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-257-8-20261029T184230468498Z-f894444e/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-257-16",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-257-16-20261029T184233238314Z-ca616c17/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-4096-1",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-4096-1-20261029T184236112122Z-be83e3b4/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-4096-3",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-4096-3-20261029T184238932875Z-1759ecfd/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-4096-8",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-4096-8-20261029T184241701061Z-4821b66a/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-4096-16",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-4096-16-20261029T184244465536Z-2f56600f/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 4
+                }
+              },
+              {
+                "label": "boundary-65536-1",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-65536-1-20261029T184246434197Z-b09e01fb/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 10
+                }
+              },
+              {
+                "label": "boundary-65536-3",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-65536-3-20261029T184251061200Z-24185e1c/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 10
+                }
+              },
+              {
+                "label": "boundary-65536-8",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-65536-8-20261029T184255738190Z-8f4c7801/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 10
+                }
+              },
+              {
+                "label": "boundary-65536-16",
+                "outcome": "passed",
+                "receipt": "evidence/boundary-65536-16-20261029T184259418461Z-6630a397/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 10
+                }
+              },
+              {
+                "label": "soc-fault-reset",
+                "outcome": "passed",
+                "receipt": "evidence/soc-fault-reset-20261029T184303945206Z-2676ca22/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 55
+                }
+              },
+              {
+                "label": "soc-integrated-65536",
+                "outcome": "passed",
+                "receipt": "evidence/soc-integrated-65536-20261029T184328197085Z-25af6996/receipt.json",
+                "coverage": {
+                  "soc_boundary_cases": 61
+                }
+              },
+              {
+                "label": "soc-capacity-65536",
+                "outcome": "passed",
+                "receipt": "evidence/soc-capacity-65536-20261029T184353753509Z-500faef6/receipt.json",
+                "coverage": {
+                  "soc_compared_descriptors": 1
+                }
+              },
+              {
+                "label": "illegal-MAX_TILE_BYTES-0",
+                "outcome": "passed",
+                "receipt": "evidence/illegal-MAX_TILE_BYTES-0-20261029T184439475979Z-9741c8a0/receipt.json",
+                "coverage": {
+                  "explicit_parameter_diagnostic": [
+                    "-Psoc_tb.MAX_TILE_BYTES=0"
+                  ]
+                }
+              },
+              {
+                "label": "illegal-MAX_TILE_BYTES-65537",
+                "outcome": "passed",
+                "receipt": "evidence/illegal-MAX_TILE_BYTES-65537-20261029T184439626832Z-6f378793/receipt.json",
+                "coverage": {
+                  "explicit_parameter_diagnostic": [
+                    "-Psoc_tb.MAX_TILE_BYTES=65537"
+                  ]
+                }
+              },
+              {
+                "label": "illegal-RING_DEPTH-0",
+                "outcome": "passed",
+                "receipt": "evidence/illegal-RING_DEPTH-0-20261029T184439778079Z-52ae602e/receipt.json",
+                "coverage": {
+                  "explicit_parameter_diagnostic": [
+                    "-Psoc_tb.RING_DEPTH=0"
+                  ]
+                }
+              },
+              {
+                "label": "illegal-RING_DEPTH-17",
+                "outcome": "passed",
+                "receipt": "evidence/illegal-RING_DEPTH-17-20261029T184439933717Z-eabb0b7f/receipt.json",
+                "coverage": {
+                  "explicit_parameter_diagnostic": [
+                    "-Psoc_tb.RING_DEPTH=17"
+                  ]
+                }
+              },
+              {
+                "label": "illegal-decoder-0",
+                "outcome": "passed",
+                "receipt": "evidence/illegal-decoder-0-20261029T184440088383Z-1d3c2b0e/receipt.json",
+                "coverage": {
+                  "explicit_parameter_diagnostic": [
+                    "-Plz4_tb.MAX_DECODED_BYTES=0"
+                  ]
+                }
+              },
+              {
+                "label": "illegal-decoder-131073",
+                "outcome": "passed",
+                "receipt": "evidence/illegal-decoder-131073-20261029T184440211202Z-2138e6b0/receipt.json",
+                "coverage": {
+                  "explicit_parameter_diagnostic": [
+                    "-Plz4_tb.MAX_DECODED_BYTES=131073"
+                  ]
+                }
+              },
+              {
+                "label": "lz4-bound-131072",
+                "outcome": "passed",
+                "receipt": "evidence/lz4-bound-131072-20261029T184440333751Z-cf48f6d7/receipt.json",
+                "coverage": {
+                  "lz4_distinct_success_categories": [
+                    "B1-offset65535",
+                    "B1-offset65535-size",
+                    "B2-linked-at65536",
+                    "B2-linked-at65536-size",
+                    "B3-overwritten-history",
+                    "B3-overwritten-history-size",
+                    "exact131072",
+                    "exact131072-size",
+                    "flags-0000-raw0-n0",
+                    "flags-0000-raw0-n1",
+                    "flags-0000-raw0-n15",
+                    "flags-0000-raw0-n16",
+                    "flags-0000-raw0-n271",
+                    "flags-0000-raw0-n800",
+                    "flags-0000-raw1-n0",
+                    "flags-0000-raw1-n1",
+                    "flags-0000-raw1-n15",
+                    "flags-0000-raw1-n16",
+                    "flags-0000-raw1-n271",
+                    "flags-0000-raw1-n800",
+                    "flags-0001-raw0-n0",
+                    "flags-0001-raw0-n1",
+                    "flags-0001-raw0-n15",
+                    "flags-0001-raw0-n16",
+                    "flags-0001-raw0-n271",
+                    "flags-0001-raw0-n800",
+                    "flags-0001-raw1-n0",
+                    "flags-0001-raw1-n1",
+                    "flags-0001-raw1-n15",
+                    "flags-0001-raw1-n16",
+                    "flags-0001-raw1-n271",
+                    "flags-0001-raw1-n800",
+                    "flags-0010-raw0-n0",
+                    "flags-0010-raw0-n1",
+                    "flags-0010-raw0-n15",
+                    "flags-0010-raw0-n16",
+                    "flags-0010-raw0-n271",
+                    "flags-0010-raw0-n800",
+                    "flags-0010-raw1-n0",
+                    "flags-0010-raw1-n1",
+                    "flags-0010-raw1-n15",
+                    "flags-0010-raw1-n16",
+                    "flags-0010-raw1-n271",
+                    "flags-0010-raw1-n800",
+                    "flags-0011-raw0-n0",
+                    "flags-0011-raw0-n1",
+                    "flags-0011-raw0-n15",
+                    "flags-0011-raw0-n16",
+                    "flags-0011-raw0-n271",
+                    "flags-0011-raw0-n800",
+                    "flags-0011-raw1-n0",
+                    "flags-0011-raw1-n1",
+                    "flags-0011-raw1-n15",
+                    "flags-0011-raw1-n16",
+                    "flags-0011-raw1-n271",
+                    "flags-0011-raw1-n800",
+                    "flags-0100-raw0-n0",
+                    "flags-0100-raw0-n1",
+                    "flags-0100-raw0-n15",
+                    "flags-0100-raw0-n16",
+                    "flags-0100-raw0-n271",
+                    "flags-0100-raw0-n800",
+                    "flags-0100-raw1-n0",
+                    "flags-0100-raw1-n1",
+                    "flags-0100-raw1-n15",
+                    "flags-0100-raw1-n16",
+                    "flags-0100-raw1-n271",
+                    "flags-0100-raw1-n800",
+                    "flags-0101-raw0-n0",
+                    "flags-0101-raw0-n1",
+                    "flags-0101-raw0-n15",
+                    "flags-0101-raw0-n16",
+                    "flags-0101-raw0-n271",
+                    "flags-0101-raw0-n800",
+                    "flags-0101-raw1-n0",
+                    "flags-0101-raw1-n1",
+                    "flags-0101-raw1-n15",
+                    "flags-0101-raw1-n16",
+                    "flags-0101-raw1-n271",
+                    "flags-0101-raw1-n800",
+                    "flags-0110-raw0-n0",
+                    "flags-0110-raw0-n1",
+                    "flags-0110-raw0-n15",
+                    "flags-0110-raw0-n16",
+                    "flags-0110-raw0-n271",
+                    "flags-0110-raw0-n800",
+                    "flags-0110-raw1-n0",
+                    "flags-0110-raw1-n1",
+                    "flags-0110-raw1-n15",
+                    "flags-0110-raw1-n16",
+                    "flags-0110-raw1-n271",
+                    "flags-0110-raw1-n800",
+                    "flags-0111-raw0-n0",
+                    "flags-0111-raw0-n1",
+                    "flags-0111-raw0-n15",
+                    "flags-0111-raw0-n16",
+                    "flags-0111-raw0-n271",
+                    "flags-0111-raw0-n800",
+                    "flags-0111-raw1-n0",
+                    "flags-0111-raw1-n1",
+                    "flags-0111-raw1-n15",
+                    "flags-0111-raw1-n16",
+                    "flags-0111-raw1-n271",
+                    "flags-0111-raw1-n800",
+                    "flags-1000-raw0-n0",
+                    "flags-1000-raw0-n1",
+                    "flags-1000-raw0-n15",
+                    "flags-1000-raw0-n16",
+                    "flags-1000-raw0-n271",
+                    "flags-1000-raw0-n800",
+                    "flags-1000-raw1-n0",
+                    "flags-1000-raw1-n1",
+                    "flags-1000-raw1-n15",
+                    "flags-1000-raw1-n16",
+                    "flags-1000-raw1-n271",
+                    "flags-1000-raw1-n800",
+                    "flags-1001-raw0-n0",
+                    "flags-1001-raw0-n1",
+                    "flags-1001-raw0-n15",
+                    "flags-1001-raw0-n16",
+                    "flags-1001-raw0-n271",
+                    "flags-1001-raw0-n800",
+                    "flags-1001-raw1-n0",
+                    "flags-1001-raw1-n1",
+                    "flags-1001-raw1-n15",
+                    "flags-1001-raw1-n16",
+                    "flags-1001-raw1-n271",
+                    "flags-1001-raw1-n800",
+                    "flags-1010-raw0-n0",
+                    "flags-1010-raw0-n1",
+                    "flags-1010-raw0-n15",
+                    "flags-1010-raw0-n16",
+                    "flags-1010-raw0-n271",
+                    "flags-1010-raw0-n800",
+                    "flags-1010-raw1-n0",
+                    "flags-1010-raw1-n1",
+                    "flags-1010-raw1-n15",
+                    "flags-1010-raw1-n16",
+                    "flags-1010-raw1-n271",
+                    "flags-1010-raw1-n800",
+                    "flags-1011-raw0-n0",
+                    "flags-1011-raw0-n1",
+                    "flags-1011-raw0-n15",
+                    "flags-1011-raw0-n16",
+                    "flags-1011-raw0-n271",
+                    "flags-1011-raw0-n800",
+                    "flags-1011-raw1-n0",
+                    "flags-1011-raw1-n1",
+                    "flags-1011-raw1-n15",
+                    "flags-1011-raw1-n16",
+                    "flags-1011-raw1-n271",
+                    "flags-1011-raw1-n800",
+                    "flags-1100-raw0-n0",
+                    "flags-1100-raw0-n1",
+                    "flags-1100-raw0-n15",
+                    "flags-1100-raw0-n16",
+                    "flags-1100-raw0-n271",
+                    "flags-1100-raw0-n800",
+                    "flags-1100-raw1-n0",
+                    "flags-1100-raw1-n1",
+                    "flags-1100-raw1-n15",
+                    "flags-1100-raw1-n16",
+                    "flags-1100-raw1-n271",
+                    "flags-1100-raw1-n800",
+                    "flags-1101-raw0-n0",
+                    "flags-1101-raw0-n1",
+                    "flags-1101-raw0-n15",
+                    "flags-1101-raw0-n16",
+                    "flags-1101-raw0-n271",
+                    "flags-1101-raw0-n800",
+                    "flags-1101-raw1-n0",
+                    "flags-1101-raw1-n1",
+                    "flags-1101-raw1-n15",
+                    "flags-1101-raw1-n16",
+                    "flags-1101-raw1-n271",
+                    "flags-1101-raw1-n800",
+                    "flags-1110-raw0-n0",
+                    "flags-1110-raw0-n1",
+                    "flags-1110-raw0-n15",
+                    "flags-1110-raw0-n16",
+                    "flags-1110-raw0-n271",
+                    "flags-1110-raw0-n800",
+                    "flags-1110-raw1-n0",
+                    "flags-1110-raw1-n1",
+                    "flags-1110-raw1-n15",
+                    "flags-1110-raw1-n16",
+                    "flags-1110-raw1-n271",
+                    "flags-1110-raw1-n800",
+                    "flags-1111-raw0-n0",
+                    "flags-1111-raw0-n1",
+                    "flags-1111-raw0-n15",
+                    "flags-1111-raw0-n16",
+                    "flags-1111-raw0-n271",
+                    "flags-1111-raw0-n800",
+                    "flags-1111-raw1-n0",
+                    "flags-1111-raw1-n1",
+                    "flags-1111-raw1-n15",
+                    "flags-1111-raw1-n16",
+                    "flags-1111-raw1-n271",
+                    "flags-1111-raw1-n800",
+                    "match-extension255-chain",
+                    "minimum-match4",
+                    "overlap-offset1",
+                    "overlap-offset2",
+                    "overlap-offset3",
+                    "recovery-singleton"
+                  ],
+                  "lz4_distinct_error_categories": [
+                    "accepted131072-but-frame-excess",
+                    "bd-256k",
+                    "bd-4m",
+                    "block-checksum",
+                    "block-over64k",
+                    "block-zero-raw",
+                    "concatenated-frame",
+                    "concealed-excess",
+                    "content-checksum",
+                    "content-size-mismatch",
+                    "decoded131073-start-reject",
+                    "dictionary-id",
+                    "early-last",
+                    "frame-start-too-large",
+                    "header-checksum",
+                    "independent-block-history-invalidated",
+                    "last-match-too-near-end",
+                    "literal-extension-truncated",
+                    "literal-overrun",
+                    "magic-byte0",
+                    "magic-byte1",
+                    "magic-byte2",
+                    "magic-byte3",
+                    "match-extension-truncated",
+                    "missing-last",
+                    "new-frame-has-no-history",
+                    "no-final-literals",
+                    "offset-truncated",
+                    "reserved-bd",
+                    "reserved-flg",
+                    "short-final-literals",
+                    "skippable-frame",
+                    "trailing-byte",
+                    "truncated-at-declared-length",
+                    "unavailable-offset",
+                    "version00",
+                    "version10",
+                    "version11",
+                    "zero-frame-start",
+                    "zero-offset"
+                  ],
+                  "lz4_valid_cases": 246,
+                  "lz4_completed_cases": 286
+                }
+              },
+              {
+                "label": "lz4-bound-65536",
+                "outcome": "passed",
+                "receipt": "evidence/lz4-bound-65536-20261029T184453978049Z-0eac7d3a/receipt.json",
+                "coverage": {
+                  "lz4_distinct_success_categories": [
+                    "flags-0000-raw0-n0",
+                    "flags-0000-raw0-n1",
+                    "flags-0000-raw0-n15",
+                    "flags-0000-raw0-n16",
+                    "flags-0000-raw0-n271",
+                    "flags-0000-raw0-n800",
+                    "flags-0000-raw1-n0",
+                    "flags-0000-raw1-n1",
+                    "flags-0000-raw1-n15",
+                    "flags-0000-raw1-n16",
+                    "flags-0000-raw1-n271",
+                    "flags-0000-raw1-n800",
+                    "flags-0001-raw0-n0",
+                    "flags-0001-raw0-n1",
+                    "flags-0001-raw0-n15",
+                    "flags-0001-raw0-n16",
+                    "flags-0001-raw0-n271",
+                    "flags-0001-raw0-n800",
+                    "flags-0001-raw1-n0",
+                    "flags-0001-raw1-n1",
+                    "flags-0001-raw1-n15",
+                    "flags-0001-raw1-n16",
+                    "flags-0001-raw1-n271",
+                    "flags-0001-raw1-n800",
+                    "flags-0010-raw0-n0",
+                    "flags-0010-raw0-n1",
+                    "flags-0010-raw0-n15",
+                    "flags-0010-raw0-n16",
+                    "flags-0010-raw0-n271",
+                    "flags-0010-raw0-n800",
+                    "flags-0010-raw1-n0",
+                    "flags-0010-raw1-n1",
+                    "flags-0010-raw1-n15",
+                    "flags-0010-raw1-n16",
+                    "flags-0010-raw1-n271",
+                    "flags-0010-raw1-n800",
+                    "flags-0011-raw0-n0",
+                    "flags-0011-raw0-n1",
+                    "flags-0011-raw0-n15",
+                    "flags-0011-raw0-n16",
+                    "flags-0011-raw0-n271",
+                    "flags-0011-raw0-n800",
+                    "flags-0011-raw1-n0",
+                    "flags-0011-raw1-n1",
+                    "flags-0011-raw1-n15",
+                    "flags-0011-raw1-n16",
+                    "flags-0011-raw1-n271",
+                    "flags-0011-raw1-n800",
+                    "flags-0100-raw0-n0",
+                    "flags-0100-raw0-n1",
+                    "flags-0100-raw0-n15",
+                    "flags-0100-raw0-n16",
+                    "flags-0100-raw0-n271",
+                    "flags-0100-raw0-n800",
+                    "flags-0100-raw1-n0",
+                    "flags-0100-raw1-n1",
+                    "flags-0100-raw1-n15",
+                    "flags-0100-raw1-n16",
+                    "flags-0100-raw1-n271",
+                    "flags-0100-raw1-n800",
+                    "flags-0101-raw0-n0",
+                    "flags-0101-raw0-n1",
+                    "flags-0101-raw0-n15",
+                    "flags-0101-raw0-n16",
+                    "flags-0101-raw0-n271",
+                    "flags-0101-raw0-n800",
+                    "flags-0101-raw1-n0",
+                    "flags-0101-raw1-n1",
+                    "flags-0101-raw1-n15",
+                    "flags-0101-raw1-n16",
+                    "flags-0101-raw1-n271",
+                    "flags-0101-raw1-n800",
+                    "flags-0110-raw0-n0",
+                    "flags-0110-raw0-n1",
+                    "flags-0110-raw0-n15",
+                    "flags-0110-raw0-n16",
+                    "flags-0110-raw0-n271",
+                    "flags-0110-raw0-n800",
+                    "flags-0110-raw1-n0",
+                    "flags-0110-raw1-n1",
+                    "flags-0110-raw1-n15",
+                    "flags-0110-raw1-n16",
+                    "flags-0110-raw1-n271",
+                    "flags-0110-raw1-n800",
+                    "flags-0111-raw0-n0",
+                    "flags-0111-raw0-n1",
+                    "flags-0111-raw0-n15",
+                    "flags-0111-raw0-n16",
+                    "flags-0111-raw0-n271",
+                    "flags-0111-raw0-n800",
+                    "flags-0111-raw1-n0",
+                    "flags-0111-raw1-n1",
+                    "flags-0111-raw1-n15",
+                    "flags-0111-raw1-n16",
+                    "flags-0111-raw1-n271",
+                    "flags-0111-raw1-n800",
+                    "flags-1000-raw0-n0",
+                    "flags-1000-raw0-n1",
+                    "flags-1000-raw0-n15",
+                    "flags-1000-raw0-n16",
+                    "flags-1000-raw0-n271",
+                    "flags-1000-raw0-n800",
+                    "flags-1000-raw1-n0",
+                    "flags-1000-raw1-n1",
+                    "flags-1000-raw1-n15",
+                    "flags-1000-raw1-n16",
+                    "flags-1000-raw1-n271",
+                    "flags-1000-raw1-n800",
+                    "flags-1001-raw0-n0",
+                    "flags-1001-raw0-n1",
+                    "flags-1001-raw0-n15",
+                    "flags-1001-raw0-n16",
+                    "flags-1001-raw0-n271",
+                    "flags-1001-raw0-n800",
+                    "flags-1001-raw1-n0",
+                    "flags-1001-raw1-n1",
+                    "flags-1001-raw1-n15",
+                    "flags-1001-raw1-n16",
+                    "flags-1001-raw1-n271",
+                    "flags-1001-raw1-n800",
+                    "flags-1010-raw0-n0",
+                    "flags-1010-raw0-n1",
+                    "flags-1010-raw0-n15",
+                    "flags-1010-raw0-n16",
+                    "flags-1010-raw0-n271",
+                    "flags-1010-raw0-n800",
+                    "flags-1010-raw1-n0",
+                    "flags-1010-raw1-n1",
+                    "flags-1010-raw1-n15",
+                    "flags-1010-raw1-n16",
+                    "flags-1010-raw1-n271",
+                    "flags-1010-raw1-n800",
+                    "flags-1011-raw0-n0",
+                    "flags-1011-raw0-n1",
+                    "flags-1011-raw0-n15",
+                    "flags-1011-raw0-n16",
+                    "flags-1011-raw0-n271",
+                    "flags-1011-raw0-n800",
+                    "flags-1011-raw1-n0",
+                    "flags-1011-raw1-n1",
+                    "flags-1011-raw1-n15",
+                    "flags-1011-raw1-n16",
+                    "flags-1011-raw1-n271",
+                    "flags-1011-raw1-n800",
+                    "flags-1100-raw0-n0",
+                    "flags-1100-raw0-n1",
+                    "flags-1100-raw0-n15",
+                    "flags-1100-raw0-n16",
+                    "flags-1100-raw0-n271",
+                    "flags-1100-raw0-n800",
+                    "flags-1100-raw1-n0",
+                    "flags-1100-raw1-n1",
+                    "flags-1100-raw1-n15",
+                    "flags-1100-raw1-n16",
+                    "flags-1100-raw1-n271",
+                    "flags-1100-raw1-n800",
+                    "flags-1101-raw0-n0",
+                    "flags-1101-raw0-n1",
+                    "flags-1101-raw0-n15",
+                    "flags-1101-raw0-n16",
+                    "flags-1101-raw0-n271",
+                    "flags-1101-raw0-n800",
+                    "flags-1101-raw1-n0",
+                    "flags-1101-raw1-n1",
+                    "flags-1101-raw1-n15",
+                    "flags-1101-raw1-n16",
+                    "flags-1101-raw1-n271",
+                    "flags-1101-raw1-n800",
+                    "flags-1110-raw0-n0",
+                    "flags-1110-raw0-n1",
+                    "flags-1110-raw0-n15",
+                    "flags-1110-raw0-n16",
+                    "flags-1110-raw0-n271",
+                    "flags-1110-raw0-n800",
+                    "flags-1110-raw1-n0",
+                    "flags-1110-raw1-n1",
+                    "flags-1110-raw1-n15",
+                    "flags-1110-raw1-n16",
+                    "flags-1110-raw1-n271",
+                    "flags-1110-raw1-n800",
+                    "flags-1111-raw0-n0",
+                    "flags-1111-raw0-n1",
+                    "flags-1111-raw0-n15",
+                    "flags-1111-raw0-n16",
+                    "flags-1111-raw0-n271",
+                    "flags-1111-raw0-n800",
+                    "flags-1111-raw1-n0",
+                    "flags-1111-raw1-n1",
+                    "flags-1111-raw1-n15",
+                    "flags-1111-raw1-n16",
+                    "flags-1111-raw1-n271",
+                    "flags-1111-raw1-n800",
+                    "match-extension255-chain",
+                    "minimum-match4",
+                    "overlap-offset1",
+                    "overlap-offset2",
+                    "overlap-offset3",
+                    "recovery-singleton"
+                  ],
+                  "lz4_distinct_error_categories": [
+                    "B1-offset65535-declared-bound-reject",
+                    "B1-offset65535-size-declared-bound-reject",
+                    "B2-linked-at65536-declared-bound-reject",
+                    "B2-linked-at65536-size-declared-bound-reject",
+                    "B3-overwritten-history-declared-bound-reject",
+                    "B3-overwritten-history-size-declared-bound-reject",
+                    "bd-256k",
+                    "bd-4m",
+                    "block-checksum",
+                    "block-over64k",
+                    "block-zero-raw",
+                    "concatenated-frame",
+                    "concealed-excess",
+                    "content-checksum",
+                    "content-size-mismatch",
+                    "dictionary-id",
+                    "early-last",
+                    "exact131072-declared-bound-reject",
+                    "exact131072-size-declared-bound-reject",
+                    "frame-start-too-large",
+                    "header-checksum",
+                    "last-match-too-near-end",
+                    "literal-extension-truncated",
+                    "literal-overrun",
+                    "magic-byte0",
+                    "magic-byte1",
+                    "magic-byte2",
+                    "magic-byte3",
+                    "match-extension-truncated",
+                    "missing-last",
+                    "new-frame-has-no-history",
+                    "no-final-literals",
+                    "offset-truncated",
+                    "reserved-bd",
+                    "reserved-flg",
+                    "short-final-literals",
+                    "skippable-frame",
+                    "trailing-byte",
+                    "truncated-at-declared-length",
+                    "unavailable-offset",
+                    "version00",
+                    "version10",
+                    "version11",
+                    "zero-frame-start",
+                    "zero-offset"
+                  ],
+                  "lz4_valid_cases": 243,
+                  "lz4_completed_cases": 288
+                }
+              },
+              {
+                "label": "lz4-bound-1",
+                "outcome": "passed",
+                "receipt": "evidence/lz4-bound-1-20261029T184502091825Z-22d1cfb1/receipt.json",
+                "coverage": {
+                  "lz4_distinct_success_categories": [
+                    "recovery-singleton",
+                    "singleton"
+                  ],
+                  "lz4_distinct_error_categories": [
+                    "singleton-concealed-overrun",
+                    "singleton-declared-too-large"
+                  ],
+                  "lz4_valid_cases": 6,
+                  "lz4_completed_cases": 8
+                }
+              },
+              {
+                "label": "singleton-crypto",
+                "outcome": "passed",
+                "receipt": "evidence/singleton-crypto-20261029T184507872513Z-a0f0aac9/receipt.json",
+                "coverage": {
+                  "crypto": {
+                    "aes_cases": 40,
+                    "aes_published_kats": 8,
+                    "gcm_cases": 304,
+                    "successes": 175,
+                    "failures": 129,
+                    "tag_bits": [
+                      0,
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8,
+                      9,
+                      10,
+                      11,
+                      12,
+                      13,
+                      14,
+                      15,
+                      16,
+                      17,
+                      18,
+                      19,
+                      20,
+                      21,
+                      22,
+                      23,
+                      24,
+                      25,
+                      26,
+                      27,
+                      28,
+                      29,
+                      30,
+                      31,
+                      32,
+                      33,
+                      34,
+                      35,
+                      36,
+                      37,
+                      38,
+                      39,
+                      40,
+                      41,
+                      42,
+                      43,
+                      44,
+                      45,
+                      46,
+                      47,
+                      48,
+                      49,
+                      50,
+                      51,
+                      52,
+                      53,
+                      54,
+                      55,
+                      56,
+                      57,
+                      58,
+                      59,
+                      60,
+                      61,
+                      62,
+                      63,
+                      64,
+                      65,
+                      66,
+                      67,
+                      68,
+                      69,
+                      70,
+                      71,
+                      72,
+                      73,
+                      74,
+                      75,
+                      76,
+                      77,
+                      78,
+                      79,
+                      80,
+                      81,
+                      82,
+                      83,
+                      84,
+                      85,
+                      86,
+                      87,
+                      88,
+                      89,
+                      90,
+                      91,
+                      92,
+                      93,
+                      94,
+                      95,
+                      96,
+                      97,
+                      98,
+                      99,
+                      100,
+                      101,
+                      102,
+                      103,
+                      104,
+                      105,
+                      106,
+                      107,
+                      108,
+                      109,
+                      110,
+                      111,
+                      112,
+                      113,
+                      114,
+                      115,
+                      116,
+                      117,
+                      118,
+                      119,
+                      120,
+                      121,
+                      122,
+                      123,
+                      124,
+                      125,
+                      126,
+                      127
+                    ],
+                    "optional_library": {
+                      "name": "cryptography",
+                      "version": "41.0.7"
+                    },
+                    "library_comparisons": 304
+                  }
+                }
+              }
+            ],
+            "removed_transient_objects": [],
+            "end": "2026-10-29T18:45:45.991195+00:00"
+          }
+        }
+      ]
+    },
+    "check:defect-sensitivity": {
+      "attempt_id": 13,
+      "duration_s": 85.0809473961126,
+      "stdout_preview": "L1 COMPLETED evidence/defects-20261029T184550362599Z-4f709efc/receipt.json\n",
+      "receipt_count": 1,
+      "receipts": [
+        {
+          "path": "evidence/defects-20261029T184550362599Z-4f709efc/receipt.json",
+          "data": {
+            "kind": "L1",
+            "argv": [
+              "/usr/bin/python3",
+              "tests/verify.py",
+              "--suite",
+              "defects"
+            ],
+            "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+            "source_sha256": {
+              "design/ARCHITECTURE.md": "2a3b92b5174b16d891fc632e547326a1a2faeb5727bd9c4e4d673f8892d21e20",
+              "design/SPEC.md": "96b41e28466dfbf0e1f9c56d8108d6f83dd45f7cc6a516591dc166f80f84aef2",
+              "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
+              "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
+              "rtl/furnace_axi4_xbar.sv": "403b8ef98a25e8bf11072456db876ae8f9c39de50609c169bc8bae930eb5a5ed",
+              "rtl/furnace_command_ring.sv": "a7e7c886652e194e0c556be33f364e464dc4bee5866d76a3b11fab83ba60df5c",
+              "rtl/furnace_csr.sv": "778a5e3cf3f07e733ff31df3da79e9418c0e66d25cfd2ddd25f2178cee617e2a",
+              "rtl/furnace_dma128.sv": "4b896d0f4c857ec9ec524a5897f0ce9078ba219a4ea781bf8a88f81e23bce12c",
+              "rtl/furnace_fp32_add5.sv": "4805a009a2314fa4079e364dd8320a3491d62b9dbe913c29d2a7d1f3feed0cfd",
+              "rtl/furnace_fp32_mul4.sv": "ba224aa2d85fe71aea5151d345750b4169d39df0d32f4cca4c0ecf703f7cc98d",
+              "rtl/furnace_fp32_round.sv": "11ba7438c65add73d63b3ce154110fbef6b9f2af4df3ef6632a6029cd8f71fe7",
+              "rtl/furnace_ghash_mul.sv": "410a0bb113e4d52bee8982cdcd68cb7d33177577f364790154a5f05a9e98941c",
+              "rtl/furnace_lz4_frontend.sv": "e1119bdcece22f0fe30f7b2d0a2079f6b2f94aea3face7bd4d405ebf24ab7156",
+              "rtl/furnace_tensor8.sv": "0f3df239bda3d5297e8eca0d17d4afcf9ae96cc42749f8e56805d491b96bed5b",
+              "rtl/furnace_x1_top.sv": "7667f36aada79d3df98383bb85a651ec07ec97ed01ef2d6d2bca38b88a143388",
+              "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
+              "tests/aes_tb.sv": "528ee6687db620588423846a7c16aee86d1ef868bd46e965d7bedad7e5bab5f9",
+              "tests/crypto_cases.py": "85c8d34599dcbb6e36fb495a0e8e9441f20d9156bbec81c58edb6fdb1bbf892c",
+              "tests/crypto_reference.py": "ddb673a54e4b3adfdf9a2949fa7fce1b75d6cb24bbdc065b1a8b93bf527cabdb",
+              "tests/csr_tb.sv": "df71c87f136674058ca732f8d99a55cc39240bf0f7bf75ad758f3e6228721196",
+              "tests/execution.py": "93a1d8177142e33cf1869a13ef5c6f9f7bc554bb6ce4e4671127351ecbcdb6c5",
+              "tests/gcm_tb.sv": "7b1867f9fae6d24daf45da9d3965edf4f5acb08e4d86aca7bca026984fbd814b",
+              "tests/interfaces.py": "32fe86b86b4f21da834be504357e18640482d2441f0d14934e77e12816216661",
+              "tests/lz4_cases.py": "8911955bc714e15c085fb7306bacf1f58757c9ae58330f02455706d3b13b833b",
+              "tests/lz4_tb.sv": "edd310d66d85ae7926b764ef02633693b4e9afd836f09d3a4bd29cbdc7aee68e",
+              "tests/mutations.py": "0ceddecd16701cc37365c9921cab97f4939fef73b37e3a2661005063759bc1cc",
+              "tests/reference.py": "1e11198dd598c170b5e49127e219d9023e3b8c2398c7b7a95d05d66368c92f46",
+              "tests/ring_tb.sv": "156954d983c60dfe4250e59a1024bcb8a59e239453087ffc1d502db49a2cd947",
+              "tests/soc_boundaries.py": "38c55c6b839bfc9649839e1c55559f378d42f25f85239ca77c9afc65700d9f76",
+              "tests/soc_cases.py": "1080fc07875c261127018b80b8371d2330623a3647194b85245a04d6619dbd81",
+              "tests/soc_tb.sv": "f29d638fa8d997e0b3c9fb56e1866db315051ff98afa262462712240cb25151e",
+              "tests/suites.py": "21490d96c270dc8d1b7e444c2a861a004a36b842eaed67db5793b05bd2122f94",
+              "tests/synthesis.py": "b1351456502892fcd7922dbb3a15af5d6e5769740be5ec7b2297c0f355312588",
+              "tests/tensor_tb.sv": "5eed5804877f990603bde783ffd2af25bff26a2a2298b47616a2268e837bdced",
+              "tests/verify.py": "ba0c39f4198407deb34c7bdd6415aca158e334ba4e2f1fad093a7a9cfeba917f",
+              "tests/xbar_tb.sv": "9ccef6a3e33d6a5442270a32bb923073e307f2868d5b1a5e4e15d5e91df76fd1",
+              "tests/yosys_packed.py": "e0925d13c932f46836ec6b9c659f0a721feccbb2cc76507ac9dc8b7ba4659a94"
+            },
+            "start": "2026-10-29T18:45:50.366381+00:00",
+            "commands": [
+              {
+                "name": "version-python3",
+                "argv": [
+                  "python3",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:45:50.379849+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-python3.stdout.txt",
+                "stderr": "version-python3.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:45:50.385114+00:00",
+                "duration_s": 0.005083387950435281
+              },
+              {
+                "name": "version-verilator",
+                "argv": [
+                  "verilator",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:45:50.385446+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-verilator.stdout.txt",
+                "stderr": "version-verilator.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:45:50.500736+00:00",
+                "duration_s": 0.11508530611172318
+              },
+              {
+                "name": "version-make",
+                "argv": [
+                  "make",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:45:50.501260+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-make.stdout.txt",
+                "stderr": "version-make.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:45:50.506641+00:00",
+                "duration_s": 0.00516916811466217
+              },
+              {
+                "name": "version-g++",
+                "argv": [
+                  "g++",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:45:50.506986+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-g++.stdout.txt",
+                "stderr": "version-g++.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:45:50.511818+00:00",
+                "duration_s": 0.00461800885386765
+              }
+            ],
+            "coverage": {
+              "functionally_detected_mutants": 6
+            },
+            "outcome": "passed",
+            "mutation_ledger": {
+              "tag": {
+                "outcome": "detected",
+                "receipt": "evidence/mutant-tag-20261029T184550512402Z-a8106e4d/receipt.json"
+              },
+              "ghash": {
+                "outcome": "detected",
+                "receipt": "evidence/mutant-ghash-20261029T184609247698Z-527cfe34/receipt.json"
+              },
+              "overlap": {
+                "outcome": "detected",
+                "receipt": "evidence/mutant-overlap-20261029T184628452950Z-5f563d8e/receipt.json"
+              },
+              "sign": {
+                "outcome": "detected",
+                "receipt": "evidence/mutant-sign-20261029T184636161919Z-a96f3fd6/receipt.json"
+              },
+              "round": {
+                "outcome": "detected",
+                "receipt": "evidence/mutant-round-20261029T184648752759Z-792791d4/receipt.json"
+              },
+              "owner": {
+                "outcome": "detected",
+                "receipt": "evidence/mutant-owner-20261029T184700342927Z-63e74940/receipt.json"
+              }
+            },
+            "mutations": {
+              "tag": "evidence/mutant-tag-20261029T184550512402Z-a8106e4d/receipt.json",
+              "ghash": "evidence/mutant-ghash-20261029T184609247698Z-527cfe34/receipt.json",
+              "overlap": "evidence/mutant-overlap-20261029T184628452950Z-5f563d8e/receipt.json",
+              "sign": "evidence/mutant-sign-20261029T184636161919Z-a96f3fd6/receipt.json",
+              "round": "evidence/mutant-round-20261029T184648752759Z-792791d4/receipt.json",
+              "owner": "evidence/mutant-owner-20261029T184700342927Z-63e74940/receipt.json"
+            },
+            "removed_transient_objects": [],
+            "end": "2026-10-29T18:47:15.252878+00:00"
+          }
+        }
+      ]
+    },
+    "check:portable-reproduction": {
+      "attempt_id": 15,
+      "duration_s": 25.932677760953084,
+      "stdout_preview": "L1 COMPLETED evidence/portable-20261029T184858412089Z-ed8b188d/receipt.json\n",
+      "receipt_count": 1,
+      "receipts": [
+        {
+          "path": "evidence/portable-20261029T184858412089Z-ed8b188d/receipt.json",
+          "data": {
+            "kind": "L1",
+            "argv": [
+              "/usr/bin/python3",
+              "tests/verify.py",
+              "--suite",
+              "portable"
+            ],
+            "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+            "source_sha256": {
+              "design/ARCHITECTURE.md": "2a3b92b5174b16d891fc632e547326a1a2faeb5727bd9c4e4d673f8892d21e20",
+              "design/SPEC.md": "96b41e28466dfbf0e1f9c56d8108d6f83dd45f7cc6a516591dc166f80f84aef2",
+              "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
+              "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
+              "rtl/furnace_axi4_xbar.sv": "403b8ef98a25e8bf11072456db876ae8f9c39de50609c169bc8bae930eb5a5ed",
+              "rtl/furnace_command_ring.sv": "a7e7c886652e194e0c556be33f364e464dc4bee5866d76a3b11fab83ba60df5c",
+              "rtl/furnace_csr.sv": "778a5e3cf3f07e733ff31df3da79e9418c0e66d25cfd2ddd25f2178cee617e2a",
+              "rtl/furnace_dma128.sv": "4b896d0f4c857ec9ec524a5897f0ce9078ba219a4ea781bf8a88f81e23bce12c",
+              "rtl/furnace_fp32_add5.sv": "4805a009a2314fa4079e364dd8320a3491d62b9dbe913c29d2a7d1f3feed0cfd",
+              "rtl/furnace_fp32_mul4.sv": "ba224aa2d85fe71aea5151d345750b4169d39df0d32f4cca4c0ecf703f7cc98d",
+              "rtl/furnace_fp32_round.sv": "11ba7438c65add73d63b3ce154110fbef6b9f2af4df3ef6632a6029cd8f71fe7",
+              "rtl/furnace_ghash_mul.sv": "410a0bb113e4d52bee8982cdcd68cb7d33177577f364790154a5f05a9e98941c",
+              "rtl/furnace_lz4_frontend.sv": "e1119bdcece22f0fe30f7b2d0a2079f6b2f94aea3face7bd4d405ebf24ab7156",
+              "rtl/furnace_tensor8.sv": "0f3df239bda3d5297e8eca0d17d4afcf9ae96cc42749f8e56805d491b96bed5b",
+              "rtl/furnace_x1_top.sv": "7667f36aada79d3df98383bb85a651ec07ec97ed01ef2d6d2bca38b88a143388",
+              "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
+              "tests/aes_tb.sv": "528ee6687db620588423846a7c16aee86d1ef868bd46e965d7bedad7e5bab5f9",
+              "tests/crypto_cases.py": "85c8d34599dcbb6e36fb495a0e8e9441f20d9156bbec81c58edb6fdb1bbf892c",
+              "tests/crypto_reference.py": "ddb673a54e4b3adfdf9a2949fa7fce1b75d6cb24bbdc065b1a8b93bf527cabdb",
+              "tests/csr_tb.sv": "df71c87f136674058ca732f8d99a55cc39240bf0f7bf75ad758f3e6228721196",
+              "tests/execution.py": "93a1d8177142e33cf1869a13ef5c6f9f7bc554bb6ce4e4671127351ecbcdb6c5",
+              "tests/gcm_tb.sv": "7b1867f9fae6d24daf45da9d3965edf4f5acb08e4d86aca7bca026984fbd814b",
+              "tests/interfaces.py": "32fe86b86b4f21da834be504357e18640482d2441f0d14934e77e12816216661",
+              "tests/lz4_cases.py": "8911955bc714e15c085fb7306bacf1f58757c9ae58330f02455706d3b13b833b",
+              "tests/lz4_tb.sv": "edd310d66d85ae7926b764ef02633693b4e9afd836f09d3a4bd29cbdc7aee68e",
+              "tests/mutations.py": "0ceddecd16701cc37365c9921cab97f4939fef73b37e3a2661005063759bc1cc",
+              "tests/reference.py": "1e11198dd598c170b5e49127e219d9023e3b8c2398c7b7a95d05d66368c92f46",
+              "tests/ring_tb.sv": "156954d983c60dfe4250e59a1024bcb8a59e239453087ffc1d502db49a2cd947",
+              "tests/soc_boundaries.py": "38c55c6b839bfc9649839e1c55559f378d42f25f85239ca77c9afc65700d9f76",
+              "tests/soc_cases.py": "1080fc07875c261127018b80b8371d2330623a3647194b85245a04d6619dbd81",
+              "tests/soc_tb.sv": "f29d638fa8d997e0b3c9fb56e1866db315051ff98afa262462712240cb25151e",
+              "tests/suites.py": "21490d96c270dc8d1b7e444c2a861a004a36b842eaed67db5793b05bd2122f94",
+              "tests/synthesis.py": "b1351456502892fcd7922dbb3a15af5d6e5769740be5ec7b2297c0f355312588",
+              "tests/tensor_tb.sv": "5eed5804877f990603bde783ffd2af25bff26a2a2298b47616a2268e837bdced",
+              "tests/verify.py": "ba0c39f4198407deb34c7bdd6415aca158e334ba4e2f1fad093a7a9cfeba917f",
+              "tests/xbar_tb.sv": "9ccef6a3e33d6a5442270a32bb923073e307f2868d5b1a5e4e15d5e91df76fd1",
+              "tests/yosys_packed.py": "e0925d13c932f46836ec6b9c659f0a721feccbb2cc76507ac9dc8b7ba4659a94"
+            },
+            "start": "2026-10-29T18:48:58.419217+00:00",
+            "commands": [
+              {
+                "name": "version-python3",
+                "argv": [
+                  "python3",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:48:58.444625+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-python3.stdout.txt",
+                "stderr": "version-python3.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:58.450787+00:00",
+                "duration_s": 0.005819428013637662
+              },
+              {
+                "name": "version-iverilog",
+                "argv": [
+                  "iverilog",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:48:58.451390+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-iverilog.stdout.txt",
+                "stderr": "version-iverilog.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:58.468931+00:00",
+                "duration_s": 0.01717787398956716
+              },
+              {
+                "name": "version-vvp",
+                "argv": [
+                  "vvp",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:48:58.469598+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-vvp.stdout.txt",
+                "stderr": "version-vvp.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:58.479070+00:00",
+                "duration_s": 0.00915120611898601
+              },
+              {
+                "name": "version-verilator",
+                "argv": [
+                  "verilator",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:48:58.479991+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-verilator.stdout.txt",
+                "stderr": "version-verilator.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:58.595847+00:00",
+                "duration_s": 0.11553293187171221
+              },
+              {
+                "name": "version-make",
+                "argv": [
+                  "make",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:48:58.597081+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-make.stdout.txt",
+                "stderr": "version-make.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:58.602879+00:00",
+                "duration_s": 0.005146743031218648
+              },
+              {
+                "name": "version-g++",
+                "argv": [
+                  "g++",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:48:58.603589+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-g++.stdout.txt",
+                "stderr": "version-g++.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:58.608837+00:00",
+                "duration_s": 0.004802772076800466
+              },
+              {
+                "name": "version-yosys",
+                "argv": [
+                  "yosys",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:48:58.609537+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-yosys.stdout.txt",
+                "stderr": "version-yosys.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:58.618881+00:00",
+                "duration_s": 0.008860813919454813
+              },
+              {
+                "name": "portable-fresh-process",
+                "argv": [
+                  "python3",
+                  "tests/verify.py",
+                  "--probe",
+                  "portable-smoke"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project/evidence/portable-20261029T184858412089Z-ed8b188d/bundle-e486fdd3",
+                "start": "2026-10-29T18:48:58.652130+00:00",
+                "timeout_s": 3600,
+                "stdout": "portable-fresh-process.stdout.txt",
+                "stderr": "portable-fresh-process.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:49:24.080374+00:00",
+                "duration_s": 25.427332235034555
+              }
+            ],
+            "coverage": {
+              "portable": {
+                "copied_files": 37,
+                "all_modes_and_tag_rejection": true,
+                "child_receipt": "evidence/portable-20261029T184858412089Z-ed8b188d/bundle-e486fdd3/evidence/preparation/portable-smoke-20261029T184858785957Z-b5d3ad06/receipt.json"
+              }
+            },
+            "outcome": "passed",
+            "portable_source_sha256": {
+              "design/ARCHITECTURE.md": "2a3b92b5174b16d891fc632e547326a1a2faeb5727bd9c4e4d673f8892d21e20",
+              "design/SPEC.md": "96b41e28466dfbf0e1f9c56d8108d6f83dd45f7cc6a516591dc166f80f84aef2",
+              "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
+              "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
+              "rtl/furnace_axi4_xbar.sv": "403b8ef98a25e8bf11072456db876ae8f9c39de50609c169bc8bae930eb5a5ed",
+              "rtl/furnace_command_ring.sv": "a7e7c886652e194e0c556be33f364e464dc4bee5866d76a3b11fab83ba60df5c",
+              "rtl/furnace_csr.sv": "778a5e3cf3f07e733ff31df3da79e9418c0e66d25cfd2ddd25f2178cee617e2a",
+              "rtl/furnace_dma128.sv": "4b896d0f4c857ec9ec524a5897f0ce9078ba219a4ea781bf8a88f81e23bce12c",
+              "rtl/furnace_fp32_add5.sv": "4805a009a2314fa4079e364dd8320a3491d62b9dbe913c29d2a7d1f3feed0cfd",
+              "rtl/furnace_fp32_mul4.sv": "ba224aa2d85fe71aea5151d345750b4169d39df0d32f4cca4c0ecf703f7cc98d",
+              "rtl/furnace_fp32_round.sv": "11ba7438c65add73d63b3ce154110fbef6b9f2af4df3ef6632a6029cd8f71fe7",
+              "rtl/furnace_ghash_mul.sv": "410a0bb113e4d52bee8982cdcd68cb7d33177577f364790154a5f05a9e98941c",
+              "rtl/furnace_lz4_frontend.sv": "e1119bdcece22f0fe30f7b2d0a2079f6b2f94aea3face7bd4d405ebf24ab7156",
+              "rtl/furnace_tensor8.sv": "0f3df239bda3d5297e8eca0d17d4afcf9ae96cc42749f8e56805d491b96bed5b",
+              "rtl/furnace_x1_top.sv": "7667f36aada79d3df98383bb85a651ec07ec97ed01ef2d6d2bca38b88a143388",
+              "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
+              "tests/aes_tb.sv": "528ee6687db620588423846a7c16aee86d1ef868bd46e965d7bedad7e5bab5f9",
+              "tests/crypto_cases.py": "85c8d34599dcbb6e36fb495a0e8e9441f20d9156bbec81c58edb6fdb1bbf892c",
+              "tests/crypto_reference.py": "ddb673a54e4b3adfdf9a2949fa7fce1b75d6cb24bbdc065b1a8b93bf527cabdb",
+              "tests/csr_tb.sv": "df71c87f136674058ca732f8d99a55cc39240bf0f7bf75ad758f3e6228721196",
+              "tests/execution.py": "93a1d8177142e33cf1869a13ef5c6f9f7bc554bb6ce4e4671127351ecbcdb6c5",
+              "tests/gcm_tb.sv": "7b1867f9fae6d24daf45da9d3965edf4f5acb08e4d86aca7bca026984fbd814b",
+              "tests/interfaces.py": "32fe86b86b4f21da834be504357e18640482d2441f0d14934e77e12816216661",
+              "tests/lz4_cases.py": "8911955bc714e15c085fb7306bacf1f58757c9ae58330f02455706d3b13b833b",
+              "tests/lz4_tb.sv": "edd310d66d85ae7926b764ef02633693b4e9afd836f09d3a4bd29cbdc7aee68e",
+              "tests/mutations.py": "0ceddecd16701cc37365c9921cab97f4939fef73b37e3a2661005063759bc1cc",
+              "tests/reference.py": "1e11198dd598c170b5e49127e219d9023e3b8c2398c7b7a95d05d66368c92f46",
+              "tests/ring_tb.sv": "156954d983c60dfe4250e59a1024bcb8a59e239453087ffc1d502db49a2cd947",
+              "tests/soc_boundaries.py": "38c55c6b839bfc9649839e1c55559f378d42f25f85239ca77c9afc65700d9f76",
+              "tests/soc_cases.py": "1080fc07875c261127018b80b8371d2330623a3647194b85245a04d6619dbd81",
+              "tests/soc_tb.sv": "f29d638fa8d997e0b3c9fb56e1866db315051ff98afa262462712240cb25151e",
+              "tests/suites.py": "21490d96c270dc8d1b7e444c2a861a004a36b842eaed67db5793b05bd2122f94",
+              "tests/synthesis.py": "b1351456502892fcd7922dbb3a15af5d6e5769740be5ec7b2297c0f355312588",
+              "tests/tensor_tb.sv": "5eed5804877f990603bde783ffd2af25bff26a2a2298b47616a2268e837bdced",
+              "tests/verify.py": "ba0c39f4198407deb34c7bdd6415aca158e334ba4e2f1fad093a7a9cfeba917f",
+              "tests/xbar_tb.sv": "9ccef6a3e33d6a5442270a32bb923073e307f2868d5b1a5e4e15d5e91df76fd1",
+              "tests/yosys_packed.py": "e0925d13c932f46836ec6b9c659f0a721feccbb2cc76507ac9dc8b7ba4659a94"
+            },
+            "removed_transient_objects": [],
+            "end": "2026-10-29T18:49:24.090953+00:00"
+          }
+        }
+      ]
+    },
+    "check:synthesis": {
+      "attempt_id": 14,
+      "duration_s": 93.78380009392276,
+      "stdout_preview": "L1 COMPLETED evidence/synthesis-20261029T184720431758Z-67ba42c6/receipt.json\n",
+      "receipt_count": 1,
+      "receipts": [
+        {
+          "path": "evidence/synthesis-20261029T184720431758Z-67ba42c6/receipt.json",
+          "data": {
+            "kind": "L1",
+            "argv": [
+              "/usr/bin/python3",
+              "tests/verify.py",
+              "--suite",
+              "synthesis"
+            ],
+            "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+            "source_sha256": {
+              "design/ARCHITECTURE.md": "2a3b92b5174b16d891fc632e547326a1a2faeb5727bd9c4e4d673f8892d21e20",
+              "design/SPEC.md": "96b41e28466dfbf0e1f9c56d8108d6f83dd45f7cc6a516591dc166f80f84aef2",
+              "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
+              "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
+              "rtl/furnace_axi4_xbar.sv": "403b8ef98a25e8bf11072456db876ae8f9c39de50609c169bc8bae930eb5a5ed",
+              "rtl/furnace_command_ring.sv": "a7e7c886652e194e0c556be33f364e464dc4bee5866d76a3b11fab83ba60df5c",
+              "rtl/furnace_csr.sv": "778a5e3cf3f07e733ff31df3da79e9418c0e66d25cfd2ddd25f2178cee617e2a",
+              "rtl/furnace_dma128.sv": "4b896d0f4c857ec9ec524a5897f0ce9078ba219a4ea781bf8a88f81e23bce12c",
+              "rtl/furnace_fp32_add5.sv": "4805a009a2314fa4079e364dd8320a3491d62b9dbe913c29d2a7d1f3feed0cfd",
+              "rtl/furnace_fp32_mul4.sv": "ba224aa2d85fe71aea5151d345750b4169d39df0d32f4cca4c0ecf703f7cc98d",
+              "rtl/furnace_fp32_round.sv": "11ba7438c65add73d63b3ce154110fbef6b9f2af4df3ef6632a6029cd8f71fe7",
+              "rtl/furnace_ghash_mul.sv": "410a0bb113e4d52bee8982cdcd68cb7d33177577f364790154a5f05a9e98941c",
+              "rtl/furnace_lz4_frontend.sv": "e1119bdcece22f0fe30f7b2d0a2079f6b2f94aea3face7bd4d405ebf24ab7156",
+              "rtl/furnace_tensor8.sv": "0f3df239bda3d5297e8eca0d17d4afcf9ae96cc42749f8e56805d491b96bed5b",
+              "rtl/furnace_x1_top.sv": "7667f36aada79d3df98383bb85a651ec07ec97ed01ef2d6d2bca38b88a143388",
+              "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
+              "tests/aes_tb.sv": "528ee6687db620588423846a7c16aee86d1ef868bd46e965d7bedad7e5bab5f9",
+              "tests/crypto_cases.py": "85c8d34599dcbb6e36fb495a0e8e9441f20d9156bbec81c58edb6fdb1bbf892c",
+              "tests/crypto_reference.py": "ddb673a54e4b3adfdf9a2949fa7fce1b75d6cb24bbdc065b1a8b93bf527cabdb",
+              "tests/csr_tb.sv": "df71c87f136674058ca732f8d99a55cc39240bf0f7bf75ad758f3e6228721196",
+              "tests/execution.py": "93a1d8177142e33cf1869a13ef5c6f9f7bc554bb6ce4e4671127351ecbcdb6c5",
+              "tests/gcm_tb.sv": "7b1867f9fae6d24daf45da9d3965edf4f5acb08e4d86aca7bca026984fbd814b",
+              "tests/interfaces.py": "32fe86b86b4f21da834be504357e18640482d2441f0d14934e77e12816216661",
+              "tests/lz4_cases.py": "8911955bc714e15c085fb7306bacf1f58757c9ae58330f02455706d3b13b833b",
+              "tests/lz4_tb.sv": "edd310d66d85ae7926b764ef02633693b4e9afd836f09d3a4bd29cbdc7aee68e",
+              "tests/mutations.py": "0ceddecd16701cc37365c9921cab97f4939fef73b37e3a2661005063759bc1cc",
+              "tests/reference.py": "1e11198dd598c170b5e49127e219d9023e3b8c2398c7b7a95d05d66368c92f46",
+              "tests/ring_tb.sv": "156954d983c60dfe4250e59a1024bcb8a59e239453087ffc1d502db49a2cd947",
+              "tests/soc_boundaries.py": "38c55c6b839bfc9649839e1c55559f378d42f25f85239ca77c9afc65700d9f76",
+              "tests/soc_cases.py": "1080fc07875c261127018b80b8371d2330623a3647194b85245a04d6619dbd81",
+              "tests/soc_tb.sv": "f29d638fa8d997e0b3c9fb56e1866db315051ff98afa262462712240cb25151e",
+              "tests/suites.py": "21490d96c270dc8d1b7e444c2a861a004a36b842eaed67db5793b05bd2122f94",
+              "tests/synthesis.py": "b1351456502892fcd7922dbb3a15af5d6e5769740be5ec7b2297c0f355312588",
+              "tests/tensor_tb.sv": "5eed5804877f990603bde783ffd2af25bff26a2a2298b47616a2268e837bdced",
+              "tests/verify.py": "ba0c39f4198407deb34c7bdd6415aca158e334ba4e2f1fad093a7a9cfeba917f",
+              "tests/xbar_tb.sv": "9ccef6a3e33d6a5442270a32bb923073e307f2868d5b1a5e4e15d5e91df76fd1",
+              "tests/yosys_packed.py": "e0925d13c932f46836ec6b9c659f0a721feccbb2cc76507ac9dc8b7ba4659a94"
+            },
+            "start": "2026-10-29T18:47:20.438409+00:00",
+            "commands": [
+              {
+                "name": "version-python3",
+                "argv": [
+                  "python3",
+                  "--version"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:47:20.461879+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-python3.stdout.txt",
+                "stderr": "version-python3.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:47:20.467608+00:00",
+                "duration_s": 0.005425394047051668
+              },
+              {
+                "name": "version-yosys",
+                "argv": [
+                  "yosys",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:47:20.468163+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-yosys.stdout.txt",
+                "stderr": "version-yosys.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:47:20.477559+00:00",
+                "duration_s": 0.009082017000764608
+              },
+              {
+                "name": "version-iverilog",
+                "argv": [
+                  "iverilog",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:47:20.478640+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-iverilog.stdout.txt",
+                "stderr": "version-iverilog.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:47:20.496037+00:00",
+                "duration_s": 0.01705622603185475
+              },
+              {
+                "name": "version-vvp",
+                "argv": [
+                  "vvp",
+                  "-V"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:47:20.496690+00:00",
+                "timeout_s": 3600,
+                "stdout": "version-vvp.stdout.txt",
+                "stderr": "version-vvp.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:47:20.505836+00:00",
+                "duration_s": 0.008785292971879244
+              },
+              {
+                "name": "soc-compile-icarus",
+                "argv": [
+                  "iverilog",
+                  "-g2012",
+                  "-Wall",
+                  "-s",
+                  "soc_tb",
+                  "-Psoc_tb.MAX_TILE_BYTES=32",
+                  "-Psoc_tb.RING_DEPTH=1",
+                  "-o",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/soc.vvp",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_aes128_block.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_aes128_gcm.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_axi4_xbar.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_command_ring.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_csr.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_dma128.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_fp32_add5.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_fp32_mul4.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_fp32_round.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_ghash_mul.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_lz4_frontend.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_tensor8.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_x1_top.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-rtl/furnace_xxh32.sv",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/soc_tb.sv"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:47:20.536972+00:00",
+                "timeout_s": 3600,
+                "stdout": "soc-compile-icarus.stdout.txt",
+                "stderr": "soc-compile-icarus.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:47:20.703232+00:00",
+                "duration_s": 0.16553848097100854
+              },
+              {
+                "name": "soc-sim-iverilog",
+                "argv": [
+                  "vvp",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/soc.vvp",
+                  "+vectors=/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/soc-vectors.txt",
+                  "+seed=17"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:47:20.704535+00:00",
+                "timeout_s": 600,
+                "stdout": "soc-sim-iverilog.stdout.txt",
+                "stderr": "soc-sim-iverilog.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:47:24.078217+00:00",
+                "duration_s": 3.372768823057413
+              },
+              {
+                "name": "yosys-1-1",
+                "argv": [
+                  "yosys",
+                  "-Q",
+                  "-T",
+                  "-s",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-1-1.ys"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:47:24.081074+00:00",
+                "timeout_s": 3600,
+                "stdout": "yosys-1-1.stdout.txt",
+                "stderr": "yosys-1-1.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:47:47.517772+00:00",
+                "duration_s": 23.435793320881203
+              },
+              {
+                "name": "yosys-257-3",
+                "argv": [
+                  "yosys",
+                  "-Q",
+                  "-T",
+                  "-s",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-257-3.ys"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:47:47.849402+00:00",
+                "timeout_s": 3600,
+                "stdout": "yosys-257-3.stdout.txt",
+                "stderr": "yosys-257-3.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:08.414221+00:00",
+                "duration_s": 20.563948421971872
+              },
+              {
+                "name": "yosys-4096-8",
+                "argv": [
+                  "yosys",
+                  "-Q",
+                  "-T",
+                  "-s",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-4096-8.ys"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:48:08.732528+00:00",
+                "timeout_s": 3600,
+                "stdout": "yosys-4096-8.stdout.txt",
+                "stderr": "yosys-4096-8.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:29.846761+00:00",
+                "duration_s": 21.113331070169806
+              },
+              {
+                "name": "yosys-65536-16",
+                "argv": [
+                  "yosys",
+                  "-Q",
+                  "-T",
+                  "-s",
+                  "/data/sufeng/furnace-soc1-line/workspace/project/evidence/synthesis-20261029T184720431758Z-67ba42c6/yosys-65536-16.ys"
+                ],
+                "cwd": "/data/sufeng/furnace-soc1-line/workspace/project",
+                "start": "2026-10-29T18:48:30.191965+00:00",
+                "timeout_s": 3600,
+                "stdout": "yosys-65536-16.stdout.txt",
+                "stderr": "yosys-65536-16.stderr.txt",
+                "exit": 0,
+                "timeout": false,
+                "end": "2026-10-29T18:48:53.269034+00:00",
+                "duration_s": 23.076122612226754
+              }
+            ],
+            "coverage": {
+              "soc_compared_descriptors": 5,
+              "synthesized_configurations": [
+                [
+                  1,
+                  1
+                ],
+                [
+                  257,
+                  3
+                ],
+                [
+                  4096,
+                  8
+                ],
+                [
+                  65536,
+                  16
+                ]
+              ]
+            },
+            "outcome": "passed",
+            "required_synthesis_configurations": [
+              [
+                1,
+                1
+              ],
+              [
+                257,
+                3
+              ],
+              [
+                4096,
+                8
+              ],
+              [
+                65536,
+                16
+              ]
+            ],
+            "yosys_syntax_lowering": {
+              "furnace_aes128_block.sv": {
+                "packed_objects": {},
+                "input_sha256": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
+                "output_sha256": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a"
+              },
+              "furnace_aes128_gcm.sv": {
+                "packed_objects": {},
+                "input_sha256": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
+                "output_sha256": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30"
+              },
+              "furnace_axi4_xbar.sv": {
+                "packed_objects": {
+                  "s_axi_awaddr": 32,
+                  "s_axi_awid": 2,
+                  "s_axi_awlen": 8,
+                  "s_axi_awsize": 3,
+                  "s_axi_awburst": 2,
+                  "s_axi_awcache": 4,
+                  "s_axi_awprot": 3,
+                  "s_axi_awqos": 4,
+                  "s_axi_awregion": 4,
+                  "s_axi_wdata": 128,
+                  "s_axi_wstrb": 16,
+                  "s_axi_bid": 2,
+                  "s_axi_bresp": 2,
+                  "s_axi_araddr": 32,
+                  "s_axi_arid": 2,
+                  "s_axi_arlen": 8,
+                  "s_axi_arsize": 3,
+                  "s_axi_arburst": 2,
+                  "s_axi_arcache": 4,
+                  "s_axi_arprot": 3,
+                  "s_axi_arqos": 4,
+                  "s_axi_arregion": 4,
+                  "s_axi_rid": 2,
+                  "s_axi_rdata": 128,
+                  "s_axi_rresp": 2,
+                  "m_axi_awaddr": 32,
+                  "m_axi_awid": 4,
+                  "m_axi_awlen": 8,
+                  "m_axi_awsize": 3,
+                  "m_axi_awburst": 2,
+                  "m_axi_awcache": 4,
+                  "m_axi_awprot": 3,
+                  "m_axi_awqos": 4,
+                  "m_axi_awregion": 4,
+                  "m_axi_wdata": 128,
+                  "m_axi_wstrb": 16,
+                  "m_axi_bid": 4,
+                  "m_axi_bresp": 2,
+                  "m_axi_araddr": 32,
+                  "m_axi_arid": 4,
+                  "m_axi_arlen": 8,
+                  "m_axi_arsize": 3,
+                  "m_axi_arburst": 2,
+                  "m_axi_arcache": 4,
+                  "m_axi_arprot": 3,
+                  "m_axi_arqos": 4,
+                  "m_axi_arregion": 4,
+                  "m_axi_rid": 4,
+                  "m_axi_rdata": 128,
+                  "m_axi_rresp": 2
+                },
+                "input_sha256": "403b8ef98a25e8bf11072456db876ae8f9c39de50609c169bc8bae930eb5a5ed",
+                "output_sha256": "d5efa084799067bec0a6ab7459ae38004603c94809f92c64e56dbc5eb217a20d"
+              },
+              "furnace_command_ring.sv": {
+                "packed_objects": {},
+                "input_sha256": "a7e7c886652e194e0c556be33f364e464dc4bee5866d76a3b11fab83ba60df5c",
+                "output_sha256": "a7e7c886652e194e0c556be33f364e464dc4bee5866d76a3b11fab83ba60df5c"
+              },
+              "furnace_csr.sv": {
+                "packed_objects": {},
+                "input_sha256": "778a5e3cf3f07e733ff31df3da79e9418c0e66d25cfd2ddd25f2178cee617e2a",
+                "output_sha256": "778a5e3cf3f07e733ff31df3da79e9418c0e66d25cfd2ddd25f2178cee617e2a"
+              },
+              "furnace_dma128.sv": {
+                "packed_objects": {},
+                "input_sha256": "4b896d0f4c857ec9ec524a5897f0ce9078ba219a4ea781bf8a88f81e23bce12c",
+                "output_sha256": "4b896d0f4c857ec9ec524a5897f0ce9078ba219a4ea781bf8a88f81e23bce12c"
+              },
+              "furnace_fp32_add5.sv": {
+                "packed_objects": {},
+                "input_sha256": "4805a009a2314fa4079e364dd8320a3491d62b9dbe913c29d2a7d1f3feed0cfd",
+                "output_sha256": "4805a009a2314fa4079e364dd8320a3491d62b9dbe913c29d2a7d1f3feed0cfd"
+              },
+              "furnace_fp32_mul4.sv": {
+                "packed_objects": {},
+                "input_sha256": "ba224aa2d85fe71aea5151d345750b4169d39df0d32f4cca4c0ecf703f7cc98d",
+                "output_sha256": "ba224aa2d85fe71aea5151d345750b4169d39df0d32f4cca4c0ecf703f7cc98d"
+              },
+              "furnace_fp32_round.sv": {
+                "packed_objects": {},
+                "input_sha256": "11ba7438c65add73d63b3ce154110fbef6b9f2af4df3ef6632a6029cd8f71fe7",
+                "output_sha256": "11ba7438c65add73d63b3ce154110fbef6b9f2af4df3ef6632a6029cd8f71fe7"
+              },
+              "furnace_ghash_mul.sv": {
+                "packed_objects": {},
+                "input_sha256": "410a0bb113e4d52bee8982cdcd68cb7d33177577f364790154a5f05a9e98941c",
+                "output_sha256": "410a0bb113e4d52bee8982cdcd68cb7d33177577f364790154a5f05a9e98941c"
+              },
+              "furnace_lz4_frontend.sv": {
+                "packed_objects": {},
+                "input_sha256": "e1119bdcece22f0fe30f7b2d0a2079f6b2f94aea3face7bd4d405ebf24ab7156",
+                "output_sha256": "e1119bdcece22f0fe30f7b2d0a2079f6b2f94aea3face7bd4d405ebf24ab7156"
+              },
+              "furnace_tensor8.sv": {
+                "packed_objects": {},
+                "input_sha256": "0f3df239bda3d5297e8eca0d17d4afcf9ae96cc42749f8e56805d491b96bed5b",
+                "output_sha256": "0f3df239bda3d5297e8eca0d17d4afcf9ae96cc42749f8e56805d491b96bed5b"
+              },
+              "furnace_x1_top.sv": {
+                "packed_objects": {
+                  "m_axi_awaddr": 32,
+                  "m_axi_awid": 4,
+                  "m_axi_awlen": 8,
+                  "m_axi_awsize": 3,
+                  "m_axi_awburst": 2,
+                  "m_axi_awcache": 4,
+                  "m_axi_awprot": 3,
+                  "m_axi_awqos": 4,
+                  "m_axi_awregion": 4,
+                  "m_axi_wdata": 128,
+                  "m_axi_wstrb": 16,
+                  "m_axi_bid": 4,
+                  "m_axi_bresp": 2,
+                  "m_axi_araddr": 32,
+                  "m_axi_arid": 4,
+                  "m_axi_arlen": 8,
+                  "m_axi_arsize": 3,
+                  "m_axi_arburst": 2,
+                  "m_axi_arcache": 4,
+                  "m_axi_arprot": 3,
+                  "m_axi_arqos": 4,
+                  "m_axi_arregion": 4,
+                  "m_axi_rid": 4,
+                  "m_axi_rdata": 128,
+                  "m_axi_rresp": 2,
+                  "rd_address": 32,
+                  "rd_length": 32,
+                  "wr_address": 32,
+                  "wr_length": 32,
+                  "write_byte": 8,
+                  "read_byte": 8,
+                  "read_error": 8,
+                  "write_error": 8,
+                  "i_awaddr": 32,
+                  "i_araddr": 32,
+                  "i_awid": 2,
+                  "i_arid": 2,
+                  "i_awburst": 2,
+                  "i_arburst": 2,
+                  "i_bid": 2,
+                  "i_bresp": 2,
+                  "i_rid": 2,
+                  "i_rresp": 2,
+                  "i_awlen": 8,
+                  "i_arlen": 8,
+                  "i_awsize": 3,
+                  "i_arsize": 3,
+                  "i_awprot": 3,
+                  "i_arprot": 3,
+                  "i_awcache": 4,
+                  "i_arcache": 4,
+                  "i_awqos": 4,
+                  "i_arqos": 4,
+                  "i_awregion": 4,
+                  "i_arregion": 4,
+                  "i_wdata": 128,
+                  "i_rdata": 128,
+                  "i_wstrb": 16
+                },
+                "input_sha256": "7667f36aada79d3df98383bb85a651ec07ec97ed01ef2d6d2bca38b88a143388",
+                "output_sha256": "7656ea63134cef607d42137d1314282f5aeb4b4b8ff0ea202212c9c1c3511819"
+              },
+              "furnace_xxh32.sv": {
+                "packed_objects": {},
+                "input_sha256": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
+                "output_sha256": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
+              }
+            },
+            "soc_expected": [
+              {
+                "index": 0,
+                "mode": 0,
+                "vectors": 1,
+                "encoding": "literal",
+                "weight_bytes": 4,
+                "infinity_operands": {},
+                "status": 0,
+                "tile_id": 17000,
+                "result": "ffffffffffff82d4"
+              },
+              {
+                "index": 1,
+                "mode": 1,
+                "vectors": 1,
+                "encoding": "literal",
+                "weight_bytes": 16,
+                "infinity_operands": {},
+                "status": 0,
+                "tile_id": 17001,
+                "result": "000000007f7f0000"
+              },
+              {
+                "index": 2,
+                "mode": 2,
+                "vectors": 1,
+                "encoding": "literal",
+                "weight_bytes": 4,
+                "infinity_operands": {},
+                "status": 0,
+                "tile_id": 17002,
+                "result": "00000000ff800000"
+              },
+              {
+                "index": 3,
+                "mode": 0,
+                "vectors": 2,
+                "encoding": "raw",
+                "weight_bytes": 8,
+                "infinity_operands": {},
+                "status": 4,
+                "tile_id": 17003,
+                "result": "fffffffffff709b2"
+              },
+              {
+                "index": 4,
+                "mode": 1,
+                "vectors": 2,
+                "encoding": "raw",
+                "weight_bytes": 32,
+                "infinity_operands": {
+                  "mode1_activation_positive_infinity": 2,
+                  "mode1_weight_positive_infinity": 2
+                },
+                "status": 0,
+                "tile_id": 17004,
+                "result": "000000007f800000"
+              }
+            ],
+            "synthesis": [
+              {
+                "max_tile": 1,
+                "depth": 1,
+                "live_modules": [
+                  "furnace_x1_top",
+                  "furnace_axi4_xbar",
+                  "furnace_command_ring",
+                  "furnace_csr",
+                  "furnace_lz4_frontend",
+                  "furnace_xxh32",
+                  "furnace_xxh32",
+                  "furnace_xxh32",
+                  "furnace_aes128_gcm",
+                  "furnace_aes128_block",
+                  "furnace_ghash_mul",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_tensor8",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round"
+                ],
+                "memory_bits": 861576,
+                "latch_cells": 0,
+                "div_mod_cells": 0,
+                "unresolved_cells": 0,
+                "structural_errors": 0,
+                "synthesized_cells": 12126
+              },
+              {
+                "max_tile": 257,
+                "depth": 3,
+                "live_modules": [
+                  "furnace_x1_top",
+                  "furnace_axi4_xbar",
+                  "furnace_command_ring",
+                  "furnace_csr",
+                  "furnace_lz4_frontend",
+                  "furnace_xxh32",
+                  "furnace_xxh32",
+                  "furnace_xxh32",
+                  "furnace_aes128_gcm",
+                  "furnace_aes128_block",
+                  "furnace_ghash_mul",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_tensor8",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round"
+                ],
+                "memory_bits": 863624,
+                "latch_cells": 0,
+                "div_mod_cells": 0,
+                "unresolved_cells": 0,
+                "structural_errors": 0,
+                "synthesized_cells": 12126
+              },
+              {
+                "max_tile": 4096,
+                "depth": 8,
+                "live_modules": [
+                  "furnace_x1_top",
+                  "furnace_axi4_xbar",
+                  "furnace_command_ring",
+                  "furnace_csr",
+                  "furnace_lz4_frontend",
+                  "furnace_xxh32",
+                  "furnace_xxh32",
+                  "furnace_xxh32",
+                  "furnace_aes128_gcm",
+                  "furnace_aes128_block",
+                  "furnace_ghash_mul",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_tensor8",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round"
+                ],
+                "memory_bits": 894336,
+                "latch_cells": 0,
+                "div_mod_cells": 0,
+                "unresolved_cells": 0,
+                "structural_errors": 0,
+                "synthesized_cells": 12126
+              },
+              {
+                "max_tile": 65536,
+                "depth": 16,
+                "live_modules": [
+                  "furnace_x1_top",
+                  "furnace_axi4_xbar",
+                  "furnace_command_ring",
+                  "furnace_csr",
+                  "furnace_lz4_frontend",
+                  "furnace_xxh32",
+                  "furnace_xxh32",
+                  "furnace_xxh32",
+                  "furnace_aes128_gcm",
+                  "furnace_aes128_block",
+                  "furnace_ghash_mul",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_dma128",
+                  "furnace_tensor8",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_mul4",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round",
+                  "furnace_fp32_add5",
+                  "furnace_fp32_round"
+                ],
+                "memory_bits": 1385856,
+                "latch_cells": 0,
+                "div_mod_cells": 0,
+                "unresolved_cells": 0,
+                "structural_errors": 0,
+                "synthesized_cells": 12126
+              }
+            ],
+            "removed_transient_objects": [],
+            "end": "2026-10-29T18:48:53.626814+00:00"
+          }
+        }
+      ]
+    }
+  }
+}
