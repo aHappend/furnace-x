@@ -137,6 +137,17 @@ def engine_memory(seed, geometry=(1, 1, 1, 1, 8), ring_depth=1, fusion_depth=1,
     return memory, expected
 
 
+def legacy_memory(seed):
+    memory, graph_expected = engine_memory(seed)
+    memory[0x1000] = memory[0x1800]
+    memory[0x4000:0x4080] = memory[0x400:0x480]
+    expected = memory.copy()
+    for offset, length in ((0x2000, 4), (0x2200, 16), (0x2300, 16),
+                           (0x5000, 16), (0x6000, 16), (0x7000, 16)):
+        expected[offset:offset+length] = graph_expected[offset:offset+length]
+    return memory, expected
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=17)
@@ -147,6 +158,7 @@ def main():
     parser.add_argument("--preflight", action="store_true")
     parser.add_argument("--repair-of")
     mode.add_argument("--host-running", action="store_true")
+    mode.add_argument("--legacy-streams", action="store_true")
     args = parser.parse_args()
     if args.engines and args.tile_bytes == 1:
         parser.error("one-byte tiles use the DMA/barrier workload, not a four-byte tensor descriptor")
@@ -159,7 +171,8 @@ def main():
                             "--in-height", "1", "--fft-n", "8",
                             "--output", str(image.relative_to(ROOT))], "firmware-build")
         metadata = json.loads(image.with_suffix(".json").read_text())
-        memory, expected = engine_memory(args.seed) if args.engines else graph_memory()
+        memory, expected = (legacy_memory(args.seed) if args.legacy_streams else
+                            engine_memory(args.seed) if args.engines else graph_memory())
         for name, data in (("memory", memory), ("expected", expected)):
             (experiment.path / f"{name}.hex").write_text(
                 "".join(f"{value:02x}\n" for value in data))
@@ -188,8 +201,11 @@ def main():
             f"+engines={int(args.engines)}",
             f"+preflight={int(args.preflight)}",
             f"+host_running={int(args.host_running)}",
+            f"+legacy_probe={int(args.legacy_streams)}",
             f"+seed={args.seed}"], "simulate")
-        expected_summary = "HOST_RUNNING_ACCESS_PASS" if args.host_running else "X3_FIRMWARE_SMOKE_PASS"
+        expected_summary = ("HOST_RUNNING_ACCESS_PASS" if args.host_running else
+                            "LEGACY_STREAM_MODE_PASS" if args.legacy_streams else
+                            "X3_FIRMWARE_SMOKE_PASS")
         if expected_summary not in output:
             raise AssertionError("missing firmware comparisons")
         print(output.strip())

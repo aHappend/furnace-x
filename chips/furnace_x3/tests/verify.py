@@ -46,6 +46,8 @@ def jobs(suite):
         yield "preserved-public-interfaces", "compatibility_checks.py", []
         for seed in SEEDS:
             yield f"exact-pipeline-edges-seed{seed}", "pipeline_checks.py", ["--seed", str(seed)]
+            yield f"legacy-stream-ownership-seed{seed}", "x3_checks.py", [
+                "--legacy-streams", "--seed", str(seed)]
     elif suite == "defects":
         yield "ten-isolated-behavioral-mutants", "defect_checks.py", []
     elif suite == "synthesis":
