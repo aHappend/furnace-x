@@ -43,6 +43,9 @@ def jobs(suite):
             yield f"crypto-max{maximum}", "crypto_checks.py", ["--maximum", str(maximum)]
         for cell in ("C0", "C1", "C2", "C3", "C4"):
             yield f"firmware-matrix-{cell}", "matrix_checks.py", ["--cell", cell, "--all-seeds"]
+        yield "preserved-public-interfaces", "compatibility_checks.py", []
+        for seed in SEEDS:
+            yield f"exact-pipeline-edges-seed{seed}", "pipeline_checks.py", ["--seed", str(seed)]
     elif suite == "defects":
         yield "ten-isolated-behavioral-mutants", "defect_checks.py", []
     elif suite == "synthesis":
