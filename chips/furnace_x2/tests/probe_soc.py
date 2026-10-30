@@ -202,10 +202,11 @@ def execute(run, cell, seed, simulator, sources=None, errors=False, frames=None,
             log = run.command(["vvp", str(run.path / "sim.vvp"), *args], "simulation")
         else:
             run.command(["verilator", "--version"], "compiler-version")
-            run.command(["verilator", "--binary", "--timing", "-Wno-fatal",
+            run.command(["g++", "--version"], "cxx-version")
+            run.verilator_build(["verilator", "--binary", "--timing", "-Wno-fatal",
                          "--top-module", "soc_probe", "--Mdir", str(obj),
                          "-o", "sim", *[f"-G{k}={v}" for k, v in parameters.items()],
-                         *rtl, "tests/soc_probe.sv"], "compile")
+                         *rtl, "tests/soc_probe.sv"], "compile", obj)
             log = run.command([str(obj / "sim"), *args], "simulation")
         if reset_stalled:
             if "COMPARED reset_stalled=1 compared_pair=1 consumed_pair=0 zeroized_epoch=1" not in log.read_text():

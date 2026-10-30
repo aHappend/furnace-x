@@ -1,11 +1,13 @@
 """Source-bound, append-only execution records for project-owned verification."""
 
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 from pathlib import Path
 import shutil
 import subprocess
+from threading import Event
 from uuid import uuid4
 
 
@@ -46,7 +48,7 @@ class Run:
         (ROOT / self.path / "receipt.json").write_text(
             json.dumps(self.receipt, indent=2) + "\n")
 
-    def command(self, argv, stem, timeout=3600, cwd=Path(".")):
+    def command(self, argv, stem, timeout=3600, cwd=Path("."), storage_path=None):
         record = {
             "argv": [str(arg) for arg in argv], "cwd": str(cwd),
             "started_at": now(), "timeout_s": timeout,
@@ -55,6 +57,44 @@ class Run:
         }
         self.receipt["commands"].append(record)
         self.save()
+        stop_sampling = Event()
+        sampler = None
+        executor = None
+        if storage_path is not None:
+            target = ROOT / storage_path
+            if not target.is_relative_to(ROOT / self.path):
+                raise ValueError("storage monitoring must stay inside this exact run")
+            storage = dict(path=str(storage_path), sample_period_s=0.25, samples=0,
+                           peak_allocated_bytes=0, peak_apparent_bytes=0,
+                           peak_pch_bytes=0,
+                           minimum_available_bytes=shutil.disk_usage(ROOT).free)
+            record["storage"] = storage
+
+            def sample():
+                allocated = apparent = pch = 0
+                for path in target.rglob("*"):
+                    try:
+                        stat = path.stat()
+                    except FileNotFoundError:
+                        continue
+                    allocated += stat.st_blocks * 512
+                    apparent += stat.st_size
+                    if path.suffix == ".gch":
+                        pch += stat.st_size
+                storage["samples"] += 1
+                storage["peak_allocated_bytes"] = max(storage["peak_allocated_bytes"], allocated)
+                storage["peak_apparent_bytes"] = max(storage["peak_apparent_bytes"], apparent)
+                storage["peak_pch_bytes"] = max(storage["peak_pch_bytes"], pch)
+                storage["minimum_available_bytes"] = min(
+                    storage["minimum_available_bytes"], shutil.disk_usage(ROOT).free)
+
+            def monitor():
+                while not stop_sampling.wait(storage["sample_period_s"]):
+                    sample()
+
+            sample()
+            executor = ThreadPoolExecutor(max_workers=1)
+            sampler = executor.submit(monitor)
         try:
             with (ROOT / record["stdout"]).open("w") as stdout, (
                     ROOT / record["stderr"]).open("w") as stderr:
@@ -69,9 +109,21 @@ class Run:
             record.update(exit_code=None, timeout=True)
             raise
         finally:
+            if sampler is not None:
+                stop_sampling.set()
+                executor.shutdown(wait=True)
+                sampler.result()
+                sample()
             record["ended_at"] = now()
             self.save()
         return ROOT / record["stdout"]
+
+    def verilator_build(self, argv, stem, obj):
+        # Verilator 5.020's split-build PCH can dwarf the generated model.
+        # Its supported legacy make rules keep split C++ compilation without PCH.
+        return self.command(
+            [*argv, "-MAKEFLAGS", "VM_DEFAULT_RULES=0", "-CFLAGS", "-Os"],
+            stem, storage_path=obj)
 
     def finish(self, error=None):
         self.receipt.update(ended_at=now(), exit_code=0 if error is None else 1)
