@@ -1,6 +1,7 @@
 """Mandatory compiled C0..C4 firmware graph matrix, fresh inputs for every run."""
 
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -8,7 +9,7 @@ import re
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from record import Experiment, ROOT
+from record import Experiment, ROOT, hashes
 from x3_checks import engine_memory
 
 
@@ -84,7 +85,7 @@ def main():
     args = parser.parse_args()
     seed_label = "all-seeds" if args.all_seeds else f"seed{args.seed}"
     experiment = Experiment(f"firmware-matrix-{args.cell.lower()}-{seed_label}", args.repair_of)
-    obj = experiment.path / "compile-obj"
+    objects = []
     try:
         experiment.command(["verilator", "--version"], "verilator-version", version=True)
         tile, ring, fusion, mailbox, iw, ih, ow, oh, fft_n, max_dma = CELLS[args.cell]
@@ -97,13 +98,23 @@ def main():
         cycle_limit = 500000000 if args.cell == "C4" else 200000000
         params += ["-GMEMORY_BYTES=131072", f"-GCYCLE_LIMIT={cycle_limit}"]
         sources = [str(p.relative_to(ROOT)) for p in sorted((ROOT / "rtl").glob("*.sv"))]
-        experiment.command(["verilator", "--binary", "--timing", "-Wno-fatal",
-                            "--top-module", "x3_smoke_tb", *params,
-                            "-MAKEFLAGS", "OPT_FAST=-O3",
-                            "--Mdir", str(obj.relative_to(ROOT)), "-o", "matrix-sim",
-                            *sources, "tests/x3_smoke_tb.sv"], "compile")
         digests = []
         for seed in ((17, 89, 2027) if args.all_seeds else (args.seed,)):
+            if hashes() != experiment.data["source_hashes"]:
+                raise RuntimeError("approved sources changed during the matrix batch")
+            stamp = experiment.path.name.rsplit("-", 1)[1]
+            obj = experiment.path / f"compile-seed{seed}-{stamp}"
+            objects.append(obj)
+            experiment.command(["verilator", "--binary", "--timing", "-Wno-fatal",
+                                "--top-module", "x3_smoke_tb", *params,
+                                "-MAKEFLAGS", "OPT_FAST=-O3",
+                                "--Mdir", str(obj.relative_to(ROOT)), "-o", "matrix-sim",
+                                *sources, "tests/x3_smoke_tb.sv"], f"compile-seed{seed}")
+            binary = obj / "matrix-sim"
+            (experiment.path / f"executable-seed{seed}.json").write_text(json.dumps({
+                "path": str(binary.relative_to(ROOT)),
+                "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+            }, indent=2) + "\n")
             digests.append(run_seed(experiment, args.cell, seed, obj / "matrix-sim",
                                    image, metadata, args.all_seeds))
         if len(set(digests)) != len(digests):
@@ -112,9 +123,10 @@ def main():
         experiment.finish(error)
         raise
     finally:
-        for pattern in ("*.o", "*.a", "*.gch"):
-            for path in obj.glob(pattern):
-                path.unlink()
+        for obj in objects:
+            for pattern in ("*.o", "*.a", "*.gch"):
+                for path in obj.glob(pattern):
+                    path.unlink()
     experiment.finish()
 
 

@@ -8,7 +8,7 @@ import re
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from record import Experiment
+from record import Experiment, hashes
 
 
 SUITES = ("behavior", "defects", "synthesis", "portability")
@@ -83,6 +83,8 @@ def run(suite):
         failed = [result["name"] for result in results if not result["passed"]]
         if failed:
             raise RuntimeError(f"mandatory {suite} checks failed: {', '.join(failed)}")
+        if hashes() != experiment.data["source_hashes"]:
+            raise RuntimeError("approved sources changed during acceptance execution")
     except Exception as error:
         experiment.finish(error)
         return False
