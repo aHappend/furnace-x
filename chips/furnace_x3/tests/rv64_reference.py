@@ -178,6 +178,10 @@ class CPU:
         elif opcode == 0x0f:
             if funct3 not in (0, 1):
                 illegal()
+            if funct3 == 0 and ((instruction >> 28) or rs1 or rd):
+                illegal()
+            if funct3 == 1 and ((instruction >> 15) or rd):
+                illegal()
         elif opcode == 0x73:
             if funct3 == 0:
                 if instruction == 0x73:

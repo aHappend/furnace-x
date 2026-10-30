@@ -17,6 +17,7 @@ def inspect_netlist(path, top):
     counts = Counter()
     states = Counter()
     memories = Counter()
+    memory_bits = Counter()
 
     def visit(name, prefix):
         module = modules[name]
@@ -35,6 +36,10 @@ def inspect_netlist(path, top):
                     states[prefix] += len(cell["connections"].get("Q", []))
                 if kind.startswith("$mem"):
                     memories[prefix] += 1
+                    parameters = cell["parameters"]
+                    if "WIDTH" in parameters and "SIZE" in parameters:
+                        memory_bits[prefix] += (int(parameters["WIDTH"], 2) *
+                                                int(parameters["SIZE"], 2))
             else:
                 raise AssertionError(f"unresolved design instance {kind} at {prefix}.{cell_name}")
 
@@ -58,6 +63,8 @@ def inspect_netlist(path, top):
             prefix = f"{top}.{instance}"
             state_bits = sum(bits for path, bits in states.items()
                              if path == prefix or path.startswith(prefix + "."))
+            state_bits += sum(bits for path, bits in memory_bits.items()
+                              if path == prefix or path.startswith(prefix + "."))
             if state_bits < minimum:
                 raise AssertionError(f"insubstantial sequential state at {instance}: {state_bits}")
         local_rams = sum(count for path, count in memories.items()
@@ -65,7 +72,8 @@ def inspect_netlist(path, top):
         if local_rams < 2:
             raise AssertionError("local IMEM/DMEM were not preserved as memories")
     return {"instance_counts": dict(counts), "state_bits_by_instance": dict(states),
-            "memory_cells_by_instance": dict(memories)}
+            "memory_cells_by_instance": dict(memories),
+            "memory_bits_by_instance": dict(memory_bits)}
 
 
 def main():
