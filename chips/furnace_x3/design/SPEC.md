@@ -7,11 +7,11 @@ relax it. The required product top is `furnace_x3_top`. Target: Intel Arria 10 G
 `10AX115N2F45E1SG`, synchronous clock period <= 10.0 ns. Static elaboration is not
 functional verification, timing closure, hardware acceptance, or delivery approval.
 
-The current source increment preserves all 26 parent modules and adds the
-synchronization, interrupt, native burst-DMA and shared DDR-fabric building
-blocks. The X3 CPU, integration, firmware and independent verification are
-not yet complete. Do not
-present this increment as an executable X3 SoC.
+The design now includes the connected X3 RTL hierarchy and a project-local
+RV64IM scheduler source, deterministic image builder and default executable
+image. All 26 parent modules remain unchanged. Independent behavioral,
+numerical, mutation and synthesis verification is still pending; no passing
+SoC, timing, physical-board or delivery result is asserted.
 
 ## Provenance
 
@@ -248,6 +248,67 @@ Status records are16 bytes: state(0 pending,1 active,2 successful,3 failed,
 4 dependency-failed), error, ID, zero. Final mailbox notification follows
 commit of every terminal record.
 
+The shipped implementation is `firmware/scheduler.S`. The standard-library-only
+Python assembler `firmware/build.py` produces little-endian RV64IM instruction
+words in `firmware/scheduler.hex`; `scheduler.json` binds the source, image,
+entry address and geometry, and `scheduler.lst` lists the actual instructions.
+Build from the project root:
+
+```
+python3 firmware/build.py
+python3 firmware/build.py --in-width 3 --in-height 2 --fft-n 32 --output firmware/c2.hex
+```
+
+The firmware image geometry must equal the instantiated input image dimensions
+and FFT_N. Ring and fusion depths are read from parent CSRs, not compiled in.
+Output image dimensions do not affect the firmware's input sample count.
+The checked-in default image starts at entry 0x10000; its exact byte count and
+source/image hashes are in `firmware/scheduler.json`. Image construction is
+not evidence that its instructions executed correctly.
+
+Firmware uses DMEM graph cache 0x20100..0x210ff, local node states
+0x21200..0x215ff, scheduler work 0x21800..0x219ff and a downward-growing
+stack initially at 0x23ff0. The boot manifest at 0x20000..0x20027 is retained.
+Firmware publishes execution state at manifest+0x40 (1 running,2 success,
+3 failure), summary error at +0x44, and synchronous-trap cause/PC u64 at
++0x48/+0x50. These are software-owned DMEM fields, not new hardware registers
+or product debug ports. A manifest and its addressed graph/data must be
+initialized before RUN; firmware initializes its own working storage.
+
+Node error codes 0..8 retain hardware meanings. Firmware errors are
+0x100 invalid graph/manifest,0x101 dependency cycle,0x102 failed dependency,
+0x103 unsatisfiable semaphore wait with no active producer,0x104 saturated
+software post semaphore,0x105 invalid opcode-specific source arguments and
+0x106 synchronous firmware trap. Invalid graph structure is rejected before
+launch; unsafe manifest/status pointers produce an error mailbox notification
+without writing through the invalid pointer. Successful software semaphore
+posts occur only after a real resource completion; dependency masks are
+advanced only after all four status words have been committed.
+
+The scheduler has one active native DMA, one parent descriptor and one frame,
+independently. It scans pending nodes, incrementally supplies vision/audio
+samples, polls actual parent descriptor retirement, and consumes hardware
+semaphore0/1 completion counts for DMA/frames. Parent descriptor IRQ requests
+are authenticated descriptor content and are never rewritten to force an
+interrupt. Consequently descriptors are polled; DMA/frame events use
+aggregator mask bits1/2 and machine-external interrupt wait/resume.
+The ISR acknowledges parent IRQ status and aggregator event bits; parent
+multimodal-fault level source0 is masked to avoid an interrupt storm during
+error propagation. A subsequent quiescent boot clears that parent fault.
+Global MIE is disabled over the final completion check and WFI, while MEIE
+remains enabled, avoiding an acknowledge-before-sleep lost-wakeup race.
+
+Final mailbox0 message is 0x58430000 OR node_count OR (failure?0x8000:0).
+Manifest/trap rejection messages use 0x5843ff00 OR firmware_error. Firmware
+waits for mailbox capacity, writes the notification only after status fences,
+then writes CPU_CTRL.RUN=0 itself. Host reads, including mailbox pops, remain
+legal during autonomous operation; host writes are not part of scheduling.
+For another graph, wait for the notification and CPU halted status, initialize
+the new manifest/data while halted, request core-only reset and assert RUN.
+Do not globally reset: parent ring/feature slots, semaphore accounting,
+mailbox pointers and interrupt state retain their hardware wrap history.
+See `firmware/README.md` for the precise host initialization sequence.
+
 The required graph exercises encrypted compressed weight loading,
 LZ4/AES-GCM authenticated INT4 commit, concurrent ISP/DSP, fusion/tensor,
 DMA publication, fork/join, semaphore waits/posts and IRQ wait/resume.
@@ -305,11 +366,21 @@ python3 tests/verify.py --suite synthesis
 python3 tests/verify.py --suite portability
 ```
 
-These are required future Verifier-owned entry points, not currently executed
+These are required Verifier-owned entry points, not currently executed
 results. Dependencies: Python3, Icarus/vvp, Verilator, make, g++ and Yosys
 with a compatible SV path. Icarus Verilog12.0 (stable) performed a static
-default-parameter elaboration of the eight new leaf/fabric modules only.
-That check did not run vvp, functional simulation or synthesis.
+default-parameter elaboration of the first eight new leaf/fabric modules.
+The current complete X3 and preserved standalone X1/X2 tops also statically
+elaborate with that compiler. Neither check ran vvp, functional simulation
+or synthesis. Retained advisory receipts:
+
+```
+evidence/preparation/static-elaboration-20261030T133847971990Z/receipt.json
+evidence/preparation/x3-static-elaboration-20261030T135157024762Z/receipt.json
+```
+
+Both compiler exits were zero; no failed preparation probe is being replaced.
+Python3.12.3 generated the current 2868-byte default firmware image.
 Other dependency versions have not yet been established.
 No installation is authorized by this source increment.
 

@@ -23,7 +23,7 @@ module furnace_hw_semaphores (
     reg [3:0] strobe_q;
     reg response_error, overflow_q, overflow_pulse, protocol_pulse;
     reg [15:0] tokens [0:15];
-    reg [15:0] next_tokens [0:15];
+    (* nomem2reg *) reg [15:0] next_tokens [0:15];
     reg [31:0] result;
     reg operation_fault, software_overflow, post_overflow;
     wire active = rst_n && enabled;

@@ -2,13 +2,13 @@
 
 ## Increment and preservation
 
-This is the design description of an incomplete implementation increment,
+This is the design description of the connected implementation,
 not an engineering acceptance report. All26 original parent modules have
 project-local copies in `rtl/`, without numerical or interface changes.
 The original source directory is not an arithmetic oracle or a passing
 baseline. Missing historical timing/PPA is disclosed in `SPEC.md`.
 
-The intended integration retains the full parent engine subsystem behind
+The integration retains the full parent engine subsystem behind
 four width adapters, shares a six-client DDR memory fabric, and adds a
 registered single-issue RV64IM control processor. Firmware owns task graph
 scheduling; hardware owns accepted transactions, synchronization and events.
@@ -178,14 +178,142 @@ pop/push succeeds in both directions. Empty FIFO pop/push fails pop
 but accepts push, with no bypass. Pointer wrap compares against
 DEPTH-1 explicitly; DEPTH1 never creates a zero-width pointer.
 
-## Remaining integration
+## Connected X3 integration
 
-The CPU, local memories, MMIO arbiter, X3 control/top, firmware builder
-and scheduler still need implementation and must wire the completed leaves.
-These must retain the exact contracts in `SPEC.md` and the admitted work
-order. In particular, firmware must observe real engine completions,
-DMA must overlap independent parent activity, and autonomous final
-mailbox notification must follow committed DDR node statuses.
+`furnace_x3_top` directly instantiates every required block and the four
+legacy width adapters. The preserved parent remains a literal
+`furnace_x2_top legacy_soc`, with no new hierarchical references or numerical
+substitutions. FW_MODE resets to zero; mode-zero stream signals pass through
+the parent. Mode-one gates the external stream handshakes and consumes the
+parent result internally, independently of host result readiness.
+
+### RV64IM core
+
+`furnace_rv64im_core` uses a non-overlapped boundary/fetch/decode/execute/
+retire machine. The register file, PC, counters, CSR state and protocol
+ownership reset asynchronously. Operand reads are captured at decode;
+control/ALU results are captured at execute, then retired separately.
+Branches and JALR validate the destination before any link writeback.
+Loads/stores validate alignment before presenting a request; bus errors
+enter the appropriate precise trap without retirement.
+
+The M datapath uses a 128-bit shift/add accumulator and a 64-bit multiplier
+shift register, or a 65-bit restoring-divider trial remainder and a 64-bit
+quotient. Every M operation advances exactly64 iterations, followed by
+separate normalization, sign/result and retirement edges. W inputs are
+normalized to their specified signedness and every W result sign-extends.
+Zero-divisor and minimum/-1 outcomes use the same fixed schedule.
+No combinational multiply, division or modulo implements M execution.
+
+CSRs are read at execute and written only at retirement. Counter writes
+override that instruction's automatic counter increment; read-only cycle/
+instret aliases trap on attempted writes. Implemented machine mode fixes
+MPP=M and misa=0x8000000000001100. Only MEIE is implemented in mie, mip.MEIP
+reflects ext_irq and its writes have no effect. misa writes retain the fixed
+ISA. mstatus implements MIE/MPIE and machine-only MPP; mepc masks bits1:0.
+mtvec writes with a non-direct mode trap rather than changing the request.
+The core serializes FENCE/FENCE.I, and WFI wakes on an individually enabled
+external interrupt even while global MIE is clear. RUN removal stops only
+at a boundary after accepted work has completed.
+
+Additional internal outputs implement the frozen event/status boundary:
+`trap_valid` is a one-edge trap-entry pulse, `trap_cause[63:0]` and
+`trap_pc[63:0]` retain the last trap, and `bus_error` is a one-edge bus-fault
+event. These connect only to control/interrupt blocks; no product debug port
+was added. Control caches trap status so core-only reset does not erase it.
+
+### Host/CPU transaction and memory boundaries
+
+`furnace_x3_mmio_arb` accepts the public AXI-Lite slave channels and the
+core's unified request/response interface. It buffers AW and W independently
+and has a separate AR slot. Round-robin chooses host versus CPU, initially
+host; a separate alternating preference prevents starvation of host reads
+by host writes. The selected owner remains selected through delivery of
+its response, including all parent AXI-Lite backpressure. Future host
+addresses/data may fill the bounded input slots but cannot execute early.
+
+The arbiter's `dev_req_*`/`dev_rsp_*` boundary retains the unified64-bit
+address/data,8-bit strobe and2-bit size convention, adding `dev_req_host`
+to distinguish host apertures. It serializes CPU local/DDR operations as
+well as MMIO, which is conservative but does not reduce required ISA,
+memory-client concurrency or fairness. `furnace_x3_control` captures this
+request and routes complete-address comparisons; it never silently narrows
+unsupported physical addresses.
+
+Control `memory_req_valid/ready[1:0]` and corresponding response arrays
+select local memory at index0 and the CPU DDR bridge at index1. The
+`memory_req_host/write/instr/addr/wdata/wstrb/size` fields are shared and
+stable until the selected request is accepted. Response data has two64-bit
+lanes; validity, error and readiness have two bits. A retained request owns
+control through response; an unselected response is never consumed.
+
+`furnace_x3_local_memory` accepts that same unified bus plus `req_host`
+and `cpu_running`. Two2048x64 byte-enabled, unreset RAM banks implement
+IMEM/DMEM. Synchronous array access is in a separate non-reset process;
+only valid captured requests can access RAM. Registered response ownership
+and error flags reset. A capture at En performs the RAM read/write at
+En+1; the response and registered RAM read are visible post-En+1.
+Byte selection/normalization uses the captured offset and width.
+Hosts must initialize every byte they read or execute; reset is not
+an implicit initialization of either RAM. Host writes sampled while the
+CPU runs, CPU IMEM writes, instruction fetch from DMEM and bad sizes/
+alignment/addresses return errors without a RAM side effect.
+
+Control `leaf_req_valid/ready[2:0]` and response arrays select IRQ0,
+semaphores1 and mailboxes2. Shared request fields are write, byte-offset8,
+data32 and strobe4; response data has three32-bit lanes. The existing
+leaves enforce their register offsets and side-effect/error rules.
+Parent `p_axil_*` is a full32-bit AXI-Lite master boundary: independent
+AW/W sent flags and retained ownership cover the response. Parent errors
+propagate and set the X3 protocol status.
+
+### Control, mode transition and firmware slots
+
+Control owns RUN, the one-cycle core-reset pulse, sticky FW_MODE and errors,
+DMA configuration/sticky completion, trap mirrors and two stream slots.
+`dma_cmd_valid/ready/src/dst/bytes` connects directly to the real DMA;
+configuration is held stable while busy. Accepted command writes return
+only after their command handshake, not after an invented completion.
+`dma_done_*` is always consumed and latched in control, while the separate
+DMA `completion` event drives semaphore0 and IRQ source1 exactly once.
+The internally consumed real parent result drives semaphore1 and IRQ
+source2. Sticky error W1C loses to concurrent new event setting.
+
+FW_MODE transition holds the transaction while control reads public parent
+busy, head, tail and multimodal status CSRs. It requires a halted CPU, no
+partial external packets, equal ring head/tail and idle engines/feature
+credits. Any external stream activity during this probe rejects the switch.
+`legacy_v_transfer/last`, `legacy_a_transfer/last` and
+`legacy_stream_activity` are actual stream-boundary observations, not
+hierarchical internal probes. Once set, ownership cannot be cleared except
+by global reset. No parent register or engine is reset by the transition.
+
+`fw_v_valid/ready/pixel/id/last` and `fw_a_valid/ready/sample/id/last`
+connect the control slots to the actual parent streams. Metadata is
+captured with DATA at its execution edge, not read live from metadata
+registers while stalled. Capacity allows replacing a token on the same
+edge that the parent accepts the old token; empty slots have no bypass.
+Full slots cause DATA service to wait, without blocking hardware engines,
+DMA progress or completion token accounting.
+
+### Firmware ownership
+
+`firmware/build.py` assembles only standard RV64IM/Zicsr instructions from
+`firmware/scheduler.S`, without a cross-compiler or external package.
+The firmware snapshots and validates the graph, checks dependency closure,
+initializes public status records, then scans runnable nodes. Independent
+resource slots allow native DMA, descriptor processing and frame progress
+to overlap. Descriptor copying writes the real parent ring and publishes
+its tail only after all128 bytes are acknowledged and fenced.
+
+Completion handling uses the real parent retirement counter/error,
+hardware completion tokens and frame status. It never advances a
+dependent on command acceptance. Vision/audio feeding is incremental and
+nonblocking with respect to the other resources. Interrupt wait/resume
+uses the real aggregator and precise MRET; the final completion check
+is protected against an ISR/WFI race. Terminal status words are committed
+before the final mailbox notification. Failure propagation and software
+layout/error ABI are detailed in `SPEC.md` and `firmware/README.md`.
 
 Independent Verifier owns test sources/models, functional experiments,
 mutation evidence and complete-hierarchy synthesis. No functional,
