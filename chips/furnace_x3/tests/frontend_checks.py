@@ -25,10 +25,17 @@ def traces(seed, iw, ih, ow, oh, fft_n):
             records.append((kind, packet_id, result, 0,
                             [(v & 65535, packet_id, int(i == count - 1), rng.randrange(3))
                              for i, v in enumerate(values)]))
-        # Early LAST; consume the explicit error and immediately recover.
+        # Malformed packets must drain to LAST, publish one error, then recover.
         if count > 1:
             packet_id = (seed * 29) & 65535
             records.append((kind, packet_id, 0, 7, [(23, packet_id, 1, 0)]))
+        for malformed in ("late-last", "changed-id") if count > 1 else ("late-last",):
+            packet_id = (seed * 31 + len(records)) & 65535
+            total = count+3 if malformed == "late-last" else count
+            records.append((kind, packet_id, 0, 7, [
+                (23, packet_id ^ int(malformed == "changed-id" and i == 1),
+                 int(i == total-1), rng.randrange(3))
+                for i in range(total)]))
             values = [rng.randrange(256) if kind == 0 else rng.randrange(-32768, 32768)
                       for _ in range(count)]
             result = vision_features(values, iw, ih, ow, oh) if kind == 0 else audio_features(values)
