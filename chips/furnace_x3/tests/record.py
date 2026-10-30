@@ -57,13 +57,20 @@ class Experiment:
         with out.open("w") as stdout, err.open("w") as stderr:
             process = subprocess.Popen(row["argv"], cwd=cwd, stdout=stdout, stderr=stderr)
             row["pid"] = process.pid
-            try:
-                row["exit"] = process.wait(timeout=timeout)
-                row["timed_out"] = False
-            except subprocess.TimeoutExpired:
-                process.kill()
-                row["exit"] = process.wait()
-                row["timed_out"] = True
+            while True:
+                remaining = timeout - (time.monotonic() - start)
+                if remaining <= 0:
+                    process.kill()
+                    row["exit"] = process.wait()
+                    row["timed_out"] = True
+                    break
+                try:
+                    row["exit"] = process.wait(timeout=min(30, remaining))
+                    row["timed_out"] = False
+                    break
+                except subprocess.TimeoutExpired:
+                    print(f"PROGRESS {name} elapsed_s={time.monotonic() - start:.0f}",
+                          flush=True)
         row.update(end=self.now(), elapsed_s=time.monotonic() - start)
         self.data["commands"].append(row)
         self.save()

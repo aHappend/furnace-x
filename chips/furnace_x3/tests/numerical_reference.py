@@ -1,5 +1,7 @@
 """Exact integer/dyadic FP32 arithmetic; no host float or DUT table dependency."""
 
+import math
+
 from cpu_reference import signed
 
 NAN = 0x7fc00000
@@ -89,3 +91,74 @@ def tensor_vector(mode, weights, activations, accumulator=0):
 
 def pack_lanes(lanes, width):
     return sum(value << (i * width) for i, value in enumerate(lanes))
+
+
+def vision_features(pixels, iw, ih, ow, oh):
+    image = []
+    for y in range(oh):
+        qy = 256 * y * (ih - 1) // (oh - 1) if oh > 1 else 0
+        y0, fy = divmod(qy, 256)
+        y1 = min(y0 + 1, ih - 1)
+        line = []
+        for x in range(ow):
+            qx = 256 * x * (iw - 1) // (ow - 1) if ow > 1 else 0
+            x0, fx = divmod(qx, 256)
+            x1 = min(x0 + 1, iw - 1)
+            weighted = (pixels[y0 * iw + x0] * (256 - fx) * (256 - fy) +
+                        pixels[y0 * iw + x1] * fx * (256 - fy) +
+                        pixels[y1 * iw + x0] * (256 - fx) * fy +
+                        pixels[y1 * iw + x1] * fx * fy)
+            line.append((weighted + 32768) >> 16)
+        image.append(line)
+    sums = [0] * 4
+    for y in range(oh):
+        for x in range(ow):
+            p = [[image[max(0, min(oh - 1, y + dy))][max(0, min(ow - 1, x + dx))]
+                  for dx in (-1, 0, 1)] for dy in (-1, 0, 1)]
+            gx = p[0][2] + 2 * p[1][2] + p[2][2] - p[0][0] - 2 * p[1][0] - p[2][0]
+            gy = p[2][0] + 2 * p[2][1] + p[2][2] - p[0][0] - 2 * p[0][1] - p[0][2]
+            laplacian = p[0][1] + p[1][0] + p[1][2] + p[2][1] - 4 * p[1][1]
+            sums = [a + b for a, b in zip(sums, (p[1][1], abs(gx), abs(gy), abs(laplacian)))]
+    return pack_lanes([total // (ow * oh) for total in sums], 16)
+
+
+def q15_twiddles():
+    return [(round(32768 * math.cos(2 * math.pi * k / 64)),
+             round(-32768 * math.sin(2 * math.pi * k / 64))) for k in range(64)]
+
+
+def fft_integer(samples):
+    n = len(samples)
+    bits = n.bit_length() - 1
+    if n not in (8, 16, 32, 64):
+        raise ValueError(n)
+    values = [(samples[int(f"{i:0{bits}b}"[::-1], 2)], 0) for i in range(n)]
+    twiddles = q15_twiddles()
+    saturation = lambda value: max(-(1 << 31), min((1 << 31) - 1, value))
+    for span in (1 << stage for stage in range(1, bits + 1)):
+        half = span // 2
+        for group in range(0, n, span):
+            for index in range(half):
+                ar, ai = values[group + index]
+                br, bi = values[group + index + half]
+                wr, wi = twiddles[index * 64 // span]
+                real, imag = (br * wr - bi * wi) >> 15, (br * wi + bi * wr) >> 15
+                values[group + index] = saturation(ar + real), saturation(ai + imag)
+                values[group + index + half] = saturation(ar - real), saturation(ai - imag)
+    return values
+
+
+def audio_features(samples):
+    n = len(samples)
+    history = [0] * 3
+    filtered = []
+    for sample in samples:
+        filtered.append((sample + 3 * history[0] + 3 * history[1] + history[2]) >> 3)
+        history = [sample, *history[:2]]
+    spectrum = fft_integer(filtered)
+    energies = [abs(real) + abs(imag) for real, imag in spectrum]
+    lanes = [sum(map(abs, filtered)) // n,
+             min(32767, energies[0] // n),
+             min(32767, sum(energies[1:n // 4 + 1]) // n),
+             min(32767, sum(energies[n // 4 + 1:n // 2 + 1]) // n)]
+    return pack_lanes(lanes, 16)
