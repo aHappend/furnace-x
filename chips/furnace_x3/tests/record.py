@@ -32,7 +32,9 @@ class Experiment:
             "start": self.now(), "source_hashes": hashes(),
             "commands": [], "repair_of": repair_of,
         }
+        self.versioned = set()
         self.save()
+        self.command(["python3", "--version"], "runtime-python-version", version=True)
 
     @staticmethod
     def now():
@@ -45,18 +47,44 @@ class Experiment:
         (self.path / "receipt.json").write_text(json.dumps(self.data, indent=2) + "\n")
 
     def command(self, argv, name, timeout=3600, cwd=ROOT, version=False):
+        executable = str(argv[0])
+        versions = {"python3": "--version", "iverilog": "-V", "vvp": "-V",
+                    "verilator": "--version", "yosys": "-V",
+                    "g++": "--version", "make": "--version"}
+        if version:
+            self.versioned.add(executable)
+        else:
+            required = [executable]
+            if executable == "verilator" and "--binary" in argv:
+                required += ["g++", "make"]
+            for tool in required:
+                if tool in versions and tool not in self.versioned:
+                    self.command([tool, versions[tool]], f"tool-version-{tool}", version=True)
         out = self.path / f"{name}.stdout.txt"
         err = self.path / f"{name}.stderr.txt"
+        if out.exists() or err.exists():
+            raise RuntimeError(f"refusing to overwrite execution logs: {name}")
         row = {
             "argv": [str(x) for x in argv], "cwd": self.relative(cwd),
             "start": self.now(), "timeout_s": timeout,
             "stdout": self.relative(out), "stderr": self.relative(err),
             "tool_version_query": version,
+            "source_hashes": hashes(),
         }
+        self.data["commands"].append(row)
+        self.save()
         start = time.monotonic()
         with out.open("w") as stdout, err.open("w") as stderr:
-            process = subprocess.Popen(row["argv"], cwd=cwd, stdout=stdout, stderr=stderr)
+            try:
+                process = subprocess.Popen(row["argv"], cwd=cwd, stdout=stdout, stderr=stderr)
+            except OSError as error:
+                stderr.write(f"{type(error).__name__}: {error}\n")
+                row.update(exit=None, timed_out=False, launch_error=str(error), end=self.now(),
+                           elapsed_s=time.monotonic()-start)
+                self.save()
+                raise
             row["pid"] = process.pid
+            self.save()
             while True:
                 remaining = timeout - (time.monotonic() - start)
                 if remaining <= 0:
@@ -72,7 +100,6 @@ class Experiment:
                     print(f"PROGRESS {name} elapsed_s={time.monotonic() - start:.0f}",
                           flush=True)
         row.update(end=self.now(), elapsed_s=time.monotonic() - start)
-        self.data["commands"].append(row)
         self.save()
         if row["exit"] or row["timed_out"]:
             raise RuntimeError(f"{name} failed: exit={row['exit']}, logs={row['stdout']}")

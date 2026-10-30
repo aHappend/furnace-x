@@ -143,6 +143,7 @@ def main():
     parser.add_argument("--lowered", action="store_true")
     parser.add_argument("--engines", action="store_true")
     parser.add_argument("--tile-bytes", type=int, choices=(1, 64), default=64)
+    parser.add_argument("--preflight", action="store_true")
     args = parser.parse_args()
     experiment = Experiment("x3-firmware-smoke")
     try:
@@ -180,6 +181,7 @@ def main():
             f"+memory={(experiment.path / 'memory.hex').relative_to(ROOT)}",
             f"+expected={(experiment.path / 'expected.hex').relative_to(ROOT)}",
             f"+engines={int(args.engines)}",
+            f"+preflight={int(args.preflight)}",
             f"+seed={args.seed}"], "simulate")
         if "X3_FIRMWARE_SMOKE_PASS" not in output:
             raise AssertionError("missing firmware comparisons")
