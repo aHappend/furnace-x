@@ -4,23 +4,34 @@
 
 The admitted work order defines the product contract. This document records its
 implementation-facing boundaries; it does not replace or relax that contract.
-Implementation is provisional under the independently admitted recovery.
-Authentic `design/GENERATIONAL_HANDOFF.md`, any associated parent source index,
-provenance reconciliation and independently reviewed resolution of conflicts
-are mandatory **before engineering acceptance**, not before implementation.
-No authentic handoff has been supplied at the time of this document. No parent
-timing or PPA figures are inferred from the RTL.
+Engineering acceptance remains subject to independent review and closure of
+the provenance, timing-scope and hardware-evidence limitations below.
+`design/GENERATIONAL_HANDOFF.md` is now readable and has been read. Its observed
+SHA256 is `502585e7732b741a2e6ee74e634742943d23c7e4f3d28a86e2ad51b4769973c5`.
+That hash identifies content, not restoration authenticity: no separate
+restoration receipt or linked intake source index has been identified.
+Authentic provenance reconciliation and independently reviewed resolution of
+conflicts remain mandatory **before engineering acceptance**.
+
+The handoff reports historical parent Quartus 17.1 setup/hold slack of
+1.464/0.038 ns at 10.0 ns and a deterministic parent PCIe HIL pass.
+These are attributed historical claims, not fresh X2 verification or
+independently reconstructed parent evidence.
 
 The immutable input is `furnace_x1_reference/rtl/*.sv`. Deliverable copies retain
 the usable `furnace_x1_top` and its public interface. Reference and deliverable
 hierarchies must be compiled separately because their module names overlap.
-The eventual X2 top is `furnace_x2_top`; its external AXI-Lite and four AXI4 bank
+The X2 top is `furnace_x2_top`; its external AXI-Lite and four AXI4 bank
 interfaces retain all parent widths, directions and signedness.
+All fourteen deliverable parent modules are byte-identical to their immutable
+references, and their inventory matches the restored handoff. This establishes
+source preservation, not correctness of every parent behavior or X2 integration.
 
-This is a provisional implementation, not an accepted SoC. See
+This is not an accepted SoC. See
 `ARCHITECTURE.md` for the connected datapaths, storage and ownership decisions.
-Verifier exclusively owns `tests/*`. No simulation, synthesis, timing or board
-result is claimed by this document.
+Verifier exclusively owns `tests/*`. Completed independent L1 evidence and the
+qualified native timing/board observations are recorded below; Designer has not
+rerun those workloads for this documentation repair.
 
 ## Cycle and degenerate-boundary table
 
@@ -151,7 +162,8 @@ have no combinational division/remainder, no mixed blocking/nonblocking
 sequential assignments, no latches, and bounded registered arithmetic.
 Generic synthesis is not timing evidence.
 
-After design handoff, the independent Verifier supplies and executes:
+The independent Verifier owns the portable entry point. Run these mandatory
+commands from the project root:
 
 ```
 python3 tests/verify.py --suite smoke
@@ -163,8 +175,55 @@ python3 tests/verify.py --suite synthesis
 python3 tests/verify.py --suite reproduction
 ```
 
-These are mandatory interfaces for the future verification entry point, not
-claims that it currently exists or that these commands have passed. All seven
-checks remain outstanding. So do native timing lint, Quartus STA and three
-deterministic consecutive hardware passes. The independently approved product
-PDF is authored by the shared runtime only after engineering acceptance.
+The retained shared-runtime attempts record all seven commands as passed,
+with aggregate receipt exit code zero in each case:
+
+| Suite | Attempt | Completed receipt |
+| --- | --- | --- |
+| smoke | 125 | `evidence/l1-smoke-20261030T081721Z-0d841f1b4c0e/receipt.json` |
+| behavior | 128 | `evidence/l1-behavior-20261030T090329Z-d8bf30b7d0ea/receipt.json` |
+| compatibility | 129 | `evidence/l1-compatibility-20261030T094222Z-a9203d523620/receipt.json` |
+| protocol | 130 | `evidence/l1-protocol-20261030T094741Z-5f1a38636555/receipt.json` |
+| mutations | 131 | `evidence/l1-mutations-20261030T095425Z-dc9505c9c7e6/receipt.json` |
+| synthesis | 132 | `evidence/l1-synthesis-20261030T095913Z-aa784e553b51/receipt.json` |
+| reproduction | 133 | `evidence/l1-reproduction-20261030T100034Z-c6d30c2a9563/receipt.json` |
+
+The behavior aggregate contains all 21 passed geometry/seed entries, not a
+partial matrix. The mutation aggregate records a passing unmutated control
+and eight compiled, functionally killed mutations. Compatibility evidence is
+separate from byte identity and from historical parent acceptance. These
+receipts retain their original source hashes, including pre-reconciliation
+documentation hashes; this documentation-only repair neither rewrites them nor
+claims a new execution. Earlier failed/interrupted receipts remain retained.
+The missing-source and interrupted-behavior failures are followed by completed
+attempts 125 and 128; neither file existence nor a partial run is the pass basis.
+
+### Native timing and hardware evidence limits
+
+The shared runtime records native L1.5 timing lint as passed with zero
+combinational divide/modulo and mixed-assignment hazards. Current Quartus
+post-fit results are separate from L1 generic synthesis and parent history.
+The retained `top.fit.rpt` reports **29,663 ALMs, 23,765 registers, 42 RAM
+blocks (M20K), and 114 DSP blocks**. Native STA reports setup/hold slack of
+**0.846/0.037 ns at 10.0 ns**.
+
+Timing scope is not complete external-interface signoff. Raw `top.sta.rpt`
+states that setup and hold requirements are not fully constrained;
+`top.sta.ucp.rpt` lists **703 unconstrained input ports and 1046 unconstrained
+output ports**, despite the native receipt's zero unconstrained-path/endpoint
+markers. Positive reported slack covers the analyzed constrained paths only.
+Valid external constraints or independently approved scope exclusions must be
+reconciled before signoff; this document grants no timing waiver.
+
+Board evidence is **L3_BRIDGE_CONNECTIVITY_PROBE_ONLY**. The retained
+`board-hil.json` records three deterministic register-57 reads returning 178
+(0xB2). Its passed status does not demonstrate flashed-X2 multimodal workload
+execution, numerical correctness on hardware, or OS boot. The mandatory
+three-consecutive-pass X2 hardware validation requirement remains unchanged
+and is not discharged by these connectivity reads.
+
+Native receipts and Quartus reports are retained shared-runtime observations,
+not shipped source inputs or prerequisites for the portable L1 commands.
+Independent review must resolve the provenance, timing and hardware limitations
+without weakening any mandatory check. The independently approved product PDF
+is authored by the shared runtime only after engineering acceptance.

@@ -1,17 +1,37 @@
 # FURNACE-X2 implementation architecture
 
-## Provisional implementation
+## Implementation and parent reconciliation
 
-The provenance prerequisite is amended as admitted: authentic parent handoff
-reading, reconciliation and independently reviewed resolution of conflicts are
-mandatory before acceptance, while provisional implementation may proceed.
-`GENERATIONAL_HANDOFF.md` is not fabricated. Parent timing/PPA is unknown.
-Historical parent acceptance cannot certify the X2 changes.
+The restored `design/GENERATIONAL_HANDOFF.md` has been read; its observed SHA256
+is `502585e7732b741a2e6ee74e634742943d23c7e4f3d28a86e2ad51b4769973c5`.
+It reports historical parent Quartus 17.1 setup/hold slack of 1.464/0.038 ns
+at 10.0 ns and a deterministic parent PCIe HIL pass. Those claims do not
+certify X2. The content hash does not authenticate restoration, and no separate
+restoration receipt or linked intake source index has been identified.
+Provenance closure and independent conflict review remain pre-acceptance
+requirements, not missing-file claims.
 
 `rtl/furnace_x1_*.sv` and the other original parent modules are deliverable
-copies of the immutable `furnace_x1_reference/rtl/` sources. Their original
-hierarchy is retained for separate compatibility elaboration. X2 integration
-must derive from that datapath, not instantiate a second independent tensor.
+copies of the immutable `furnace_x1_reference/rtl/` sources. All fourteen parent
+modules are byte-identical, and their inventory matches the restored handoff.
+Their original hierarchy is retained for separate compatibility elaboration.
+X2 derives from that datapath with one shared tensor rather than a disconnected
+legacy island. Parent public interfaces and numerical modes remain the
+compatibility contract; unchanged bytes alone are not verification. The
+independent compatibility receipt is cited in `SPEC.md`.
+
+The handoff's byte-lane memory guidance addresses large memories with byte
+enables. The inherited GCM quarantine and LZ4 history already use unpacked
+eight-bit arrays, byte-wide accesses, synchronous registered reads, and no
+wholesale RAM reset. They do not require a wide-word byte-enable rewrite.
+The new vision input/resized line stores use the same byte-oriented synchronous
+pattern. In the retained default X2 `top.map.rpt`, Quartus maps quarantine
+(4096x8), history (65536x8), input lines (16x8), and resized lines (24x8) to
+simple-dual-port M20K RAMs. Thus actual inference, not an attribute or a
+presumed register implementation, reconciles the memory guidance with the
+unchanged parent sources. The handoff's **<45-second inference guidance has
+not been established as a measured result** here; no inference-runtime or
+end-to-end performance promise follows from it.
 
 ## Datapath decisions
 
@@ -122,13 +142,38 @@ Feature/result DMA errors produce code 5 and no invalid activation reaches
 tensor arithmetic. Error pairs bypass tensor execution but still produce a
 zero-valued stored result and public completion.
 
-## Independence and outstanding acceptance
+## Independent evidence and remaining acceptance limits
 
 Verifier owns all functional reference models, transactors, mutation tooling,
 simulation and synthesis checks. No functional or synthesis checks are authored
-or executed by Designer. Required runtime checks, timing and board gates remain
-outstanding. The original missing-source failure is not declared passing merely
-because RTL files now exist: the independent checks must execute and succeed.
+or executed by Designer for this repair. `SPEC.md` cites the seven completed
+L1 receipts from attempts 125 and 128-133. Attempt 128's behavior aggregate,
+`evidence/l1-behavior-20261030T090329Z-d8bf30b7d0ea/receipt.json`, records all
+21 matrix entries passed; the mutation aggregate records 8/8 functional kills
+with a passing control. Earlier failures and interrupted attempts remain
+retained, not overwritten or reclassified by this document. Receipt source
+hashes describe the executed inputs before this documentation reconciliation;
+RTL and verification sources are unchanged by this repair.
+
+Separately, current Quartus `top.fit.rpt` reports 29,663 ALMs, 23,765 registers,
+42 M20K RAM blocks and 114 DSP blocks. Native post-fit STA reports
+0.846/0.037 ns setup/hold slack at a 10.0 ns clock. These are X2 observations,
+not inherited parent figures or generic-synthesis timing claims. Raw
+`top.sta.rpt` says setup/hold are not fully constrained, and `top.sta.ucp.rpt`
+lists 703 unconstrained inputs and 1046 unconstrained outputs despite zero
+markers in the native receipt. Reported positive slack therefore does not
+establish complete external-interface timing signoff. Constraint reconciliation
+or independently approved scope exclusions remain unresolved.
+
+The board observation is **L3_BRIDGE_CONNECTIVITY_PROBE_ONLY**: three
+deterministic register-57 reads returning 178 (0xB2) in `board-hil.json` show
+bridge connectivity, not flashed-X2 multimodal execution or OS boot. Actual
+X2 hardware-workload evidence remains required. Native timing lint is recorded
+as passed, but neither a gate status nor this documentation reconciliation
+waives timing/hardware scope or provenance closure. These retained runtime
+reports are observations, not deliverable source dependencies. Independent
+review and engineering acceptance remain pending; the shared runtime's
+independently approved product PDF follows acceptance.
 
 ## Portable source use
 
