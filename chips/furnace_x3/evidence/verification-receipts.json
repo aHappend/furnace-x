@@ -2,20 +2,20 @@
   "chip": "Furnace-X3",
   "passed_checks": {
     "check:behavior": {
-      "attempt_id": 5,
-      "duration_s": 15099.05265627103,
-      "stdout_preview": "_s=11760\nPROGRESS firmware-matrix-C4 elapsed_s=11790\nPROGRESS firmware-matrix-C4 elapsed_s=11820\nPROGRESS firmware-matrix-C4 elapsed_s=11850\nPROGRESS firmware-matrix-C4 elapsed_s=11880\nPROGRESS firmware-matrix-C4 elapsed_s=11910\nPROGRESS firmware-matrix-C4 elapsed_s=11940\nPROGRESS firmware-matrix-C4 elapsed_s=11970\nPROGRESS firmware-matrix-C4 elapsed_s=12000\nPROGRESS firmware-matrix-C4 elapsed_s=12030\nPROGRESS firmware-matrix-C4 elapsed_s=12060\nPROGRESS firmware-matrix-C4 elapsed_s=12090\nPROGRESS firmware-matrix-C4 elapsed_s=12120\nPROGRESS firmware-matrix-C4 elapsed_s=12150\nPROGRESS firmware-matrix-C4 elapsed_s=12180\nPROGRESS firmware-matrix-C4 elapsed_s=12210\nPROGRESS firmware-matrix-C4 elapsed_s=12240\nPROGRESS firmware-matrix-C4 elapsed_s=12270\nPROGRESS firmware-matrix-C4 elapsed_s=12300\nPROGRESS firmware-matrix-C4 elapsed_s=12330\nPROGRESS firmware-matrix-C4 elapsed_s=12360\nPROGRESS firmware-matrix-C4 elapsed_s=12390\nPROGRESS firmware-matrix-C4 elapsed_s=12420\nL1_CHECK_PASS behavior/firmware-matrix-C4\nL1_CHECK_PASS behavior/preserved-public-interfaces\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed17\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed17\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed89\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed89\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed2027\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed2027\nevidence/preparation/portable-l1-behavior-20261030T214803278789Z/receipt.json\nL1_SUITE_PASS behavior checks=86\n",
+      "attempt_id": 13,
+      "duration_s": 15080.359252022812,
+      "stdout_preview": "_s=11730\nPROGRESS firmware-matrix-C4 elapsed_s=11760\nPROGRESS firmware-matrix-C4 elapsed_s=11790\nPROGRESS firmware-matrix-C4 elapsed_s=11820\nPROGRESS firmware-matrix-C4 elapsed_s=11850\nPROGRESS firmware-matrix-C4 elapsed_s=11880\nPROGRESS firmware-matrix-C4 elapsed_s=11910\nPROGRESS firmware-matrix-C4 elapsed_s=11940\nPROGRESS firmware-matrix-C4 elapsed_s=11970\nPROGRESS firmware-matrix-C4 elapsed_s=12000\nPROGRESS firmware-matrix-C4 elapsed_s=12030\nPROGRESS firmware-matrix-C4 elapsed_s=12060\nPROGRESS firmware-matrix-C4 elapsed_s=12090\nPROGRESS firmware-matrix-C4 elapsed_s=12120\nPROGRESS firmware-matrix-C4 elapsed_s=12150\nPROGRESS firmware-matrix-C4 elapsed_s=12180\nPROGRESS firmware-matrix-C4 elapsed_s=12210\nPROGRESS firmware-matrix-C4 elapsed_s=12240\nPROGRESS firmware-matrix-C4 elapsed_s=12270\nPROGRESS firmware-matrix-C4 elapsed_s=12300\nPROGRESS firmware-matrix-C4 elapsed_s=12330\nPROGRESS firmware-matrix-C4 elapsed_s=12360\nPROGRESS firmware-matrix-C4 elapsed_s=12390\nL1_CHECK_PASS behavior/firmware-matrix-C4\nL1_CHECK_PASS behavior/preserved-public-interfaces\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed17\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed17\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed89\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed89\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed2027\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed2027\nevidence/preparation/portable-l1-behavior-20261031T034652019790Z/receipt.json\nL1_SUITE_PASS behavior checks=86\n",
       "receipt_count": 0,
       "receipts": []
     },
     "check:defect-sensitivity": {
-      "attempt_id": 6,
-      "duration_s": 281.16495158919133,
-      "stdout_preview": "PROGRESS ten-isolated-behavioral-mutants elapsed_s=30\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=60\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=90\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=120\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=150\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=180\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=210\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=240\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=270\nL1_CHECK_PASS defects/ten-isolated-behavioral-mutants\nevidence/preparation/portable-l1-defects-20261031T015944835389Z/receipt.json\nL1_SUITE_PASS defects checks=1\n",
+      "attempt_id": 14,
+      "duration_s": 291.6571576211136,
+      "stdout_preview": "PROGRESS ten-isolated-behavioral-mutants elapsed_s=30\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=60\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=90\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=120\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=150\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=180\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=210\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=240\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=270\nL1_CHECK_PASS defects/ten-isolated-behavioral-mutants\nevidence/preparation/portable-l1-defects-20261031T075815435666Z/receipt.json\nL1_SUITE_PASS defects checks=1\n",
       "receipt_count": 1,
       "receipts": [
         {
-          "path": "evidence/preparation/portable-l1-defects-20261031T015944835389Z/receipt.json",
+          "path": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/receipt.json",
           "data": {
             "advisory": true,
             "argv": [
@@ -24,7 +24,7 @@
               "defects"
             ],
             "cwd": ".",
-            "start": "2026-10-31T01:59:44.835621+00:00",
+            "start": "2026-10-31T07:58:15.435935+00:00",
             "source_hashes": {
               "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
               "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
@@ -65,8 +65,8 @@
               "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
               "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
               "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-              "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-              "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+              "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+              "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
               "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
               "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
               "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -158,10 +158,10 @@
                   "--version"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T01:59:44.847405+00:00",
+                "start": "2026-10-31T07:58:15.457429+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/preparation/portable-l1-defects-20261031T015944835389Z/runtime-python-version.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-defects-20261031T015944835389Z/runtime-python-version.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/runtime-python-version.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/runtime-python-version.stderr.txt",
                 "tool_version_query": true,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -203,8 +203,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -289,11 +289,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3164479,
+                "pid": 1305103,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T01:59:44.863202+00:00",
-                "elapsed_s": 0.0044218499679118395
+                "end": "2026-10-31T07:58:15.483260+00:00",
+                "elapsed_s": 0.0051891428884118795
               },
               {
                 "argv": [
@@ -301,10 +301,10 @@
                   "tests/defect_checks.py"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T01:59:44.863891+00:00",
+                "start": "2026-10-31T07:58:15.484225+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-defects-20261031T015944835389Z/ten-isolated-behavioral-mutants.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-defects-20261031T015944835389Z/ten-isolated-behavioral-mutants.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/ten-isolated-behavioral-mutants.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/ten-isolated-behavioral-mutants.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -346,8 +346,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -432,15 +432,15 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3164480,
+                "pid": 1305105,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:04:25.819056+00:00",
-                "elapsed_s": 280.94387798407115
+                "end": "2026-10-31T08:03:06.874307+00:00",
+                "elapsed_s": 291.3698417120613
               }
             ],
             "repair_of": null,
-            "end": "2026-10-31T02:04:25.847710+00:00",
+            "end": "2026-10-31T08:03:06.899710+00:00",
             "outcome": "passed",
             "error": null
           }
@@ -448,13 +448,13 @@
       ]
     },
     "check:portable-reproduction": {
-      "attempt_id": 8,
-      "duration_s": 15.911639006109908,
-      "stdout_preview": "L1_CHECK_PASS portability/fresh-source-only-reproduction\nevidence/preparation/portable-l1-portability-20261031T021154544329Z/receipt.json\nL1_SUITE_PASS portability checks=1\n",
+      "attempt_id": 16,
+      "duration_s": 17.241671439027414,
+      "stdout_preview": "L1_CHECK_PASS portability/fresh-source-only-reproduction\nevidence/preparation/portable-l1-portability-20261031T081110448724Z/receipt.json\nL1_SUITE_PASS portability checks=1\n",
       "receipt_count": 1,
       "receipts": [
         {
-          "path": "evidence/preparation/portable-l1-portability-20261031T021154544329Z/receipt.json",
+          "path": "evidence/preparation/portable-l1-portability-20261031T081110448724Z/receipt.json",
           "data": {
             "advisory": true,
             "argv": [
@@ -463,7 +463,7 @@
               "portability"
             ],
             "cwd": ".",
-            "start": "2026-10-31T02:11:54.544613+00:00",
+            "start": "2026-10-31T08:11:10.448987+00:00",
             "source_hashes": {
               "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
               "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
@@ -504,8 +504,8 @@
               "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
               "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
               "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-              "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-              "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+              "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+              "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
               "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
               "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
               "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -597,10 +597,10 @@
                   "--version"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:11:54.565908+00:00",
+                "start": "2026-10-31T08:11:10.470501+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/preparation/portable-l1-portability-20261031T021154544329Z/runtime-python-version.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-portability-20261031T021154544329Z/runtime-python-version.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-portability-20261031T081110448724Z/runtime-python-version.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-portability-20261031T081110448724Z/runtime-python-version.stderr.txt",
                 "tool_version_query": true,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -642,8 +642,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -728,11 +728,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3227293,
+                "pid": 1520818,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:11:54.591811+00:00",
-                "elapsed_s": 0.004903658991679549
+                "end": "2026-10-31T08:11:10.496873+00:00",
+                "elapsed_s": 0.005225250031799078
               },
               {
                 "argv": [
@@ -740,10 +740,10 @@
                   "tests/portability_checks.py"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:11:54.592754+00:00",
+                "start": "2026-10-31T08:11:10.497866+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-portability-20261031T021154544329Z/fresh-source-only-reproduction.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-portability-20261031T021154544329Z/fresh-source-only-reproduction.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-portability-20261031T081110448724Z/fresh-source-only-reproduction.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-portability-20261031T081110448724Z/fresh-source-only-reproduction.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -785,8 +785,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -871,15 +871,15 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3227294,
+                "pid": 1520823,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:12:10.262740+00:00",
-                "elapsed_s": 15.649348319042474
+                "end": "2026-10-31T08:11:27.487911+00:00",
+                "elapsed_s": 16.969619404058903
               }
             ],
             "repair_of": null,
-            "end": "2026-10-31T02:12:10.287905+00:00",
+            "end": "2026-10-31T08:11:27.513006+00:00",
             "outcome": "passed",
             "error": null
           }
@@ -887,13 +887,13 @@
       ]
     },
     "check:synthesis": {
-      "attempt_id": 7,
-      "duration_s": 443.15711464500055,
-      "stdout_preview": "L1_CHECK_PASS synthesis/parameter-diagnostics-and-source-invariants\nPROGRESS furnace_x1_top elapsed_s=30\nL1_CHECK_PASS synthesis/furnace_x1_top\nPROGRESS furnace_x2_top elapsed_s=30\nL1_CHECK_PASS synthesis/furnace_x2_top\nPROGRESS complete-x3-C0 elapsed_s=30\nPROGRESS complete-x3-C0 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C0\nPROGRESS complete-x3-C1 elapsed_s=30\nPROGRESS complete-x3-C1 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C1\nPROGRESS complete-x3-C2 elapsed_s=30\nPROGRESS complete-x3-C2 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C2\nPROGRESS complete-x3-C3 elapsed_s=30\nPROGRESS complete-x3-C3 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C3\nPROGRESS complete-x3-C4 elapsed_s=30\nPROGRESS complete-x3-C4 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C4\nevidence/preparation/portable-l1-synthesis-20261031T020428905380Z/receipt.json\nL1_SUITE_PASS synthesis checks=8\n",
+      "attempt_id": 15,
+      "duration_s": 477.56891846307553,
+      "stdout_preview": "L1_CHECK_PASS synthesis/parameter-diagnostics-and-source-invariants\nPROGRESS furnace_x1_top elapsed_s=30\nL1_CHECK_PASS synthesis/furnace_x1_top\nPROGRESS furnace_x2_top elapsed_s=30\nPROGRESS furnace_x2_top elapsed_s=60\nL1_CHECK_PASS synthesis/furnace_x2_top\nPROGRESS complete-x3-C0 elapsed_s=30\nPROGRESS complete-x3-C0 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C0\nPROGRESS complete-x3-C1 elapsed_s=30\nPROGRESS complete-x3-C1 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C1\nPROGRESS complete-x3-C2 elapsed_s=30\nPROGRESS complete-x3-C2 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C2\nPROGRESS complete-x3-C3 elapsed_s=30\nPROGRESS complete-x3-C3 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C3\nPROGRESS complete-x3-C4 elapsed_s=30\nPROGRESS complete-x3-C4 elapsed_s=60\nL1_CHECK_PASS synthesis/complete-x3-C4\nevidence/preparation/portable-l1-synthesis-20261031T080310085203Z/receipt.json\nL1_SUITE_PASS synthesis checks=8\n",
       "receipt_count": 1,
       "receipts": [
         {
-          "path": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/receipt.json",
+          "path": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/receipt.json",
           "data": {
             "advisory": true,
             "argv": [
@@ -902,7 +902,7 @@
               "synthesis"
             ],
             "cwd": ".",
-            "start": "2026-10-31T02:04:28.905701+00:00",
+            "start": "2026-10-31T08:03:10.085499+00:00",
             "source_hashes": {
               "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
               "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
@@ -943,8 +943,8 @@
               "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
               "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
               "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-              "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-              "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+              "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+              "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
               "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
               "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
               "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -1036,10 +1036,10 @@
                   "--version"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:04:28.927281+00:00",
+                "start": "2026-10-31T08:03:10.106633+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/runtime-python-version.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/runtime-python-version.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/runtime-python-version.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/runtime-python-version.stderr.txt",
                 "tool_version_query": true,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -1081,8 +1081,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -1167,11 +1167,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3188391,
+                "pid": 1385033,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:04:28.953357+00:00",
-                "elapsed_s": 0.0055464578326791525
+                "end": "2026-10-31T08:03:10.130596+00:00",
+                "elapsed_s": 0.0038510768208652735
               },
               {
                 "argv": [
@@ -1179,10 +1179,10 @@
                   "tests/parameter_checks.py"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:04:28.954962+00:00",
+                "start": "2026-10-31T08:03:10.131544+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/parameter-diagnostics-and-source-invariants.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/parameter-diagnostics-and-source-invariants.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/parameter-diagnostics-and-source-invariants.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/parameter-diagnostics-and-source-invariants.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -1224,8 +1224,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -1310,11 +1310,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3188394,
+                "pid": 1385034,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:04:40.220418+00:00",
-                "elapsed_s": 11.245113339042291
+                "end": "2026-10-31T08:03:21.496086+00:00",
+                "elapsed_s": 11.343612966127694
               },
               {
                 "argv": [
@@ -1324,10 +1324,10 @@
                   "furnace_x1_top"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:04:40.222862+00:00",
+                "start": "2026-10-31T08:03:21.498345+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/furnace_x1_top.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/furnace_x1_top.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/furnace_x1_top.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/furnace_x1_top.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -1369,8 +1369,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -1455,11 +1455,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3189038,
+                "pid": 1388090,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:05:34.531139+00:00",
-                "elapsed_s": 54.283633856801316
+                "end": "2026-10-31T08:04:20.359066+00:00",
+                "elapsed_s": 58.83651656494476
               },
               {
                 "argv": [
@@ -1469,10 +1469,10 @@
                   "furnace_x2_top"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:05:34.533753+00:00",
+                "start": "2026-10-31T08:04:20.361514+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/furnace_x2_top.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/furnace_x2_top.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/furnace_x2_top.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/furnace_x2_top.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -1514,8 +1514,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -1600,11 +1600,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3193911,
+                "pid": 1391413,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:06:31.280732+00:00",
-                "elapsed_s": 56.72219275706448
+                "end": "2026-10-31T08:05:23.559893+00:00",
+                "elapsed_s": 63.17292503709905
               },
               {
                 "argv": [
@@ -1614,10 +1614,10 @@
                   "C0"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:06:31.283479+00:00",
+                "start": "2026-10-31T08:05:23.562612+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C0.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C0.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C0.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C0.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -1659,8 +1659,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -1745,11 +1745,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3197017,
+                "pid": 1400181,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:07:33.779456+00:00",
-                "elapsed_s": 62.47034506010823
+                "end": "2026-10-31T08:06:29.671430+00:00",
+                "elapsed_s": 66.08088370994665
               },
               {
                 "argv": [
@@ -1759,10 +1759,10 @@
                   "C1"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:07:33.782023+00:00",
+                "start": "2026-10-31T08:06:29.675072+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C1.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C1.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C1.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C1.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -1804,8 +1804,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -1890,11 +1890,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3201757,
+                "pid": 1440344,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:08:36.075267+00:00",
-                "elapsed_s": 62.27259269799106
+                "end": "2026-10-31T08:07:37.538374+00:00",
+                "elapsed_s": 67.8371330788359
               },
               {
                 "argv": [
@@ -1904,10 +1904,10 @@
                   "C2"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:08:36.078832+00:00",
+                "start": "2026-10-31T08:07:37.541805+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C2.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C2.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C2.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C2.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -1949,8 +1949,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -2035,11 +2035,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3207960,
+                "pid": 1478570,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:09:40.735045+00:00",
-                "elapsed_s": 64.62956576305442
+                "end": "2026-10-31T08:08:46.358641+00:00",
+                "elapsed_s": 68.79042125120759
               },
               {
                 "argv": [
@@ -2049,10 +2049,10 @@
                   "C3"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:09:40.738732+00:00",
+                "start": "2026-10-31T08:08:46.362252+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C3.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C3.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C3.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C3.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -2094,8 +2094,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -2180,11 +2180,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3215792,
+                "pid": 1488222,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:10:46.997725+00:00",
-                "elapsed_s": 66.23196952790022
+                "end": "2026-10-31T08:09:55.229015+00:00",
+                "elapsed_s": 68.8402012779843
               },
               {
                 "argv": [
@@ -2194,10 +2194,10 @@
                   "C4"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T02:10:47.001611+00:00",
+                "start": "2026-10-31T08:09:55.233060+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C4.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/complete-x3-C4.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C4.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/complete-x3-C4.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -2239,8 +2239,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "10fef9f64501e880662f898c3517ff7253de5a8bfdccddb34572b02cf3ada9f7",
-                  "design/SPEC.md": "46c655b9521c88904d53adcafa916fd5bc0a52e8f093c125d528443d1ba5d8bc",
+                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
+                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -2325,15 +2325,15 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 3223311,
+                "pid": 1506207,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T02:11:51.856715+00:00",
-                "elapsed_s": 64.82869780994952
+                "end": "2026-10-31T08:11:07.456138+00:00",
+                "elapsed_s": 72.1956006551627
               }
             ],
             "repair_of": null,
-            "end": "2026-10-31T02:11:51.883901+00:00",
+            "end": "2026-10-31T08:11:07.479613+00:00",
             "outcome": "passed",
             "error": null
           }
