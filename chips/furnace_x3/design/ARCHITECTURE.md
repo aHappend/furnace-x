@@ -316,5 +316,51 @@ before the final mailbox notification. Failure propagation and software
 layout/error ABI are detailed in `SPEC.md` and `firmware/README.md`.
 
 Independent Verifier owns test sources/models, functional experiments,
-mutation evidence and complete-hierarchy synthesis. No functional,
-numerical, synthesis, timing or physical result is asserted here.
+mutation evidence and complete-hierarchy synthesis. The measured status
+below distinguishes those executed checks from physical implementation
+and workload acceptance.
+
+## Measured verification and implementation scope
+
+The [SPEC evidence index](SPEC.md#independent-acceptance-and-reproduction)
+links the four current L1 receipts, retained tool-version logs and unchanged
+coverage contract. Shared-runtime attempts 5..8 passed behavior (86 checks),
+defect sensitivity (10 detected mutants with passing original controls),
+synthesis (8 checks) and fresh-source portability (1 check), with exit zero
+and settled scopes. Their preparation-format receipts remain `advisory: true`;
+runtime attempt admission, not receipt location, establishes the check result.
+The document hashes in those receipts predate this documentation-only repair.
+No RTL, firmware or verification source changed, and no simulations were rerun.
+
+| Tier | Observation | Limitation |
+|---|---|---|
+| L1 | Compact Icarus behavior, full compiled-Verilator matrix, independent CPU/device/graph and bit-exact numerical/crypto comparisons, mutations, Yosys synthesis and fresh-copy smoke passed the recorded suites. | Simulation and structural synthesis are not on-board workload or timing proof. |
+| L1.5 | Native [timing lint](../.vulcan/engineering/run-0001/rtl-timing-lint.json) passed with zero division/modulo and mixed-assignment hazards. | Structural lint is not STA. |
+| L2 | Native [Quartus receipt](../.vulcan/engineering/run-0001/quartus-sta.json) reports passed at 10.000 ns; setup +5.672 ns, hold -0.203 ns, 20 failing hold paths. | `fit_mode=plan_plus_post_map_sta`, `sta_summary.netlist_mode=post_map`; not post-fit/all-slack closure. |
+| L3 | Native [board receipt](../.vulcan/engineering/run-0001/board-hil.json) reports three deterministic register-57 reads, value 178 (0xb2). | `L3_BRIDGE_CONNECTIVITY_PROBE_ONLY`; no X3 flashing or on-board firmware/engine workload is evidenced. |
+| L4 | No executed OS/Linux boot is evidenced. | No L4 pass is claimed or new check introduced. |
+
+The [successful fitter summary](../.vulcan/engineering/run-0001/quartus_sta_work/top.fit.summary)
+uses Quartus Prime 17.1.0 Build 590 Standard Edition and targets
+`10AX115N2F45E1SG`. Completed fitter resources are **226557 ALMs,
+297056 registers, 567188 block-memory bits, reported `m20k_ram_blocks=0`,
+114 DSPs and 1517 virtual pins**. These completed fitter measurements do
+not change the separately recorded post-map STA scope. Preserve the reported
+memory fields without converting bits into an assumed M20K count or treating
+RAM attributes as proof of physical block-RAM inference. Virtual-pin fitting
+does not establish board I/O, DDR PHY or PCIe implementation. Neither maximum
+physical workload throughput nor unqualified 100 MHz timing closure follows
+from these observations.
+
+Runtime links above are project-relative audit references, not deliverable
+source selectors or portable execution dependencies. Historical failed probes
+remain retained; later passes do not erase them. The resolved ENOSPC transport
+failure is distinct from attempt 9's normally completed review, which rejected
+stale delivery claims. The missing `design/GENERATIONAL_HANDOFF.md` and
+unavailable historical parent timing/PPA remain disclosed, not reconstructed.
+
+Verifier's `evidence/verification-receipts.json`,
+`evidence/ppa-resource-summary.json` and independent claim/link audit are
+pending at this Designer handoff. The unchanged acceptance contract still
+requires independent engineering delivery approval; the runtime authors,
+independently reviews and renders the product PDF only after that acceptance.

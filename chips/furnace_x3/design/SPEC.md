@@ -9,9 +9,12 @@ functional verification, timing closure, hardware acceptance, or delivery approv
 
 The design now includes the connected X3 RTL hierarchy and a project-local
 RV64IM scheduler source, deterministic image builder and default executable
-image. All 26 parent modules remain unchanged. Independent behavioral,
-numerical, mutation and synthesis verification is still pending; no passing
-SoC, timing, physical-board or delivery result is asserted.
+image. All 26 parent modules remain unchanged. The four portable L1 suites
+passed in shared-runtime attempts 5..8; retained receipts and measured native
+gate scopes are documented below. These results are not delivery approval:
+STA is recorded as post-map with negative hold slack, and the physical-board
+receipt covers connectivity only, not X3 firmware workloads. Independent
+delivery approval remains pending.
 
 ## Provenance
 
@@ -366,23 +369,53 @@ python3 tests/verify.py --suite synthesis
 python3 tests/verify.py --suite portability
 ```
 
-These are required Verifier-owned entry points, not currently executed
-results. Dependencies: Python3, Icarus/vvp, Verilator, make, g++ and Yosys
-with a compatible SV path. Icarus Verilog12.0 (stable) performed a static
-default-parameter elaboration of the first eight new leaf/fabric modules.
-The current complete X3 and preserved standalone X1/X2 tops also statically
-elaborate with that compiler. Neither check ran vvp, functional simulation
-or synthesis. Retained advisory receipts:
+These Verifier-owned commands executed successfully in shared-runtime
+attempts 5..8, respectively, with exit zero and settled process scopes.
+The linked L1 receipts use the verification runner's `advisory: true`
+preparation format; their location alone does not admit a check. Admission
+is through the corresponding runtime attempt, not a promotion of arbitrary
+preparation evidence. The archived results precede this documentation-only
+repair; their captured document hashes are historical, not hashes of these
+updated documents. RTL, firmware and tests are unchanged by this repair.
 
-```
-evidence/preparation/static-elaboration-20261030T133847971990Z/receipt.json
-evidence/preparation/x3-static-elaboration-20261030T135157024762Z/receipt.json
-```
+| L1 suite | Runtime attempt | Recorded result | Retained receipt |
+|---|---:|---|---|
+| behavior | 5 | Passed, 86 checks | [behavior](../evidence/preparation/portable-l1-behavior-20261030T214803278789Z/receipt.json) |
+| defects | 6 | Passed, 1 orchestration check; 10 detected mutants with passing original controls | [defects](../evidence/preparation/portable-l1-defects-20261031T015944835389Z/receipt.json) |
+| synthesis | 7 | Passed, 8 checks | [synthesis](../evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/receipt.json) |
+| portability | 8 | Passed, 1 fresh-source reproduction check | [portability](../evidence/preparation/portable-l1-portability-20261031T021154544329Z/receipt.json) |
 
-Both compiler exits were zero; no failed preparation probe is being replaced.
-Python3.12.3 generated the current 2868-byte default firmware image.
-Other dependency versions have not yet been established.
-No installation is authorized by this source increment.
+L1 covers real compact Icarus simulation, compiled-Verilator matrix runs,
+independent architectural/device/graph and numerical/crypto comparisons,
+behavioral mutations, Yosys structural synthesis and fresh-copy execution.
+For example, the retained [C4 matrix log](../evidence/preparation/portable-l1-behavior-20261030T214803278789Z/firmware-matrix-C4.stdout.txt)
+records all three seeds completing with 4,325,376 compared bytes each.
+These are simulation observations, not physical-board workload measurements.
+
+Dependencies are Python3, Icarus/vvp, Verilator, make, g++ and Yosys with
+the retained compatible SV lowering path. Versions established by retained
+logs, rather than a new environment query, are:
+
+| Tool | Recorded version | Retained log |
+|---|---|---|
+| Python | 3.12.3 | [version](../evidence/preparation/portable-l1-behavior-20261030T214803278789Z/runtime-python-version.stdout.txt) |
+| Icarus Verilog | 12.0 (stable) | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-iverilog.stdout.txt) |
+| vvp | 12.0 (stable) | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-vvp.stderr.txt) |
+| Verilator | 5.020, Debian 5.020-1 | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-verilator.stdout.txt) |
+| GNU Make | 4.3 | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-make.stdout.txt) |
+| g++ | 13.3.0, Ubuntu 13.3.0-6ubuntu2~24.04.1 | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-g++.stdout.txt) |
+| Yosys | 0.33, git 2584903a060 | [version](../evidence/preparation/complete-hierarchy-synthesis-20261031T021047243016Z/yosys-version.stdout.txt) |
+| Quartus Prime | 17.1.0 Build 590, Standard Edition | [fitter summary](../.vulcan/engineering/run-0001/quartus_sta_work/top.fit.summary) |
+
+Earlier static-only receipts remain advisory historical evidence:
+`evidence/preparation/static-elaboration-20261030T133847971990Z/receipt.json`
+and `evidence/preparation/x3-static-elaboration-20261030T135157024762Z/receipt.json`.
+They are not substitutes for the executed L1 suites. Historical failed probes
+remain retained and are not reclassified by later passing runs. The earlier
+ENOSPC transport failure was resolved; attempt 9 completed normally but
+Reviewer rejected stale delivery claims, not a demonstrated RTL failure.
+No unchanged simulation was rerun for this documentation repair, and no
+installation is authorized.
 
 Behavior requires real Icarus compact smoke, full compiled-Verilator
 C0..C4 cells with seeds17/89/2027, independent CPU/device/graph and
@@ -426,3 +459,47 @@ Zero combinational division/modulo and no mixed blocking/nonblocking
 sequential assignments are mandatory. No timing waiver is presumed.
 The runtime-authored, independently approved product PDF follows engineering
 acceptance and is not an earlier verification prerequisite.
+
+## Measured native tiers and remaining limitations
+
+The following links identify authoritative shared-runtime records for audit
+only. Runtime metadata is not a deliverable design/verification source or a
+portable execution dependency. Recorded gate status does not broaden the
+workload or netlist actually measured, nor change any acceptance threshold.
+
+| Tier | Recorded result and exact scope |
+|---|---|
+| L1.5 | [rtl-timing-lint.json](../.vulcan/engineering/run-0001/rtl-timing-lint.json) reports passed for 39 RTL files, zero division/modulo hazards and zero mixed-assignment hazards. This is not STA certification. |
+| L2 | [quartus-sta.json](../.vulcan/engineering/run-0001/quartus-sta.json) reports passed at 10.000 ns, setup WNS +5.672 ns, hold WNS -0.203 ns and 20 failing hold paths. Its `fit_mode` is `plan_plus_post_map_sta`; `sta_summary.netlist_mode` is `post_map`. |
+| L3 | [board-hil.json](../.vulcan/engineering/run-0001/board-hil.json) reports passed and `L3_BRIDGE_CONNECTIVITY_PROBE_ONLY`: three deterministic register-57 reads returning 178 (0xb2). No X3 bitstream flashing or on-board firmware/engine workload execution is evidenced. |
+| L4 | No executed OS/Linux boot is evidenced. No L4 pass is claimed or new check added. |
+
+The [completed fitter summary](../.vulcan/engineering/run-0001/quartus_sta_work/top.fit.summary)
+reports success for `furnace_x3_top` on `10AX115N2F45E1SG`. Its resources,
+also recorded in the native receipt, are:
+
+| Resource field | Recorded value |
+|---|---:|
+| ALMs | 226557 |
+| Registers | 297056 |
+| Block-memory bits | 567188 |
+| `m20k_ram_blocks` | 0 |
+| DSP blocks | 114 |
+| Virtual pins | 1517 |
+
+Completed fitting/resource accounting is distinct from the receipt's
+post-map STA netlist scope. Neither the positive setup slack nor the
+native `passed` label establishes post-fit, all-slack timing closure.
+Negative hold slack is explicitly retained. The 1517 virtual pins bound
+the implementation scope; these results do not prove physical board I/O,
+DDR PHY or PCIe integration. Reported block-memory bits and zero reported
+RAM blocks are preserved exactly, without inferring an M20K count or
+successful local-memory block-RAM inference from RTL attributes.
+
+Missing parent `GENERATIONAL_HANDOFF.md` and historical PPA remain unresolved
+provenance limitations. All original coverage, timing, physical workload
+and independent-review requirements remain unchanged. Verifier must author
+`evidence/verification-receipts.json` and `evidence/ppa-resource-summary.json`
+and audit these claims/links; those summaries are not yet present at this
+Designer handoff. Engineering delivery approval and the subsequent
+runtime-owned independently approved product PDF remain pending.

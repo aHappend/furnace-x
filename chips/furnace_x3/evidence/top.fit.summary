@@ -1,0 +1,28 @@
+Fully registered fixed point DSP blocks : 2 / 114 ( 2 % )
+Partially registered fixed point DSP blocks : 64 / 114 ( 56 % )
+Unregistered fixed point DSP blocks : 48 / 114 ( 42 % )
+ : 
+Reasons candidate registers could not be packed: : 
+  Overuse     - Control signal overuse (requires more clock/enable or clears than are available) : 8 / 114 ( 7 % )
+  Mismatch    - Control signal mismatch (different clock/enable or clears pack to same register bank) : 20 / 114 ( 18 % )
+  Vcc         - Input tied to Vcc : 75 / 114 ( 66 % )
+  NoOuptutFF  - Output connected to something other than a register : 12 / 114 ( 11 % )
+Fitter Status : Successful - Fri Oct 30 20:34:17 2026
+Quartus Prime Version : 17.1.0 Build 590 10/25/2017 SJ Standard Edition
+Revision Name : top
+Top-level Entity Name : furnace_x3_top
+Family : Arria 10
+Device : 10AX115N2F45E1SG
+Timing Models : Final
+Logic utilization (in ALMs) : 226,557 / 427,200 ( 53 % )
+  * Logic utilization warning : A large number of ALMs contain virtual pins and count towards logic utilization
+  * ALMs containing virtual pins : 759 / 427,200 ( < 1 % )
+Total registers : 297056
+Total pins : 0 / 992 ( 0 % )
+Total virtual pins : 1,517
+Total block memory bits : 567,188 / 55,562,240 ( 1 % )
+Total RAM Blocks : 0 / 2,713 ( 0 % )
+Total DSP Blocks : 114 / 1,518 ( 8 % )
+Total HSSI RX channels : 0 / 48 ( 0 % )
+Total HSSI TX channels : 0 / 48 ( 0 % )
+Total PLLs : 0 / 112 ( 0 % )
