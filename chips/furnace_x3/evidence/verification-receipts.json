@@ -2,20 +2,20 @@
   "chip": "Furnace-X3",
   "passed_checks": {
     "check:behavior": {
-      "attempt_id": 13,
-      "duration_s": 15080.359252022812,
-      "stdout_preview": "_s=11730\nPROGRESS firmware-matrix-C4 elapsed_s=11760\nPROGRESS firmware-matrix-C4 elapsed_s=11790\nPROGRESS firmware-matrix-C4 elapsed_s=11820\nPROGRESS firmware-matrix-C4 elapsed_s=11850\nPROGRESS firmware-matrix-C4 elapsed_s=11880\nPROGRESS firmware-matrix-C4 elapsed_s=11910\nPROGRESS firmware-matrix-C4 elapsed_s=11940\nPROGRESS firmware-matrix-C4 elapsed_s=11970\nPROGRESS firmware-matrix-C4 elapsed_s=12000\nPROGRESS firmware-matrix-C4 elapsed_s=12030\nPROGRESS firmware-matrix-C4 elapsed_s=12060\nPROGRESS firmware-matrix-C4 elapsed_s=12090\nPROGRESS firmware-matrix-C4 elapsed_s=12120\nPROGRESS firmware-matrix-C4 elapsed_s=12150\nPROGRESS firmware-matrix-C4 elapsed_s=12180\nPROGRESS firmware-matrix-C4 elapsed_s=12210\nPROGRESS firmware-matrix-C4 elapsed_s=12240\nPROGRESS firmware-matrix-C4 elapsed_s=12270\nPROGRESS firmware-matrix-C4 elapsed_s=12300\nPROGRESS firmware-matrix-C4 elapsed_s=12330\nPROGRESS firmware-matrix-C4 elapsed_s=12360\nPROGRESS firmware-matrix-C4 elapsed_s=12390\nL1_CHECK_PASS behavior/firmware-matrix-C4\nL1_CHECK_PASS behavior/preserved-public-interfaces\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed17\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed17\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed89\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed89\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed2027\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed2027\nevidence/preparation/portable-l1-behavior-20261031T034652019790Z/receipt.json\nL1_SUITE_PASS behavior checks=86\n",
+      "attempt_id": 21,
+      "duration_s": 15189.932198171038,
+      "stdout_preview": "_s=11820\nPROGRESS firmware-matrix-C4 elapsed_s=11850\nPROGRESS firmware-matrix-C4 elapsed_s=11880\nPROGRESS firmware-matrix-C4 elapsed_s=11910\nPROGRESS firmware-matrix-C4 elapsed_s=11940\nPROGRESS firmware-matrix-C4 elapsed_s=11970\nPROGRESS firmware-matrix-C4 elapsed_s=12000\nPROGRESS firmware-matrix-C4 elapsed_s=12030\nPROGRESS firmware-matrix-C4 elapsed_s=12060\nPROGRESS firmware-matrix-C4 elapsed_s=12090\nPROGRESS firmware-matrix-C4 elapsed_s=12120\nPROGRESS firmware-matrix-C4 elapsed_s=12150\nPROGRESS firmware-matrix-C4 elapsed_s=12180\nPROGRESS firmware-matrix-C4 elapsed_s=12210\nPROGRESS firmware-matrix-C4 elapsed_s=12240\nPROGRESS firmware-matrix-C4 elapsed_s=12270\nPROGRESS firmware-matrix-C4 elapsed_s=12300\nPROGRESS firmware-matrix-C4 elapsed_s=12330\nPROGRESS firmware-matrix-C4 elapsed_s=12360\nPROGRESS firmware-matrix-C4 elapsed_s=12390\nPROGRESS firmware-matrix-C4 elapsed_s=12420\nPROGRESS firmware-matrix-C4 elapsed_s=12450\nPROGRESS firmware-matrix-C4 elapsed_s=12480\nL1_CHECK_PASS behavior/firmware-matrix-C4\nL1_CHECK_PASS behavior/preserved-public-interfaces\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed17\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed17\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed89\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed89\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed2027\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed2027\nevidence/preparation/portable-l1-behavior-20261031T094216652239Z/receipt.json\nL1_SUITE_PASS behavior checks=86\n",
       "receipt_count": 0,
       "receipts": []
     },
     "check:defect-sensitivity": {
-      "attempt_id": 14,
-      "duration_s": 291.6571576211136,
-      "stdout_preview": "PROGRESS ten-isolated-behavioral-mutants elapsed_s=30\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=60\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=90\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=120\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=150\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=180\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=210\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=240\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=270\nL1_CHECK_PASS defects/ten-isolated-behavioral-mutants\nevidence/preparation/portable-l1-defects-20261031T075815435666Z/receipt.json\nL1_SUITE_PASS defects checks=1\n",
+      "attempt_id": 22,
+      "duration_s": 281.59172622906044,
+      "stdout_preview": "PROGRESS ten-isolated-behavioral-mutants elapsed_s=30\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=60\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=90\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=120\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=150\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=180\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=210\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=240\nPROGRESS ten-isolated-behavioral-mutants elapsed_s=270\nL1_CHECK_PASS defects/ten-isolated-behavioral-mutants\nevidence/preparation/portable-l1-defects-20261031T135530400418Z/receipt.json\nL1_SUITE_PASS defects checks=1\n",
       "receipt_count": 1,
       "receipts": [
         {
-          "path": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/receipt.json",
+          "path": "evidence/preparation/portable-l1-defects-20261031T135530400418Z/receipt.json",
           "data": {
             "advisory": true,
             "argv": [
@@ -24,7 +24,7 @@
               "defects"
             ],
             "cwd": ".",
-            "start": "2026-10-31T07:58:15.435935+00:00",
+            "start": "2026-10-31T13:55:30.400631+00:00",
             "source_hashes": {
               "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
               "rtl/furnace_aes128_gcm.sv": "56da763dfba487ef8b80bcec824e275cf541e17400d1ec1c6be59c55a3291a30",
@@ -65,8 +65,8 @@
               "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
               "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
               "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-              "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
-              "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
+              "design/ARCHITECTURE.md": "ea7d126e08ea9814f3345f59d7d1b0ea8241d13d86c00d5628ff49efcdb85a27",
+              "design/SPEC.md": "144519cff6cc519ca54543fafb0deb673c990565a3dd3691697bf2ad6433949b",
               "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
               "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
               "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -158,10 +158,10 @@
                   "--version"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T07:58:15.457429+00:00",
+                "start": "2026-10-31T13:55:30.417448+00:00",
                 "timeout_s": 3600,
-                "stdout": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/runtime-python-version.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/runtime-python-version.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-defects-20261031T135530400418Z/runtime-python-version.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-defects-20261031T135530400418Z/runtime-python-version.stderr.txt",
                 "tool_version_query": true,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -203,8 +203,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
-                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
+                  "design/ARCHITECTURE.md": "ea7d126e08ea9814f3345f59d7d1b0ea8241d13d86c00d5628ff49efcdb85a27",
+                  "design/SPEC.md": "144519cff6cc519ca54543fafb0deb673c990565a3dd3691697bf2ad6433949b",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -289,11 +289,11 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 1305103,
+                "pid": 318857,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T07:58:15.483260+00:00",
-                "elapsed_s": 0.0051891428884118795
+                "end": "2026-10-31T13:55:30.438537+00:00",
+                "elapsed_s": 0.005152103956788778
               },
               {
                 "argv": [
@@ -301,10 +301,10 @@
                   "tests/defect_checks.py"
                 ],
                 "cwd": ".",
-                "start": "2026-10-31T07:58:15.484225+00:00",
+                "start": "2026-10-31T13:55:30.439281+00:00",
                 "timeout_s": 7200,
-                "stdout": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/ten-isolated-behavioral-mutants.stdout.txt",
-                "stderr": "evidence/preparation/portable-l1-defects-20261031T075815435666Z/ten-isolated-behavioral-mutants.stderr.txt",
+                "stdout": "evidence/preparation/portable-l1-defects-20261031T135530400418Z/ten-isolated-behavioral-mutants.stdout.txt",
+                "stderr": "evidence/preparation/portable-l1-defects-20261031T135530400418Z/ten-isolated-behavioral-mutants.stderr.txt",
                 "tool_version_query": false,
                 "source_hashes": {
                   "rtl/furnace_aes128_block.sv": "750fd9035b2e4a944a27cd61d18025efeb0ac406c91d00282f24b84710c23a5a",
@@ -346,8 +346,8 @@
                   "rtl/furnace_x3_mmio_arb.sv": "e73633230e3bd45de35e2a8683ce19cee5e40ce92692748c1a9205a2584ee489",
                   "rtl/furnace_x3_top.sv": "fe8ced2ebdc867e3b5c2591635244554e99f5fe3f04578143b798e92da560539",
                   "rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2",
-                  "design/ARCHITECTURE.md": "e18380cf703e0d51e225da6364ebe0b1d921c1ee2af1ca2fa66e82e94fededf8",
-                  "design/SPEC.md": "be9cd4c8f5b8f466fc4b2d9900e524215b8a6a2855ea2b973e232af04e04886e",
+                  "design/ARCHITECTURE.md": "ea7d126e08ea9814f3345f59d7d1b0ea8241d13d86c00d5628ff49efcdb85a27",
+                  "design/SPEC.md": "144519cff6cc519ca54543fafb0deb673c990565a3dd3691697bf2ad6433949b",
                   "firmware/README.md": "e826cc030adc32562875f6dbb0e09f1ae0f133e4bf256548f7b41475b5e0c4a9",
                   "firmware/build.py": "39039d472ef2c64e5756b5206139daed71ee76659af9ac7925cc66b45b46ecdb",
                   "firmware/scheduler.S": "708d703909c590524a204c5153b609b4670ea83b9d845b942cf62a6499a2f4b8",
@@ -432,15 +432,15 @@
                   "furnace_x2_reference/rtl/furnace_x2_vision.sv": "490ba616c04abb247cec89ad9c4a252e8015d861c2588ef4a4246a234c2e094e",
                   "furnace_x2_reference/rtl/furnace_xxh32.sv": "802ba4168c5f9fdadc6764427d66f7cb43aef5d2b658d89ee32f8abf87e7e4f2"
                 },
-                "pid": 1305105,
+                "pid": 318858,
                 "exit": 0,
                 "timed_out": false,
-                "end": "2026-10-31T08:03:06.874307+00:00",
-                "elapsed_s": 291.3698417120613
+                "end": "2026-10-31T14:00:11.798184+00:00",
+                "elapsed_s": 281.34247295511886
               }
             ],
             "repair_of": null,
-            "end": "2026-10-31T08:03:06.899710+00:00",
+            "end": "2026-10-31T14:00:11.823870+00:00",
             "outcome": "passed",
             "error": null
           }
