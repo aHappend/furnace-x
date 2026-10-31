@@ -1,0 +1,11 @@
+{
+  "chip": "Furnace-X3",
+  "fitter_resources": {
+    "total_registers": 298478,
+    "block_memory_bits": 567188,
+    "dsp_blocks": 114,
+    "virtual_pins": 1517
+  },
+  "timing": {},
+  "verification_tiers": {}
+}
