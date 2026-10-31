@@ -10,7 +10,7 @@ functional verification, timing closure, hardware acceptance, or delivery approv
 The design now includes the connected X3 RTL hierarchy and a project-local
 RV64IM scheduler source, deterministic image builder and default executable
 image. All 26 parent modules remain unchanged. The four portable L1 suites
-passed in shared-runtime attempts 5..8; retained receipts and measured native
+passed in shared-runtime attempts 13..16; retained receipts and measured native
 gate scopes are documented below. These results are not delivery approval:
 STA is recorded as post-map with negative hold slack, and the physical-board
 receipt covers connectivity only, not X3 firmware workloads. Independent
@@ -370,26 +370,41 @@ python3 tests/verify.py --suite portability
 ```
 
 These Verifier-owned commands executed successfully in shared-runtime
-attempts 5..8, respectively, with exit zero and settled process scopes.
+attempts 13..16, respectively, with exit zero and settled process scopes.
 The linked L1 receipts use the verification runner's `advisory: true`
 preparation format; their location alone does not admit a check. Admission
 is through the corresponding runtime attempt, not a promotion of arbitrary
-preparation evidence. The archived results precede this documentation-only
-repair; their captured document hashes are historical, not hashes of these
-updated documents. RTL, firmware and tests are unchanged by this repair.
+preparation evidence. All four receipts matched 124/124 current source hashes
+before this documentation-only repair. Their captured document hashes are
+historical, not hashes of these updated documents. RTL, firmware and tests
+are unchanged by this repair.
 
-| L1 suite | Runtime attempt | Recorded result | Retained receipt |
-|---|---:|---|---|
-| behavior | 5 | Passed, 86 checks | [behavior](../evidence/preparation/portable-l1-behavior-20261030T214803278789Z/receipt.json) |
-| defects | 6 | Passed, 1 orchestration check; 10 detected mutants with passing original controls | [defects](../evidence/preparation/portable-l1-defects-20261031T015944835389Z/receipt.json) |
-| synthesis | 7 | Passed, 8 checks | [synthesis](../evidence/preparation/portable-l1-synthesis-20261031T020428905380Z/receipt.json) |
-| portability | 8 | Passed, 1 fresh-source reproduction check | [portability](../evidence/preparation/portable-l1-portability-20261031T021154544329Z/receipt.json) |
+| L1 suite | Runtime attempt | Recorded result | Retained receipt | Linked child receipts present |
+|---|---:|---|---|---:|
+| behavior | 13 | Passed, 86 checks | [behavior](../evidence/preparation/portable-l1-behavior-20261031T034652019790Z/receipt.json) | 22/86 |
+| defects | 14 | Passed, 1 orchestration check; 10 detected mutants with passing original controls | [defects](../evidence/preparation/portable-l1-defects-20261031T075815435666Z/receipt.json) | 1/1 |
+| synthesis | 15 | Passed, 8 checks | [synthesis](../evidence/preparation/portable-l1-synthesis-20261031T080310085203Z/receipt.json) | 2/8 |
+| portability | 16 | Passed, 1 fresh-source reproduction check | [portability](../evidence/preparation/portable-l1-portability-20261031T081110448724Z/receipt.json) | 1/1 |
+
+These are the current receipt-availability counts at this handoff, not the
+superseded audit of attempts 5..8. The 64 missing behavior children and six
+missing synthesis children remain retention gaps despite successful recorded
+suite exits. Escalate them to the shared runtime for preservation and recovery;
+do not reconstruct missing evidence or automatically rerun unchanged suites.
+Earlier results and failures remain historical, not replacements for this index.
 
 L1 covers real compact Icarus simulation, compiled-Verilator matrix runs,
 independent architectural/device/graph and numerical/crypto comparisons,
 behavioral mutations, Yosys structural synthesis and fresh-copy execution.
-For example, the retained [C4 matrix log](../evidence/preparation/portable-l1-behavior-20261030T214803278789Z/firmware-matrix-C4.stdout.txt)
-records all three seeds completing with 4,325,376 compared bytes each.
+For example, retained C4 matrix logs for
+[seed17](../evidence/preparation/firmware-matrix-c4-all-seeds-20261031T043122373435Z/simulate-seed17.stdout.txt),
+[seed89](../evidence/preparation/firmware-matrix-c4-all-seeds-20261031T043122373435Z/simulate-seed89.stdout.txt)
+and [seed2027](../evidence/preparation/firmware-matrix-c4-all-seeds-20261031T043122373435Z/simulate-seed2027.stdout.txt)
+each record 33 graphs, 66 descriptors, 33 frames, 33 mailbox transfers and
+4,325,376 compared bytes. The current
+[C4 synthesis result](../evidence/preparation/complete-hierarchy-synthesis-20261031T080955477111Z/structural.json),
+netlist and diagnostics also survive. These surviving artifacts do not restore
+the other missing child receipts or establish complete evidence retention.
 These are simulation observations, not physical-board workload measurements.
 
 Dependencies are Python3, Icarus/vvp, Verilator, make, g++ and Yosys with
@@ -398,13 +413,13 @@ logs, rather than a new environment query, are:
 
 | Tool | Recorded version | Retained log |
 |---|---|---|
-| Python | 3.12.3 | [version](../evidence/preparation/portable-l1-behavior-20261030T214803278789Z/runtime-python-version.stdout.txt) |
-| Icarus Verilog | 12.0 (stable) | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-iverilog.stdout.txt) |
-| vvp | 12.0 (stable) | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-vvp.stderr.txt) |
-| Verilator | 5.020, Debian 5.020-1 | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-verilator.stdout.txt) |
-| GNU Make | 4.3 | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-make.stdout.txt) |
-| g++ | 13.3.0, Ubuntu 13.3.0-6ubuntu2~24.04.1 | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261030T214803394984Z/tool-version-g++.stdout.txt) |
-| Yosys | 0.33, git 2584903a060 | [version](../evidence/preparation/complete-hierarchy-synthesis-20261031T021047243016Z/yosys-version.stdout.txt) |
+| Python | 3.12.3 | [version](../evidence/preparation/portable-l1-behavior-20261031T034652019790Z/runtime-python-version.stdout.txt) |
+| Icarus Verilog | 12.0 (stable) | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261031T034652148262Z/tool-version-iverilog.stdout.txt) |
+| vvp | 12.0 (stable) | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261031T034652148262Z/tool-version-vvp.stderr.txt) |
+| Verilator | 5.020, Debian 5.020-1 | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261031T034652148262Z/tool-version-verilator.stdout.txt) |
+| GNU Make | 4.3 | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261031T034652148262Z/tool-version-make.stdout.txt) |
+| g++ | 13.3.0, Ubuntu 13.3.0-6ubuntu2~24.04.1 | [version](../evidence/preparation/cross-simulator-seeded-stimulus-20261031T034652148262Z/tool-version-g++.stdout.txt) |
+| Yosys | 0.33, git 2584903a060 | [version](../evidence/preparation/complete-hierarchy-synthesis-20261031T080955477111Z/yosys-version.stdout.txt) |
 | Quartus Prime | 17.1.0 Build 590, Standard Edition | [fitter summary](../.vulcan/engineering/run-0001/quartus_sta_work/top.fit.summary) |
 
 Earlier static-only receipts remain advisory historical evidence:
@@ -496,10 +511,20 @@ DDR PHY or PCIe integration. Reported block-memory bits and zero reported
 RAM blocks are preserved exactly, without inferring an M20K count or
 successful local-memory block-RAM inference from RTL attributes.
 
+Shared-runtime follow-through must supply source-bound post-fit STA at
+<=10.0 ns with nonnegative setup and hold slack and zero failing hold paths,
+plus three consecutive deterministic physical X3 firmware-workload passes.
+Preserve the native passed statuses while recording their measured limits;
+neither connectivity reads nor completed fitting satisfy these missing scopes.
+No project `fpga/*` wrapper exists; do not infer board integration or an RTL
+repair from these records.
+
 Missing parent `GENERATIONAL_HANDOFF.md` and historical PPA remain unresolved
 provenance limitations. All original coverage, timing, physical workload
-and independent-review requirements remain unchanged. Verifier must author
-`evidence/verification-receipts.json` and `evidence/ppa-resource-summary.json`
-and audit these claims/links; those summaries are not yet present at this
-Designer handoff. Engineering delivery approval and the subsequent
+and independent-review requirements remain unchanged. The Verifier-owned
+[verification index](../evidence/verification-receipts.json) and
+[PPA/resource summary](../evidence/ppa-resource-summary.json) already exist,
+but still reference superseded L1 results/retention counts. Verifier must refresh
+them for attempts 13..16 and audit the changed claims/links without repeating
+unchanged simulations. Engineering delivery approval and the subsequent
 runtime-owned independently approved product PDF remain pending.

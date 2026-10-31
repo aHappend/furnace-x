@@ -7,7 +7,7 @@ Reasons candidate registers could not be packed: :
   Mismatch    - Control signal mismatch (different clock/enable or clears pack to same register bank) : 20 / 114 ( 18 % )
   Vcc         - Input tied to Vcc : 75 / 114 ( 66 % )
   NoOuptutFF  - Output connected to something other than a register : 12 / 114 ( 11 % )
-Fitter Status : Successful - Fri Oct 30 20:34:17 2026
+Fitter Status : Successful - Sat Oct 31 02:32:59 2026
 Quartus Prime Version : 17.1.0 Build 590 10/25/2017 SJ Standard Edition
 Revision Name : top
 Top-level Entity Name : furnace_x3_top

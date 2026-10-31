@@ -324,13 +324,22 @@ and workload acceptance.
 
 The [SPEC evidence index](SPEC.md#independent-acceptance-and-reproduction)
 links the four current L1 receipts, retained tool-version logs and unchanged
-coverage contract. Shared-runtime attempts 5..8 passed behavior (86 checks),
+coverage contract. Shared-runtime attempts 13..16 passed behavior (86 checks),
 defect sensitivity (10 detected mutants with passing original controls),
 synthesis (8 checks) and fresh-source portability (1 check), with exit zero
 and settled scopes. Their preparation-format receipts remain `advisory: true`;
 runtime attempt admission, not receipt location, establishes the check result.
-The document hashes in those receipts predate this documentation-only repair.
+All four receipts matched 124/124 source hashes before this documentation-only
+repair; their captured document hashes now predate these updated documents.
 No RTL, firmware or verification source changed, and no simulations were rerun.
+
+Current linked child-receipt availability is behavior 22/86, synthesis 2/8,
+defects 1/1 and portability 1/1, not the superseded audit of attempts 5..8.
+The [C4 matrix artifacts](../evidence/preparation/firmware-matrix-c4-all-seeds-20261031T043122373435Z/receipt.json)
+and [C4 synthesis artifacts](../evidence/preparation/complete-hierarchy-synthesis-20261031T080955477111Z/receipt.json)
+survive; their survival does not restore the 64 behavior and six synthesis
+missing child receipts. Escalate retention gaps to the shared runtime for
+preservation and recovery, without reconstructing evidence or automatic reruns.
 
 | Tier | Observation | Limitation |
 |---|---|---|
@@ -359,8 +368,14 @@ failure is distinct from attempt 9's normally completed review, which rejected
 stale delivery claims. The missing `design/GENERATIONAL_HANDOFF.md` and
 unavailable historical parent timing/PPA remain disclosed, not reconstructed.
 
-Verifier's `evidence/verification-receipts.json`,
-`evidence/ppa-resource-summary.json` and independent claim/link audit are
-pending at this Designer handoff. The unchanged acceptance contract still
-requires independent engineering delivery approval; the runtime authors,
+The Verifier-owned [verification index](../evidence/verification-receipts.json)
+and [PPA/resource summary](../evidence/ppa-resource-summary.json) already exist,
+but their superseded L1 selections/retention counts require refresh for attempts
+13..16 and an independent audit of changed claims/links, not repeated unchanged
+simulations. Preserve native passed statuses and their limits: shared-runtime
+follow-through must provide source-bound post-fit STA at <=10.0 ns with
+nonnegative setup/hold slack and zero failing hold paths, and three consecutive
+deterministic physical X3 firmware-workload passes. No project `fpga/*` wrapper
+exists; these records authorize neither invented hardware results nor an
+inferred RTL repair. Engineering approval remains pending. The runtime authors,
 independently reviews and renders the product PDF only after that acceptance.
