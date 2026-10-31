@@ -1,0 +1,12 @@
+{
+  "chip": "Furnace-X3",
+  "passed_checks": {
+    "check:behavior": {
+      "attempt_id": 5,
+      "duration_s": 15099.05265627103,
+      "stdout_preview": "_s=11760\nPROGRESS firmware-matrix-C4 elapsed_s=11790\nPROGRESS firmware-matrix-C4 elapsed_s=11820\nPROGRESS firmware-matrix-C4 elapsed_s=11850\nPROGRESS firmware-matrix-C4 elapsed_s=11880\nPROGRESS firmware-matrix-C4 elapsed_s=11910\nPROGRESS firmware-matrix-C4 elapsed_s=11940\nPROGRESS firmware-matrix-C4 elapsed_s=11970\nPROGRESS firmware-matrix-C4 elapsed_s=12000\nPROGRESS firmware-matrix-C4 elapsed_s=12030\nPROGRESS firmware-matrix-C4 elapsed_s=12060\nPROGRESS firmware-matrix-C4 elapsed_s=12090\nPROGRESS firmware-matrix-C4 elapsed_s=12120\nPROGRESS firmware-matrix-C4 elapsed_s=12150\nPROGRESS firmware-matrix-C4 elapsed_s=12180\nPROGRESS firmware-matrix-C4 elapsed_s=12210\nPROGRESS firmware-matrix-C4 elapsed_s=12240\nPROGRESS firmware-matrix-C4 elapsed_s=12270\nPROGRESS firmware-matrix-C4 elapsed_s=12300\nPROGRESS firmware-matrix-C4 elapsed_s=12330\nPROGRESS firmware-matrix-C4 elapsed_s=12360\nPROGRESS firmware-matrix-C4 elapsed_s=12390\nPROGRESS firmware-matrix-C4 elapsed_s=12420\nL1_CHECK_PASS behavior/firmware-matrix-C4\nL1_CHECK_PASS behavior/preserved-public-interfaces\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed17\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed17\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed89\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed89\nL1_CHECK_PASS behavior/exact-pipeline-edges-seed2027\nL1_CHECK_PASS behavior/legacy-stream-ownership-seed2027\nevidence/preparation/portable-l1-behavior-20261030T214803278789Z/receipt.json\nL1_SUITE_PASS behavior checks=86\n",
+      "receipt_count": 0,
+      "receipts": []
+    }
+  }
+}
