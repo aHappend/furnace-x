@@ -2,13 +2,13 @@
   "chip": "Furnace-X4",
   "passed_checks": {
     "check:behavior": {
-      "attempt_id": 21,
-      "duration_s": 858.2141016519163,
-      "stdout_preview": "L1 behavior: evidence/behavior-20261102T201454520690Z-df536839/receipt.json\nVerification: adapter-cpu running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: queue-boundary running\nVerification: queue-boundary running\nVerification: queue-boundary running\nVerification: queue-boundary running\nVerification: queue-boundary running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: interrupt running\n",
+      "attempt_id": 24,
+      "duration_s": 1062.9212714431342,
+      "stdout_preview": "L1 behavior: evidence/behavior-20261102T215007730315Z-32b027c3/receipt.json\nVerification: adapter-mmio running\nVerification: adapter-cpu running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: stream-boundary running\nVerification: queue-boundary running\nVerification: queue-boundary running\nVerification: queue-boundary running\nVerification: queue-boundary running\nVerification: tile-boundary running\nVerification: tile-boundary running\nVerification: tile-boundary running\nVerification: tile-boundary running\nVerification: dma-boundary running\nVerification: dma-boundary running\nVerification: dma-boundary running\nVerification: dma-boundary running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: integrated running\nVerification: interrupt running\n",
       "receipt_count": 1,
       "receipts": [
         {
-          "path": "evidence/behavior-20261102T201454520690Z-df536839/receipt.json",
+          "path": "evidence/behavior-20261102T215007730315Z-32b027c3/receipt.json",
           "data": {
             "schema": 1,
             "suite": "behavior",
@@ -238,12 +238,14 @@
               "tests/boot_model_contract.cpp": "742df40debfdb73941619c9c3e64a9eb9e043e633cc1ee8cdab7f2d426e398bf",
               "tests/boot_model_probe.py": "0235a6a696dbb1cb36e3d3a80bf943b5499ef3e08a12b2f4917c7623a30b4851",
               "tests/boot_observers.sv": "2ca6cd5e6273a7f55f389612c57d16e6c004b4e67f83170e14453a20a06d133b",
-              "tests/boot_performance_probe.py": "414a2ab453f4a805188898216a8da009feccd6628f854df7cd480d214f94362b",
-              "tests/boot_probe.py": "4688b6f0193f45d31da61af4811cd3e3d3a10d2a42e3c7be5700cf8c6c3e27c6",
+              "tests/boot_performance_probe.py": "c58dd64b977720f54f6c5726e928d24f5bdabbc3c7ad3dfb28c1756c30f418bd",
+              "tests/boot_probe.py": "6ca00bf98f7c3c7a65457f916091c6231c1f25f4b76620cf9bf73134e23994f6",
               "tests/boot_scoring.py": "131f1700ab38a70e580049d09116484c289aaac6697cd234e88935f5a2a8489c",
               "tests/boot_scoring_contract.py": "a68c814e4052c32a7ce85f8f546777aeb0ef091f24092f07f4e96cb63f168c1c",
               "tests/boot_workload_model.h": "d14534a62eec743f7a755101e96beaf3844c9df7701461a03e819f924445e34d",
-              "tests/cpu_adapter_contract.sv": "e3fa6a0d34b8d1e52c4a279df88b3e2feec78f504f6d7f2eddac63fb0bfe4270",
+              "tests/cpu_adapter_contract.sv": "8f310c956acd80feb3b19b62c4663125dd20da71a1707a2b7b26888a0de964e1",
+              "tests/dma_boundary_contract.sv": "cf986535a046deb20af13fed3ff5e96f3e8358fc9d5c5175307452a9c768f1c7",
+              "tests/dma_boundary_probe.py": "764930e14764ec3dcf67971a1ab9a3fd1ee2ca28c9c93ddd76fd0aafafc2dca9",
               "tests/firmware_integer.c": "a40ae15da867404f96f48dd228ff2356dfd548a1afc4c74a7244eefe2381b31c",
               "tests/firmware_probe.py": "48c0921a408e271bfc11717ac5cbac9d1308af4c3efd8ba5da3b99e5a6889241",
               "tests/firmware_riscv_asm.h": "a0410b0fae156f93b4e0a3658291af36da83f5dfa2bc609e99bf4a312bdcf4cc",
@@ -256,7 +258,7 @@
               "tests/integrated_start.S": "9b7452095afa784fa0b7ef7f30c41707461b0aceb031c75c42b7337e8a046457",
               "tests/interrupt_contract.sv": "f901b41e03c1bbf48dbd1c2b0efa329a9d277960065bafc222d2343befc9fa41",
               "tests/interrupt_probe.py": "818135af03a094e7140722ea059b2ea509c21715fdd01f06c3c53a2005a6378b",
-              "tests/mmio_contract.sv": "429587c6faacd554f293bda06868b16170cd21d6a0cbdcc43a9c26f5d9b432f4",
+              "tests/mmio_contract.sv": "f6c87db4f610e6ff318c2eb2b02dbd401430ad3ae163eb6ca82a35816682c431",
               "tests/mutation_probe.py": "ce6c6935e0747ad40f0741818fdf9663ed3879e914692cf4216bd89b7ab15767",
               "tests/numerical_model.py": "4c50af6704cb6949c3f13aba58c8c00c222b9b64ff50795f756a710842fa68b7",
               "tests/numerical_probe.py": "6c2f4a397606109d55ed241567e5abb5ee211efe7679406a787591d9b3f43de1",
@@ -270,11 +272,13 @@
               "tests/synthesis_probe.py": "bca0ce27275c18b3f314323f139fcc280ba23cc6d8d7e6eee7b0fac01ef572b7",
               "tests/tensor_contract.sv": "c11172a313c91a2cc7382e59211c6c5ce8d72fcceb2eb8c4aee1f5c733694191",
               "tests/tensor_probe.py": "c64e5af54ee39ef0eee80f2dd7e0481ab16d34fe0bacc024f2d4071f32918c8a",
-              "tests/verify.py": "5980e96d9b6a1f18cc62733db93f53e93e6796be28eee00a5f7b37fa9024f4d9",
+              "tests/tile_boundary_contract.sv": "ac4bb7067790dc4506346315c914b8b19840387afbd9398ee2b660b8661aee36",
+              "tests/tile_boundary_probe.py": "2717c3ec7ca7ef8378246680a09ac0b3f1b8ecf8cc557222e910cdec798a52b9",
+              "tests/verify.py": "3f0caa91977a7b84a4b12c8a67a48d756953bafc686e910bb20f1fd0e669011a",
               "tests/workload_model.py": "e6f2ce97d5ee673a1312762db798d57b9506e584200756d4404dffb8137d440b"
             },
-            "start_utc": "2026-11-02T20:14:54.803782+00:00",
-            "end_utc": "2026-11-02T20:29:12.407503+00:00",
+            "start_utc": "2026-11-02T21:50:08.017152+00:00",
+            "end_utc": "2026-11-02T22:07:50.283534+00:00",
             "timeout_s": 2700,
             "timed_out": false,
             "exit_code": 0,
@@ -284,159 +288,193 @@
                   "python3",
                   "tests/adapter_probe.py",
                   "--output-root",
-                  "evidence/behavior-20261102T201454520690Z-df536839/adapter-mmio-c2ebd902",
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/adapter-mmio-db02757a",
                   "--adapter",
                   "mmio"
                 ],
                 "cwd": ".",
-                "start_utc": "2026-11-02T20:14:54.805467+00:00",
-                "end_utc": "2026-11-02T20:15:05.695394+00:00",
+                "start_utc": "2026-11-02T21:50:08.019064+00:00",
+                "end_utc": "2026-11-02T21:50:34.790443+00:00",
                 "exit_code": 0,
-                "timeout_s": 2699.7138749780133,
+                "timeout_s": 2699.7094107428566,
                 "stdout": "adapter-mmio.stdout.txt",
                 "stderr": "adapter-mmio.stderr.txt",
                 "timed_out": false,
-                "duration_s": 10.888961107004434
+                "duration_s": 26.77038815105334
               },
               {
                 "argv": [
                   "python3",
                   "tests/adapter_probe.py",
                   "--output-root",
-                  "evidence/behavior-20261102T201454520690Z-df536839/adapter-cpu-f150a6e1",
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/adapter-cpu-0ec99022",
                   "--adapter",
                   "cpu"
                 ],
                 "cwd": ".",
-                "start_utc": "2026-11-02T20:15:05.700990+00:00",
-                "end_utc": "2026-11-02T20:15:46.607929+00:00",
+                "start_utc": "2026-11-02T21:50:34.795629+00:00",
+                "end_utc": "2026-11-02T21:51:20.259145+00:00",
                 "exit_code": 0,
-                "timeout_s": 2688.8183713899925,
+                "timeout_s": 2672.9328657938167,
                 "stdout": "adapter-cpu.stdout.txt",
                 "stderr": "adapter-cpu.stderr.txt",
                 "timed_out": false,
-                "duration_s": 40.9052772091236
+                "duration_s": 45.46263482817449
               },
               {
                 "argv": [
                   "python3",
                   "tests/firmware_probe.py",
                   "--output-root",
-                  "evidence/behavior-20261102T201454520690Z-df536839/firmware-1d485cde"
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/firmware-8f65c1ca"
                 ],
                 "cwd": ".",
-                "start_utc": "2026-11-02T20:15:46.613711+00:00",
-                "end_utc": "2026-11-02T20:15:47.281993+00:00",
+                "start_utc": "2026-11-02T21:51:20.264496+00:00",
+                "end_utc": "2026-11-02T21:51:20.932630+00:00",
                 "exit_code": 0,
-                "timeout_s": 2647.9056650958955,
+                "timeout_s": 2627.463996151928,
                 "stdout": "firmware.stdout.txt",
                 "stderr": "firmware.stderr.txt",
                 "timed_out": false,
-                "duration_s": 0.6672103989403695
+                "duration_s": 0.6670044378843158
               },
               {
                 "argv": [
                   "python3",
                   "tests/numerical_probe.py",
                   "--output-root",
-                  "evidence/behavior-20261102T201454520690Z-df536839/numerical-57932e6b"
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/numerical-6f6a562f"
                 ],
                 "cwd": ".",
-                "start_utc": "2026-11-02T20:15:47.287430+00:00",
-                "end_utc": "2026-11-02T20:15:57.377692+00:00",
+                "start_utc": "2026-11-02T21:51:20.938198+00:00",
+                "end_utc": "2026-11-02T21:51:31.527859+00:00",
                 "exit_code": 0,
-                "timeout_s": 2647.231927674962,
+                "timeout_s": 2626.7902969918214,
                 "stdout": "numerical.stdout.txt",
                 "stderr": "numerical.stderr.txt",
                 "timed_out": false,
-                "duration_s": 10.089167159050703
+                "duration_s": 10.588526366045699
               },
               {
                 "argv": [
                   "python3",
                   "tests/tensor_probe.py",
                   "--output-root",
-                  "evidence/behavior-20261102T201454520690Z-df536839/tensor-86f1f839"
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/tensor-bfab8b5b"
                 ],
                 "cwd": ".",
-                "start_utc": "2026-11-02T20:15:57.383173+00:00",
-                "end_utc": "2026-11-02T20:16:12.232769+00:00",
+                "start_utc": "2026-11-02T21:51:31.532812+00:00",
+                "end_utc": "2026-11-02T21:51:47.633872+00:00",
                 "exit_code": 0,
-                "timeout_s": 2637.1361840220634,
+                "timeout_s": 2616.1956673178356,
                 "stdout": "tensor.stdout.txt",
                 "stderr": "tensor.stderr.txt",
                 "timed_out": false,
-                "duration_s": 14.848462079185992
+                "duration_s": 16.100009866058826
               },
               {
                 "argv": [
                   "python3",
                   "tests/stream_boundary_probe.py",
                   "--output-root",
-                  "evidence/behavior-20261102T201454520690Z-df536839/stream-boundary-8c2a15f0"
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/stream-boundary-473abccf"
                 ],
                 "cwd": ".",
-                "start_utc": "2026-11-02T20:16:12.238730+00:00",
-                "end_utc": "2026-11-02T20:21:28.704973+00:00",
+                "start_utc": "2026-11-02T21:51:47.639652+00:00",
+                "end_utc": "2026-11-02T21:56:46.810709+00:00",
                 "exit_code": 0,
-                "timeout_s": 2622.280630396912,
+                "timeout_s": 2600.088859767886,
                 "stdout": "stream-boundary.stdout.txt",
                 "stderr": "stream-boundary.stderr.txt",
                 "timed_out": false,
-                "duration_s": 316.46507445909083
+                "duration_s": 299.1698549569119
               },
               {
                 "argv": [
                   "python3",
                   "tests/queue_boundary_probe.py",
                   "--output-root",
-                  "evidence/behavior-20261102T201454520690Z-df536839/queue-boundary-f2b6cc17"
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/queue-boundary-5740d7d1"
                 ],
                 "cwd": ".",
-                "start_utc": "2026-11-02T20:21:28.712754+00:00",
-                "end_utc": "2026-11-02T20:23:44.307741+00:00",
+                "start_utc": "2026-11-02T21:56:46.818087+00:00",
+                "end_utc": "2026-11-02T21:58:48.131518+00:00",
                 "exit_code": 0,
-                "timeout_s": 2305.8066099770367,
+                "timeout_s": 2300.9104119809344,
                 "stdout": "queue-boundary.stdout.txt",
                 "stderr": "queue-boundary.stderr.txt",
                 "timed_out": false,
-                "duration_s": 135.59374028909951
+                "duration_s": 121.31219226890244
+              },
+              {
+                "argv": [
+                  "python3",
+                  "tests/tile_boundary_probe.py",
+                  "--output-root",
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/tile-boundary-ef612280"
+                ],
+                "cwd": ".",
+                "start_utc": "2026-11-02T21:58:48.137490+00:00",
+                "end_utc": "2026-11-02T22:00:47.705446+00:00",
+                "exit_code": 0,
+                "timeout_s": 2179.5910053749103,
+                "stdout": "tile-boundary.stdout.txt",
+                "stderr": "tile-boundary.stderr.txt",
+                "timed_out": false,
+                "duration_s": 119.5666727151256
+              },
+              {
+                "argv": [
+                  "python3",
+                  "tests/dma_boundary_probe.py",
+                  "--output-root",
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/dma-boundary-a4a880e1"
+                ],
+                "cwd": ".",
+                "start_utc": "2026-11-02T22:00:47.712798+00:00",
+                "end_utc": "2026-11-02T22:02:31.238756+00:00",
+                "exit_code": 0,
+                "timeout_s": 2060.0157008168753,
+                "stdout": "dma-boundary.stdout.txt",
+                "stderr": "dma-boundary.stderr.txt",
+                "timed_out": false,
+                "duration_s": 103.52451670519076
               },
               {
                 "argv": [
                   "python3",
                   "tests/integrated_probe.py",
                   "--output-root",
-                  "evidence/behavior-20261102T201454520690Z-df536839/integrated-b0ad388b",
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/integrated-587ee785",
                   "--seeds",
                   "17,89,211"
                 ],
                 "cwd": ".",
-                "start_utc": "2026-11-02T20:23:44.314228+00:00",
-                "end_utc": "2026-11-02T20:28:25.545753+00:00",
+                "start_utc": "2026-11-02T22:02:31.244924+00:00",
+                "end_utc": "2026-11-02T22:07:10.724282+00:00",
                 "exit_code": 0,
-                "timeout_s": 2170.2051439920906,
+                "timeout_s": 1956.4836121068802,
                 "stdout": "integrated.stdout.txt",
                 "stderr": "integrated.stderr.txt",
                 "timed_out": false,
-                "duration_s": 281.23022270784713
+                "duration_s": 279.4777039780747
               },
               {
                 "argv": [
                   "python3",
                   "tests/interrupt_probe.py",
                   "--output-root",
-                  "evidence/behavior-20261102T201454520690Z-df536839/interrupt-0be204ad"
+                  "evidence/behavior-20261102T215007730315Z-32b027c3/interrupt-3ad924be"
                 ],
                 "cwd": ".",
-                "start_utc": "2026-11-02T20:28:25.578105+00:00",
-                "end_utc": "2026-11-02T20:29:12.094932+00:00",
+                "start_utc": "2026-11-02T22:07:10.769343+00:00",
+                "end_utc": "2026-11-02T22:07:49.973368+00:00",
                 "exit_code": 0,
-                "timeout_s": 1888.941260739928,
+                "timeout_s": 1676.959153239848,
                 "stdout": "interrupt.stdout.txt",
                 "stderr": "interrupt.stderr.txt",
                 "timed_out": false,
-                "duration_s": 46.515484183095396
+                "duration_s": 39.202430352102965
               }
             ],
             "seeds": [
@@ -446,40 +484,48 @@
             ],
             "children": [
               {
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/adapter-mmio-c2ebd902/adapter-contract-20261102T201454929064Z-f3141f0d/receipt.json",
-                "sha256": "18b3c132855bfb5de3d040238e6c1f388bd334538e65c402fd4d550a12d431b4"
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/adapter-mmio-db02757a/adapter-contract-20261102T215008246399Z-56caa490/receipt.json",
+                "sha256": "f65300c80738c02e2554370071fdf4b07459d34ffbf88954482e3a630b0f77ae"
               },
               {
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/adapter-cpu-f150a6e1/adapter-contract-20261102T201505924049Z-3b0ddf21/receipt.json",
-                "sha256": "f22f5113dc3ae2385493437543990be3f1bdb37d736202e1bc393482b29c3d6b"
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/adapter-cpu-0ec99022/adapter-contract-20261102T215035014603Z-6866e4c3/receipt.json",
+                "sha256": "de215c5d74d3bd2197b4a0a8af49e5f5ffefa73dcfa12116f656ea490efd9ebe"
               },
               {
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/firmware-1d485cde/firmware-integer-20261102T201546836122Z-7495b20e/receipt.json",
-                "sha256": "f80accc1de2efb68dfbc60a14c3bff78b2720a7ba772ad21cbd03cfbe0d41e8f"
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/firmware-8f65c1ca/firmware-integer-20261102T215120489279Z-4d029ee5/receipt.json",
+                "sha256": "8a02f0eb489e8d961fa5463f024cc5ff7ff4bc8846f363918c0b6cf5249052c3"
               },
               {
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/numerical-57932e6b/numerical-20261102T201547507682Z-fd4055b2/receipt.json",
-                "sha256": "ac0748be90568f0d7d944ee6b46611d487217f158dc92bda5bd8c391d2e9d7cd"
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/numerical-6f6a562f/numerical-20261102T215121160209Z-69feeaf5/receipt.json",
+                "sha256": "64623540466f051dd019171e0755134859ce52430944434fe740782af09f4231"
               },
               {
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/tensor-86f1f839/tensor-20261102T201557603729Z-498603f0/receipt.json",
-                "sha256": "9e7ec253150c06f110748603eb090b5c04ee6873ef77c9b9c92d5537e624f0e0"
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/tensor-bfab8b5b/tensor-20261102T215131758336Z-02dae158/receipt.json",
+                "sha256": "9729d490ee1380bf5540a068bc13258bcdfc90b28c6ed8ef4bfc74fffc5f16d5"
               },
               {
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/stream-boundary-8c2a15f0/stream-boundary-20261102T201612465152Z-607a88c9/receipt.json",
-                "sha256": "df4edbb90a7f1821491fa9932fa820b8bce25c1fd3246c68bf57f1694177cb00"
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/stream-boundary-473abccf/stream-boundary-20261102T215147865630Z-84baec7e/receipt.json",
+                "sha256": "68a6d2739560fcaf89ee30753b27607d05072166d0dabbb2884e0054603c91ac"
               },
               {
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/queue-boundary-f2b6cc17/queue-boundary-20261102T202128934231Z-2b0b8814/receipt.json",
-                "sha256": "b11d80c03a4e2af11571b98cae5c942706f401d98ed2e4f652bd3a7a64242acc"
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/queue-boundary-5740d7d1/queue-boundary-20261102T215647056216Z-99a4e196/receipt.json",
+                "sha256": "7608ff1e5ef3a349b74024efe00f869b495c1d3fced223eae958dba7bd266c12"
               },
               {
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/integrated-b0ad388b/integrated-20261102T202344538482Z-2d568eeb/receipt.json",
-                "sha256": "5d3ed15700eff7cc4232c1c618b86bbb4953b2d05c2d2cb23507d2b321f6137b"
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/tile-boundary-ef612280/tile-boundary-20261102T215848360410Z-0e06539a/receipt.json",
+                "sha256": "5763e64c5f65a2352d001ebf1dc099d83130081d362ac8dc6878603743fcb06d"
               },
               {
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/interrupt-0be204ad/interrupt-20261102T202825801256Z-19d78228/receipt.json",
-                "sha256": "623380c97ba87a1d4eca28d561134f33324bccdae615e0a7cce9f32a95f1b8e9"
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/dma-boundary-a4a880e1/dma-boundary-20261102T220047950922Z-6f9d8ac8/receipt.json",
+                "sha256": "2f8629156631b0e9a6a23fc33859693f6813de1880e3e4aead718b34e056028e"
+              },
+              {
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/integrated-587ee785/integrated-20261102T220231393724Z-b5226aaf/receipt.json",
+                "sha256": "e3517b0bfa4e94e0293ebf1d5dfe48de8ea17ca4c90cdccbdc68a766e9c185bc"
+              },
+              {
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/interrupt-3ad924be/interrupt-20261102T220710988812Z-0a435780/receipt.json",
+                "sha256": "f5f545e34626df1d43e41cc979c6b83df336bb29bd7f0e4693a97858a665ffc0"
               }
             ],
             "leaf_comparisons": [
@@ -487,44 +533,56 @@
                 "scope": "leaf",
                 "adapter": "mmio",
                 "simulator": "icarus",
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/adapter-mmio-c2ebd902/adapter-contract-20261102T201454929064Z-f3141f0d/receipt.json",
-                "comparisons": 74,
-                "writes": 3,
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/adapter-mmio-db02757a/adapter-contract-20261102T215008246399Z-56caa490/receipt.json",
+                "comparisons": 253,
+                "writes": 8,
                 "reads": 1,
+                "rejected_writes": 6,
+                "rejected_reads": 4,
+                "resets": 5,
                 "failures": 0
               },
               {
                 "scope": "leaf",
                 "adapter": "mmio",
                 "simulator": "verilator",
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/adapter-mmio-c2ebd902/adapter-contract-20261102T201454929064Z-f3141f0d/receipt.json",
-                "comparisons": 74,
-                "writes": 3,
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/adapter-mmio-db02757a/adapter-contract-20261102T215008246399Z-56caa490/receipt.json",
+                "comparisons": 253,
+                "writes": 8,
                 "reads": 1,
+                "rejected_writes": 6,
+                "rejected_reads": 4,
+                "resets": 5,
                 "failures": 0
               },
               {
                 "scope": "leaf",
                 "adapter": "cpu",
                 "simulator": "icarus",
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/adapter-cpu-f150a6e1/adapter-contract-20261102T201505924049Z-3b0ddf21/receipt.json",
-                "comparisons": 654,
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/adapter-cpu-0ec99022/adapter-contract-20261102T215035014603Z-6866e4c3/receipt.json",
+                "comparisons": 835,
                 "writes": 24,
-                "reads": 12,
+                "reads": 17,
                 "rejected_writes": 6,
                 "rejected_reads": 5,
+                "resets": 5,
+                "drained_writes": 2,
+                "rejected_read_beats": 8,
                 "failures": 0
               },
               {
                 "scope": "leaf",
                 "adapter": "cpu",
                 "simulator": "verilator",
-                "receipt": "evidence/behavior-20261102T201454520690Z-df536839/adapter-cpu-f150a6e1/adapter-contract-20261102T201505924049Z-3b0ddf21/receipt.json",
-                "comparisons": 654,
+                "receipt": "evidence/behavior-20261102T215007730315Z-32b027c3/adapter-cpu-0ec99022/adapter-contract-20261102T215035014603Z-6866e4c3/receipt.json",
+                "comparisons": 835,
                 "writes": 24,
-                "reads": 12,
+                "reads": 17,
                 "rejected_writes": 6,
                 "rejected_reads": 5,
+                "resets": 5,
+                "drained_writes": 2,
+                "rejected_read_beats": 8,
                 "failures": 0
               }
             ],
