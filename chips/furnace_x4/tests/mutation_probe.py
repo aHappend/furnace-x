@@ -31,6 +31,7 @@ REQUIRED = (
     "tensor_rounding", "tensor_weight_sign", "vision_numerical", "fft_numerical",
     "mailbox_semaphore_association", "authenticated_weight_commit",
     "fault_classifier_disconnect",
+    "drain_fault_classifier_disconnect",
 )
 
 
@@ -214,6 +215,40 @@ def main():
                 elif len(child["runs"]) != 6:
                     raise ValueError("controller baseline incomplete simulator/target matrix")
                 save(output, receipt)
+            for variant in ("baseline", "mutant"):
+                child_root = output / f"drain-{variant}-{uuid.uuid4().hex[:8]}"
+                child_root.mkdir()
+                argv = ["python3", "tests/fulltop_fault_probe.py", "--output-root",
+                        child_root.relative_to(ROOT)]
+                if variant == "mutant":
+                    argv += ["--mutation", "drain_fault_classifier_disconnect"]
+                result = run(argv, output, f"drain-{variant}", receipt,
+                             timeout_s=2700, check=False)
+                found = list(child_root.glob("*/receipt.json"))
+                if len(found) != 1:
+                    raise ValueError("DRAIN mutant missing unique child receipt")
+                path = found[0]
+                child = json.loads(path.read_text())
+                receipt["children"].append({
+                    "receipt": str(path.relative_to(ROOT)), "sha256": digest(path),
+                })
+                for source, expected in child["source_sha256"].items():
+                    if digest(project_path(Path(source))) != expected:
+                        raise ValueError(f"DRAIN source changed: {source}")
+                if result["exit_code"] or child["exit_code"]:
+                    raise ValueError("DRAIN baseline or sensitivity procedure failed")
+                if variant == "mutant":
+                    if not child["mutant_detected"]:
+                        raise ValueError("DRAIN classifier mutant lacks intended semantic rejection")
+                    measured["drain_fault_classifier_disconnect"] = 1
+                    receipt["mutants"].append({
+                        "name": "drain_fault_classifier_disconnect", "scope": "full top",
+                        "intended_assertion": child["intended_assertion"],
+                        "receipt": str(path.relative_to(ROOT)), "detected": True,
+                    })
+                elif len(child["runs"]) != 3:
+                    raise ValueError("DRAIN baseline incomplete three-seed matrix")
+                save(output, receipt)
         if args.focus in (None, "tensor"):
             for variant in ("baseline", "mutant"):
                 child_root = output / f"tensor-{variant}-{uuid.uuid4().hex[:8]}"
@@ -253,6 +288,8 @@ def main():
                     tuple(row[0] for row in MUTATIONS) if args.focus == "adapters" else REQUIRED)
         if args.focus == "tensor":
             required = ("tensor_rounding",)
+        if args.focus == "controller":
+            required = ("fault_classifier_disconnect", "drain_fault_classifier_disconnect")
         if any(measured.get(name, 0) != 1 for name in required):
             raise ValueError("mandatory full-system semantic mutation comparisons incomplete; "
                              "see coverage.json (adapter mutants are separate leaf evidence)")

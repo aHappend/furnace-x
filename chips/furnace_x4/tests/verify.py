@@ -144,6 +144,7 @@ def behavior(output, receipt, seeds):
     child_probe("top_configuration_probe.py", [], output, receipt, "top-configuration")
     child_probe("cache_fault_probe.py", [], output, receipt, "cache-fault")
     child_probe("cache_controller_probe.py", [], output, receipt, "cache-controller")
+    child_probe("fulltop_fault_probe.py", [], output, receipt, "fulltop-fault")
     _, child = child_probe("integrated_probe.py", ["--seeds", ",".join(map(str, seeds))],
                            output, receipt, "integrated")
     _, leaf = child_probe("interrupt_probe.py", [], output, receipt, "interrupt")
