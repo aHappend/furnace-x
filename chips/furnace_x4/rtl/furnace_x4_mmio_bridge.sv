@@ -47,11 +47,16 @@ module furnace_x4_mmio_bridge (
     reg [63:0] wdata_q, rdata_q;
     reg [7:0] wstrb_q;
     reg [1:0] bresp_q, rresp_q;
-    wire aw_bad = awaddr_q < 32'h20000000 ||
-        awaddr_q > 32'h2000fffc || |awaddr_q[1:0];
+    wire aw_capture = s_axil_awvalid && s_axil_awready;
+    wire w_capture = s_axil_wvalid && s_axil_wready;
+    wire [31:0] collected_awaddr = aw_full ? awaddr_q : s_axil_awaddr;
+    wire [7:0] collected_wstrb = w_full ? wstrb_q : s_axil_wstrb;
+    wire aw_bad = collected_awaddr < 32'h20000000 ||
+        collected_awaddr > 32'h2000fffc || |collected_awaddr[1:0];
     wire ar_bad = s_axil_araddr < 32'h20000000 ||
         s_axil_araddr > 32'h2000fffc || |s_axil_araddr[1:0];
-    wire mask_bad = awaddr_q[2] ? |wstrb_q[3:0] : |wstrb_q[7:4];
+    wire mask_bad = collected_awaddr[2] ?
+        |collected_wstrb[3:0] : |collected_wstrb[7:4];
     wire [31:0] write_offset = awaddr_q - 32'h20000000;
     wire [31:0] read_offset = araddr_q - 32'h20000000;
 
@@ -98,17 +103,17 @@ module furnace_x4_mmio_bridge (
         end else begin
             case (ws)
                 COLLECT: begin
-                    if (s_axil_awvalid && s_axil_awready) begin
+                    if (aw_capture) begin
                         aw_full <= 1;
                         awaddr_q <= s_axil_awaddr;
                         awprot_q <= s_axil_awprot;
                     end
-                    if (s_axil_wvalid && s_axil_wready) begin
+                    if (w_capture) begin
                         w_full <= 1;
                         wdata_q <= s_axil_wdata;
                         wstrb_q <= s_axil_wstrb;
                     end
-                    if (aw_full && w_full) begin
+                    if ((aw_full || aw_capture) && (w_full || w_capture)) begin
                         aw_sent <= 0;
                         w_sent <= 0;
                         if (aw_bad || mask_bad) begin

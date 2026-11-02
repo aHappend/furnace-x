@@ -94,8 +94,22 @@ module furnace_x4_cpu_axi512_bridge (
     wire ar_geometry_bad = s_axi_arlen != 0 || s_axi_arsize != 3 ||
         s_axi_arburst != 1 || s_axi_arlock;
     wire write_complete = aw_full && wcount == {1'b0,awlen_q} + 9'd1;
-    wire write_last_bad = wlast_error || (awlen_q == 0 && !wlast_first) ||
-        (awlen_q != 0 && wlast_first);
+    wire aw_capture = s_axi_awvalid && s_axi_awready;
+    wire w_capture = s_axi_wvalid && s_axi_wready;
+    wire [7:0] collected_awlen = aw_full ? awlen_q : s_axi_awlen;
+    wire [1:0] collected_awresp = aw_full ? awresp_q :
+        aw_address_bad ? 2'b11 : aw_geometry_bad ? 2'b10 : 2'b0;
+    wire [8:0] collected_wcount = wcount + {8'b0,w_capture};
+    wire collected_wlast_first = wcount == 0 && w_capture ?
+        s_axi_wlast : wlast_first;
+    wire collected_wlast_error = wlast_error ||
+        (w_capture && wcount != 0 &&
+         s_axi_wlast != (wcount == {1'b0,collected_awlen}));
+    wire write_collected = (aw_full || aw_capture) &&
+        collected_wcount == {1'b0,collected_awlen} + 9'd1;
+    wire write_last_bad = collected_wlast_error ||
+        (collected_awlen == 0 && !collected_wlast_first) ||
+        (collected_awlen != 0 && collected_wlast_first);
 
     assign s_axi_awready = rst_n && ws == COLLECT && !aw_full;
     assign s_axi_wready = rst_n && ws == COLLECT &&
@@ -171,7 +185,7 @@ module furnace_x4_cpu_axi512_bridge (
         end else begin
             case (ws)
                 COLLECT: begin
-                    if (s_axi_awvalid && s_axi_awready) begin
+                    if (aw_capture) begin
                         aw_full <= 1;
                         awaddr_q <= s_axi_awaddr;
                         awid_q <= s_axi_awid;
@@ -182,7 +196,7 @@ module furnace_x4_cpu_axi512_bridge (
                         awresp_q <= aw_address_bad ? 2'b11 :
                             aw_geometry_bad ? 2'b10 : 2'b0;
                     end
-                    if (s_axi_wvalid && s_axi_wready) begin
+                    if (w_capture) begin
                         wcount <= wcount + 9'd1;
                         if (wcount == 0) begin
                             wdata_q <= s_axi_wdata;
@@ -191,11 +205,12 @@ module furnace_x4_cpu_axi512_bridge (
                         end else if (s_axi_wlast != (wcount == {1'b0,awlen_q}))
                             wlast_error <= 1;
                     end
-                    if (write_complete) begin
+                    if (write_collected) begin
                         aw_sent <= 0;
                         w_sent <= 0;
-                        if (awresp_q != 0 || write_last_bad) begin
-                            bresp_q <= awresp_q != 0 ? awresp_q : 2'b10;
+                        if (collected_awresp != 0 || write_last_bad) begin
+                            bresp_q <= collected_awresp != 0 ?
+                                collected_awresp : 2'b10;
                             ws <= RESPONSE;
                         end else ws <= ISSUE;
                     end

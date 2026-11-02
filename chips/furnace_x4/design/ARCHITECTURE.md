@@ -31,6 +31,16 @@ No downstream response has a combinational upstream bypass. Errors and selected
 lanes are captured along with the transaction, so backpressure cannot change
 address, mask, association or response shape.
 
+Write collection includes handshakes at the current edge, not just the previous
+AW/W occupancy. At the final capture edge E0, the MMIO bridge validates the
+assembled address/strobes and enters registered ISSUE (or registered error
+RESPONSE). The CPU bridge similarly includes the current AW header, W count
+and LAST when validating completion. Legal writes assert downstream AWVALID
+and WVALID immediately after E0 in either upstream channel order; payloads
+come only from captured registers. Each downstream channel stalls independently.
+Rejected CPU bursts still drain exactly AWLEN+1 beats before returning an
+error, with no downstream transaction.
+
 Fabric transfers are store-and-forward across exclusion. A full write burst
 uses 256*64=16384 data bytes plus 2048 strobe bytes. A full read response uses
 16384 data bytes plus per-beat response state. Use synchronous independently
@@ -124,6 +134,15 @@ the existing source-bound helper; the failed attempts remain linked through
 `evidence/preparation/software-build-20261102T152458032073Z-00b3bad4/receipt.json`.
 That final attempt exited0 and produced the complete software image set.
 It is a design handoff, not independent engineering acceptance.
+
+The independent adapter diagnostic retained at
+`evidence/preparation/adapter-contract-20261102T161514883244Z-a857822f/receipt.json`
+found three capture-to-issue timing failures in each simulator: simultaneous
+AW/W, AW-first and W-first. Both bridges previously tested only pre-edge
+collection state, inserting an extra edge after final capture. The current
+repair includes that edge's accepted fields in the registered state decision,
+without an input-to-output bypass. No Designer functional simulation or synthesis
+was run for this repair; independent repair checks remain pending.
 
 ## Source-derived compatibility audit
 

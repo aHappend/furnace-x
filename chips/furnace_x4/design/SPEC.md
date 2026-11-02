@@ -467,10 +467,12 @@ are post-edge. Payload remains stable throughout any stalled VALID.
 |---|---|
 | Active reset | public ready/valid/LAST/control=0; TX=1; outstanding validity cleared |
 | First release edge | reset synchronizer has not yet enabled internal transactions |
-| E0 request capture | downstream registered VALID may appear after E0; earliest acceptance E1 |
+| E0 legal request capture | downstream VALID asserted immediately after E0 from registered state/payload; earliest acceptance E1 |
 | ER response capture | upstream response appears after ER; earliest retirement ER+1 |
-| Independent MMIO AW/W | assemble after max(EA,EW); issue/hold AW and W independently |
-| CPU bridge capture | coherent slave capture earliest E1; endpoint acceptance earliest E2 |
+| Independent MMIO AW/W | E0=max(EA,EW); both downstream VALIDs asserted immediately after E0; independently hold each until accepted |
+| CPU bridge write capture | E0 captures final required AW/W field; legal single-beat write asserts both downstream VALIDs immediately after E0; coherent slave capture earliest E1, endpoint acceptance earliest E2 |
+| Invalid adapter write | validate newly captured and previously buffered fields together at E0; registered error response after E0, no downstream request |
+| Rejected CPU burst | retain AWLEN+1-beat drain and LAST checks; error response after final required W/AW capture, no endpoint write |
 | DH actual drain complete | D command after DH, acceptance no earlier than DH+1 |
 | DR D response | I command after DR, acceptance no earlier than DR+1 |
 | IR I response | registered grant after IR, acceptance no earlier than IR+1 |
