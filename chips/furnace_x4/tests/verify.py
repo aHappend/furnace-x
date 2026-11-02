@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Portable L1 entrypoint. A diagnostic pass never substitutes for suite coverage.
 
-Work in progress: integrated behavior/Linux event instrumentation and the remaining
-semantic mutants are not implemented. Their numerical coverage assertions remain
-active; existing leaf checks and UART text cannot produce a passing full suite.
+Work in progress: CPU-driven integrated workload scoring is present; remaining
+protocol/privilege bins and semantic mutants are not yet complete. All required
+coverage assertions remain active.
 """
 
 import argparse
