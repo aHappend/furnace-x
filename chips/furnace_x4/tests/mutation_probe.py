@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Semantic adapter mutants in disposable copies; incomplete full-system matrix."""
+"""Semantic full-system and leaf mutants in disposable source copies."""
 
 import argparse
 import datetime
@@ -83,7 +83,7 @@ def main():
             row = {"name": name, "intended_assertion": assertion, "detected": False}
             receipt["mutants"].append(row)
             for variant in ("baseline", "mutant"):
-                directory = output / f"{name}-{variant}"
+                directory = output / f"{name}-{variant}-{uuid.uuid4().hex[:8]}"
                 directory.mkdir()
                 copied = directory / f"{module}.sv"
                 copied.write_text(original if variant == "baseline" else
