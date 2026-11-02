@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Portable L1 entrypoint. A diagnostic pass never substitutes for suite coverage.
 
-Work in progress: CPU-driven workloads, tensor arithmetic, stream/queue/tile/DMA
-boundaries and semantic mutants are wired. Remaining complete-top cache-fault
-coverage and complete Linux execution are not established. Required assertions remain active.
+Work in progress: CPU-driven workloads, numerical/boundary checks and semantic
+mutants are wired. Cache leaf and controller-boundary faults are distinct from
+remaining full-top fault containment. Complete Linux execution is not established.
 """
 
 import argparse
@@ -141,6 +141,9 @@ def behavior(output, receipt, seeds):
     child_probe("queue_boundary_probe.py", [], output, receipt, "queue-boundary")
     child_probe("tile_boundary_probe.py", [], output, receipt, "tile-boundary")
     child_probe("dma_boundary_probe.py", [], output, receipt, "dma-boundary")
+    child_probe("top_configuration_probe.py", [], output, receipt, "top-configuration")
+    child_probe("cache_fault_probe.py", [], output, receipt, "cache-fault")
+    child_probe("cache_controller_probe.py", [], output, receipt, "cache-controller")
     _, child = child_probe("integrated_probe.py", ["--seeds", ",".join(map(str, seeds))],
                            output, receipt, "integrated")
     _, leaf = child_probe("interrupt_probe.py", [], output, receipt, "interrupt")

@@ -30,13 +30,14 @@ REQUIRED = (
     "reservation_invalidation", "plic_disconnect", "authentication_bypass",
     "tensor_rounding", "tensor_weight_sign", "vision_numerical", "fft_numerical",
     "mailbox_semaphore_association", "authenticated_weight_commit",
+    "fault_classifier_disconnect",
 )
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
-    parser.add_argument("--focus", choices=("adapters", "integrated", "tensor"),
+    parser.add_argument("--focus", choices=("adapters", "integrated", "tensor", "controller"),
                         help="bounded diagnostic subset; default enforces the full mandatory matrix")
     parser.add_argument("--repair-of", type=Path)
     parser.add_argument("--only", help="comma-separated integrated diagnostic mutants")
@@ -177,6 +178,41 @@ def main():
                     raise ValueError("commit mutant did not reach actual successful tensor retirement")
                 row.update(detected=True, code=code, observed=observed, expected=expected)
                 measured[name] = 1
+                save(output, receipt)
+        if args.focus in (None, "controller"):
+            for variant in ("baseline", "mutant"):
+                child_root = output / f"controller-{variant}-{uuid.uuid4().hex[:8]}"
+                child_root.mkdir()
+                argv = ["python3", "tests/cache_controller_probe.py", "--output-root",
+                        child_root.relative_to(ROOT)]
+                if variant == "mutant":
+                    argv += ["--mutation", "fault_classifier_disconnect"]
+                result = run(argv, output, f"controller-{variant}", receipt,
+                             timeout_s=2700, check=False)
+                found = list(child_root.glob("*/receipt.json"))
+                if len(found) != 1:
+                    raise ValueError("controller mutant missing unique child receipt")
+                path = found[0]
+                child = json.loads(path.read_text())
+                receipt["children"].append({
+                    "receipt": str(path.relative_to(ROOT)), "sha256": digest(path),
+                })
+                for source, expected in child["source_sha256"].items():
+                    if digest(project_path(Path(source))) != expected:
+                        raise ValueError(f"controller source changed: {source}")
+                if result["exit_code"] or child["exit_code"]:
+                    raise ValueError("controller baseline or sensitivity procedure failed")
+                if variant == "mutant":
+                    if not child["mutant_detected"]:
+                        raise ValueError("fault classifier mutant lacks intended semantic rejection")
+                    measured["fault_classifier_disconnect"] = 1
+                    receipt["mutants"].append({
+                        "name": "fault_classifier_disconnect", "scope": "controller boundary",
+                        "intended_assertion": child["intended_assertion"],
+                        "receipt": str(path.relative_to(ROOT)), "detected": True,
+                    })
+                elif len(child["runs"]) != 6:
+                    raise ValueError("controller baseline incomplete simulator/target matrix")
                 save(output, receipt)
         if args.focus in (None, "tensor"):
             for variant in ("baseline", "mutant"):

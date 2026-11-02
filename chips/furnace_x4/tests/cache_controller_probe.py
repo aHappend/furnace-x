@@ -19,6 +19,7 @@ def main():
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
     parser.add_argument("--repair-of", type=Path)
     parser.add_argument("--mutation", choices=("fault_classifier_disconnect",))
+    parser.add_argument("--simulator", choices=("both", "icarus", "verilator"), default="both")
     args = parser.parse_args()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = project_path(args.output_root)/f"cache-controller-{stamp}-{uuid.uuid4().hex[:8]}"
@@ -83,13 +84,15 @@ def main():
                   *[p.relative_to(ROOT) for p in rtl if p.name != "hammer_v3_top.sv"],
                   copied.relative_to(ROOT), "tests/cache_controller_contract.sv"]
         obj = output/f"obj-{uuid.uuid4().hex[:8]}"
-        run(["verilator", "--binary", "--timing", "--assert", "-Wno-fatal",
-             "--top-module", "cache_controller_contract", "--Mdir", obj.relative_to(ROOT),
-             *inputs], output, "verilator-compile", receipt)
-        if not args.mutation:
+        if not args.mutation and args.simulator != "verilator":
             run(["iverilog", "-g2012", "-Wall", "-s", "cache_controller_contract",
                  "-o", relative/"controller.vvp", *inputs], output, "icarus-compile", receipt)
-        for simulator in (("verilator",) if args.mutation else ("icarus", "verilator")):
+        if args.mutation or args.simulator != "icarus":
+            run(["verilator", "--binary", "--timing", "--assert", "-Wno-fatal",
+                 "--top-module", "cache_controller_contract", "--Mdir", obj.relative_to(ROOT),
+                 *inputs], output, "verilator-compile", receipt)
+        simulators = ("icarus", "verilator") if args.simulator == "both" else (args.simulator,)
+        for simulator in (("verilator",) if args.mutation else simulators):
             for target in ((1,) if args.mutation else (0, 1, 2)):
                 stem = f"{simulator}-target{target}"
                 argv = (["vvp", relative/"controller.vvp"] if simulator == "icarus"
