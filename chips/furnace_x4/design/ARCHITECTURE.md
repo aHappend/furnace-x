@@ -192,9 +192,17 @@ ELF/instruction attributes and actual image/runtime bounds. The first independen
 build failed before those audits: upstream v0.2 unconditionally included its
 FP-only header from hart initialization and misaligned-access handling.
 `sw/opensbi/rv64ima-v0.2.patch` guards the includes and FP-only decoder/register
-paths with `__riscv_flen`, preserving integer misaligned emulation and rejecting
-unsupported FP encodings through the existing `SBI_EILL` path before data-memory
-access or PC advancement. The pinned archive, firmware version and RV64IMA/lp64
+paths with `__riscv_flen`, rejecting unsupported FP encodings through the
+existing `SBI_EILL` path before data-memory access or PC advancement. It also
+repairs upstream misaligned LH/LW sign extension by casting the unsigned
+left-shift result to XLEN-wide signed `long` before the arithmetic right shift.
+LHU/LWU use shift zero with zero-filled upper bytes; LD preserves all bits.
+Load/store decoding, stores, register selection and PC advancement are unchanged.
+The independent pre-repair diagnostic reported 28 failures in 676 comparisons at
+`evidence/preparation/firmware-integer-20261102T155354939642Z-1a701fc9/receipt.json`.
+The repaired source awaits independent comparisons and a source-bound rebuild;
+no earlier binary or boot result validates this change.
+The pinned archive, firmware version and RV64IMA/lp64
 flags are unchanged. The builder applies this patch only to fresh extracted
 sources and records patch/tool identity and before/after source hashes.
 An additional v0.2 patch gives the naturally aligned, all-word scratch structure
