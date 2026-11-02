@@ -144,6 +144,11 @@ def main():
         "scope": "Bounded public-pin boot diagnostic, not full behavior/Linux/defects/synthesis acceptance.",
     }
     save(output, receipt)
+    for name in ("boot_probe.py", "boot_endpoint.cpp", "boot_execution_model.h",
+                 "boot_workload_model.h", "boot_observers.sv"):
+        snapshot = output / "sources" / name
+        snapshot.parent.mkdir(exist_ok=True)
+        snapshot.write_bytes((ROOT / "tests" / name).read_bytes())
     print(f"Boot preparation receipt: {relative}/receipt.json", flush=True)
     status = 1
     try:
@@ -201,6 +206,7 @@ def main():
             "verilator", "--cc", "--exe", "--build", "-j", str(args.jobs),
             "--top-module", "furnace_x4_top", "--Mdir", relative / "obj",
             "--assert", "-Wno-fatal", "--output-split", "20000",
+            "-MAKEFLAGS", "OPT_FAST=-O2 OPT_SLOW=-O2 OPT_GLOBAL=-O2",
             "-CFLAGS", "-O2 -std=c++17",
             *[str(p.relative_to(ROOT)) for p in sorted((ROOT / "rtl").glob("*.sv"))],
             "tests/boot_observers.sv",
