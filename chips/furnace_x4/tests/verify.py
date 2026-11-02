@@ -36,7 +36,7 @@ def sources():
     )
 
 
-def child_probe(script, args, output, receipt, stem):
+def child_probe(script, args, output, receipt, stem, *, on_receipt=None):
     child_root = output / f"{stem}-{uuid.uuid4().hex[:8]}"
     child_root.mkdir()
     record = run(["python3", f"tests/{script}", "--output-root",
@@ -51,11 +51,13 @@ def child_probe(script, args, output, receipt, stem):
         "receipt": str(path.relative_to(ROOT)), "sha256": digest(path),
     })
     save(output, receipt)
-    if child["exit_code"] != 0 or record["exit_code"] != 0:
-        raise ValueError(f"{stem}: child receipt records failure")
     for name, expected in child["source_sha256"].items():
         if digest(project_path(Path(name))) != expected:
             raise ValueError(f"{stem}: source changed during execution: {name}")
+    if on_receipt is not None:
+        on_receipt(child)
+    if child["exit_code"] != 0 or record["exit_code"] != 0:
+        raise ValueError(f"{stem}: child receipt records failure")
     return path, child
 
 
@@ -144,15 +146,21 @@ def behavior(output, receipt, seeds):
 
 
 def linux(output, receipt, seeds):
+    child_probe("boot_model_probe.py", [], output, receipt, "boot-oracle-unit")
     build = software(output, receipt)
     measured = {}
     for seed in seeds:
-        _, child = child_probe("boot_probe.py", [
+        def observe(child):
+            # Failed runs retain real partial comparisons, never a passing boot.
+            measured.update({f"seed{seed}.{name}": value for name, value in
+                             child.get("execution_observations", {}).get("coverage", {}).items()
+                             if name != "complete_boot" or child["exit_code"] == 0})
+            measured.update(child.get("measurements", {}))
+            write_coverage(output, coverage_requirements("linux", seeds), measured)
+        child_probe("boot_probe.py", [
             "--build-receipt", str(build.relative_to(ROOT)), "--seed", str(seed),
             "--cycles", "40000000",
-        ], output, receipt, f"boot-{seed}")
-        measured.update(child["measurements"])
-        write_coverage(output, coverage_requirements("linux", seeds), measured)
+        ], output, receipt, f"boot-{seed}", on_receipt=observe)
     assert_coverage(output, coverage_requirements("linux", seeds), measured)
 
 

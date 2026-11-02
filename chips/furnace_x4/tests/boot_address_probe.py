@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve retained public DDR instruction-fill observations against built ELFs."""
+"""Resolve retained public DDR fills and public retirement observations against ELFs."""
 
 import argparse
 import bisect
@@ -72,13 +72,14 @@ def main():
         for line in summary.read_text().splitlines():
             if line.startswith("WINDOW "):
                 window = line
-            if not line.startswith("instruction_fill_lines_by_ARPROT "):
+            retired = line.startswith("retired_hot_lines:")
+            if not retired and not line.startswith("instruction_fill_lines_by_ARPROT "):
                 continue
             for physical_hex, count in re.findall(r"(0x[0-9a-f]+),(\d+)", line):
                 physical = int(physical_hex, 16)
                 kind = "kernel" if physical >= components["kernel"]["address"] else "firmware"
                 _, elf, relocation, symbols = next(row for row in tables if row[0] == kind)
-                virtual = physical + relocation
+                virtual = physical if retired and physical >> 63 else physical + relocation
                 text_symbols = [(address, name) for address, typ, name in symbols
                                 if typ in "tTwW"]
                 at = bisect.bisect_right([address for address, _ in text_symbols], virtual) - 1
@@ -88,6 +89,7 @@ def main():
                 observations.append({
                     "window": window, "physical_line": physical_hex,
                     "virtual_line": hex(virtual), "fill_count": int(count),
+                    "observation": "retired instructions" if retired else "DDR instruction fills",
                     "elf": str(elf.relative_to(ROOT)), "symbol_at_line_start": name,
                     "symbol_offset": virtual - address,
                 })
