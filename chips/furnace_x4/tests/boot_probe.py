@@ -14,6 +14,8 @@ import time
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from boot_scoring import score_boot
 os.environ.setdefault("FURNACE_VERIFY_DEADLINE", str(time.monotonic() + 2700))
 
 
@@ -213,9 +215,9 @@ def main():
         measured = json.loads((output / "execution-measurements.json").read_text())
         if measured["simulation_exit"] != 0 or measured["retired"] <= 0:
             raise ValueError("missing actual instruction execution")
-        receipt["measurements"] = {
-            f"seed{args.seed}.{name}": value for name, value in measured["coverage"].items()
-        }
+        scored = score_boot(measured, (output / "uart.txt").read_text())
+        receipt["measurements"] = {f"seed{args.seed}.{name}": value
+                                   for name, value in scored.items()}
         status = 0
     except (OSError, ValueError, KeyError, RuntimeError) as error:
         receipt["diagnostic_error"] = str(error)
