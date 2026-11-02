@@ -29,6 +29,17 @@ COMPILE_PROFILES = {
                       "--output-split-cfuncs", "10000"],
         "optimization": "-O3",
     },
+    "o3-small": {
+        "verilator": ["-O3", "--output-split", "5000",
+                      "--output-split-cfuncs", "1000",
+                      "--gate-stmts", "1000", "--inline-mult", "0"],
+        "optimization": "-O3",
+    },
+    "gprof": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000", "--prof-c", "--prof-cfuncs"],
+        "optimization": "-O3",
+    },
 }
 
 
@@ -230,12 +241,25 @@ def main():
             "tests/boot_observers.sv",
             cpp_from_obj,
         ], output, "compile", receipt)
-        run([
+        simulation_argv = [
             relative / "obj/Vfurnace_x4_top", relative / "image-index.txt",
             relative / "uart.txt", str(args.cycles), str(args.seed),
             relative / "simulation-summary.txt",
             relative / "execution-measurements.json",
-        ], output, "simulation", receipt)
+        ]
+        if args.compile_profile == "gprof":
+            simulation_argv = ["env", f"GMON_OUT_PREFIX={relative}/gmon", *simulation_argv]
+        simulation = run(simulation_argv, output, "simulation", receipt, check=False)
+        if args.compile_profile == "gprof":
+            profiles = list(output.glob("gmon.*"))
+            if len(profiles) != 1:
+                raise ValueError("expected exactly one settled execution profile")
+            receipt["execution_profile_sha256"] = digest(profiles[0])
+            run(["gprof", "--version"], output, "gprof-version", receipt)
+            run(["gprof", relative / "obj/Vfurnace_x4_top", profiles[0].relative_to(ROOT)],
+                output, "execution-profile", receipt)
+        if simulation["exit_code"]:
+            raise RuntimeError(f"simulation exit={simulation['exit_code']}; see {relative}")
         measured = json.loads((output / "execution-measurements.json").read_text())
         if measured["simulation_exit"] != 0 or measured["retired"] <= 0:
             raise ValueError("missing actual instruction execution")
