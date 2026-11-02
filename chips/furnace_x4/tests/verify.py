@@ -164,7 +164,7 @@ def linux(output, receipt, seeds):
             write_coverage(output, coverage_requirements("linux", seeds), measured)
         child_probe("boot_probe.py", [
             "--build-receipt", str(build.relative_to(ROOT)), "--seed", str(seed),
-            "--cycles", "40000000",
+            "--cycles", "40000000", "--compile-profile", "o3-split",
         ], output, receipt, f"boot-{seed}", on_receipt=observe)
     assert_coverage(output, coverage_requirements("linux", seeds), measured)
 
