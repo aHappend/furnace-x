@@ -16,6 +16,34 @@ from workload_model import FIXTURE_BASE, fixtures
 
 
 INTEGRATED_MUTATIONS = {
+    "dma_data_order": {
+        "module": "furnace_dma512.sv",
+        "before": "assign m_axi_wdata = m_axi_wvalid ? buffer_q : 512'b0;",
+        "after": "assign m_axi_wdata = m_axi_wvalid ? (buffer_q ^ 512'b1) : 512'b0;",
+        "message": r"DDR semantic write id=(?:[0-9]|1[0-5]) beat=0 at=0x86300000 observed=0 expected=1",
+        "assertion": "DMA WDATA bytes match independently generated source pattern",
+    },
+    "cache_invalidation": {
+        "module": "hammer_v3_cache.sv",
+        "before": "if (cmd_q == 3) valid[scan] <= 1'b0;",
+        "after": "if (cmd_q == 3 && READ_ONLY) valid[scan] <= 1'b0;",
+        "code_low": 0x7000, "code_high": 0x700a,
+        "assertion": "CPU feature re-read observes engine DMA update rather than retained clean cache line",
+    },
+    "reservation_invalidation": {
+        "module": "hammer_v3_atomic.sv",
+        "before": "if (invalidate || store_commit) reservation <= 1'b0;",
+        "after": "if (store_commit) reservation <= 1'b0;",
+        "code_low": 0x9000, "code_high": 0x9000,
+        "assertion": "SC fails after real DMA activity without an intervening CPU store",
+    },
+    "plic_disconnect": {
+        "module": "furnace_x4_top.sv",
+        "before": ".plic_sources({30'b0,fabric_irq})",
+        "after": ".plic_sources(31'b0)",
+        "code_low": 0x0c200004, "code_high": 0x0c200004,
+        "assertion": "PLIC claim returns actual fabric completion source 2",
+    },
     "authenticated_weight_commit": {
         "module": "furnace_x2_top.sv",
         "before": "mm_weights<=candidate_weights; mm_weights_valid<=1;",

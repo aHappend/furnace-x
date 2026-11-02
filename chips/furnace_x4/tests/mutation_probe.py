@@ -38,6 +38,7 @@ def main():
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
     parser.add_argument("--focus", choices=("adapters", "integrated"),
                         help="bounded diagnostic subset; default enforces the full mandatory matrix")
+    parser.add_argument("--repair-of", type=Path)
     args = parser.parse_args()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = project_path(args.output_root) / f"mutations-{stamp}-{uuid.uuid4().hex[:8]}"
@@ -58,6 +59,9 @@ def main():
     save(output, receipt)
     status = 1
     try:
+        if args.repair_of:
+            receipt["repair_of"] = str(args.repair_of)
+            receipt["repair_receipt_sha256"] = digest(project_path(args.repair_of))
         run(["verilator", "--version"], output, "verilator-version", receipt)
         measured = {}
         for name, kind, before, after, assertion in (
@@ -138,6 +142,13 @@ def main():
                 if not simulation or simulation["timed_out"] or simulation["exit_code"] != 1:
                     raise ValueError(f"{name}: compile/tool/timeout failure is not sensitivity")
                 message = (path.parent / simulation["stderr"]).read_text()
+                if "message" in mutation:
+                    if not re.search(mutation["message"], message):
+                        raise ValueError(f"{name}: missing intended public-DDR rejection")
+                    row.update(detected=True, observed_failure=message.strip())
+                    measured[name] = 1
+                    save(output, receipt)
+                    continue
                 matches = re.findall(
                     r"CPU assertion/trap: F ([0-9a-f]{16}) ([0-9a-f]{16}) ([0-9a-f]{16})",
                     message,

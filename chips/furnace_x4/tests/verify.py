@@ -136,7 +136,11 @@ def behavior(output, receipt, seeds):
     child_probe("numerical_probe.py", [], output, receipt, "numerical")
     _, child = child_probe("integrated_probe.py", ["--seeds", ",".join(map(str, seeds))],
                            output, receipt, "integrated")
-    assert_coverage(output, coverage_requirements("behavior", seeds), child["measurements"])
+    _, leaf = child_probe("interrupt_probe.py", [], output, receipt, "interrupt")
+    receipt["coverage_scopes"] = {"irq_source_positions": "leaf public aggregator source interface"}
+    measured = dict(child["measurements"])
+    measured.update(leaf["measurements"])
+    assert_coverage(output, coverage_requirements("behavior", seeds), measured)
 
 
 def linux(output, receipt, seeds):
