@@ -145,13 +145,15 @@ def behavior(output, receipt, seeds):
 
 def linux(output, receipt, seeds):
     build = software(output, receipt)
+    measured = {}
     for seed in seeds:
-        child_probe("boot_probe.py", [
+        _, child = child_probe("boot_probe.py", [
             "--build-receipt", str(build.relative_to(ROOT)), "--seed", str(seed),
             "--cycles", "40000000",
         ], output, receipt, f"boot-{seed}")
-    # UART completion text alone cannot establish executed privilege/IRQ coverage.
-    assert_coverage(output, coverage_requirements("linux", seeds), {})
+        measured.update(child["measurements"])
+        write_coverage(output, coverage_requirements("linux", seeds), measured)
+    assert_coverage(output, coverage_requirements("linux", seeds), measured)
 
 
 def defects(output, receipt):

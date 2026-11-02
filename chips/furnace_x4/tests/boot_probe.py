@@ -201,18 +201,30 @@ def main():
             "--assert", "-Wno-fatal", "--output-split", "20000",
             "-CFLAGS", "-O2 -std=c++17",
             *[str(p.relative_to(ROOT)) for p in sorted((ROOT / "rtl").glob("*.sv"))],
+            "tests/boot_observers.sv",
             cpp_from_obj,
         ], output, "compile", receipt)
         run([
             relative / "obj/Vfurnace_x4_top", relative / "image-index.txt",
             relative / "uart.txt", str(args.cycles), str(args.seed),
             relative / "simulation-summary.txt",
+            relative / "execution-measurements.json",
         ], output, "simulation", receipt)
+        measured = json.loads((output / "execution-measurements.json").read_text())
+        if measured["simulation_exit"] != 0 or measured["retired"] <= 0:
+            raise ValueError("missing actual instruction execution")
+        receipt["measurements"] = {
+            f"seed{args.seed}.{name}": value for name, value in measured["coverage"].items()
+        }
         status = 0
     except (OSError, ValueError, KeyError, RuntimeError) as error:
         receipt["diagnostic_error"] = str(error)
         print(str(error), file=sys.stderr)
     finally:
+        measured_path = output / "execution-measurements.json"
+        if measured_path.is_file():
+            receipt["execution_measurements_sha256"] = digest(measured_path)
+            receipt["execution_observations"] = json.loads(measured_path.read_text())
         receipt["end_utc"] = now()
         receipt["exit_code"] = status
         save(output, receipt)
