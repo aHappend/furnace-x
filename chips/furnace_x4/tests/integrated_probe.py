@@ -67,6 +67,29 @@ INTEGRATED_MUTATIONS = {
         "public_message": r"DDR semantic write id=(?:[0-9]|1[0-5]) beat=0 at=0x8600500[0-9a-f] observed=[0-9a-f]+ expected=[0-9a-f]+",
         "assertion": "signed W4 tensor result matches independent integer dot product",
     },
+    "vision_numerical": {
+        "module": "furnace_bilinear_pipe.sv",
+        "before": "assign m_data=(rst_n && enabled) ? answer : 8'b0;",
+        "after": "assign m_data=(rst_n && enabled) ? (answer ^ 8'h01) : 8'b0;",
+        "code_low": 0x7000, "code_high": 0x7002,
+        "public_message": r"DDR semantic write id=(?:[0-9]|1[0-5]) beat=0 at=0x8600700[0-9a-f] observed=[0-9a-f]+ expected=[0-9a-f]+",
+        "assertion": "vision feature DMA matches independent constant-image spatial means",
+    },
+    "fft_numerical": {
+        "module": "furnace_fft_radix2.sv",
+        "before": "assign m_re=active ? answer_re : 32'sd0;",
+        "after": "assign m_re=active ? (answer_re ^ 32'h00010000) : 32'sd0;",
+        "code_low": 0x7001, "code_high": 0x7002,
+        "public_message": r"DDR semantic write id=(?:[0-9]|1[0-5]) beat=0 at=0x8600710[0-9a-f] observed=[0-9a-f]+ expected=[0-9a-f]+",
+        "assertion": "audio feature DMA matches independent all-zero FFT magnitudes",
+    },
+    "mailbox_semaphore_association": {
+        "module": "furnace_mailboxes.sv",
+        "before": "else result = pop_data[index_q];",
+        "after": "else result = pop_data[index_q ^ 2'b01];",
+        "code_low": 0x2600, "code_high": 0x2630,
+        "assertion": "mailbox read returns the submitted data from the addressed queue",
+    },
 }
 
 

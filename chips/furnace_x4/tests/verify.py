@@ -136,6 +136,7 @@ def behavior(output, receipt, seeds):
     receipt["leaf_comparisons"] = adapters(output, receipt)
     child_probe("firmware_probe.py", [], output, receipt, "firmware")
     child_probe("numerical_probe.py", [], output, receipt, "numerical")
+    child_probe("tensor_probe.py", [], output, receipt, "tensor")
     _, child = child_probe("integrated_probe.py", ["--seeds", ",".join(map(str, seeds))],
                            output, receipt, "integrated")
     _, leaf = child_probe("interrupt_probe.py", [], output, receipt, "interrupt")

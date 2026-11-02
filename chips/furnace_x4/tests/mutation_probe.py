@@ -36,7 +36,7 @@ REQUIRED = (
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
-    parser.add_argument("--focus", choices=("adapters", "integrated"),
+    parser.add_argument("--focus", choices=("adapters", "integrated", "tensor"),
                         help="bounded diagnostic subset; default enforces the full mandatory matrix")
     parser.add_argument("--repair-of", type=Path)
     parser.add_argument("--only", help="comma-separated integrated diagnostic mutants")
@@ -73,7 +73,7 @@ def main():
         run(["verilator", "--version"], output, "verilator-version", receipt)
         measured = {}
         for name, kind, before, after, assertion in (
-            MUTATIONS if args.focus != "integrated" else ()
+            MUTATIONS if args.focus in (None, "adapters") else ()
         ):
             top = "mmio_contract" if kind == "mmio" else "cpu_adapter_contract"
             module = "furnace_x4_mmio_bridge" if kind == "mmio" else "furnace_x4_cpu_axi512_bridge"
@@ -112,7 +112,7 @@ def main():
                     if transient.suffix in (".o", ".a", ".gch"):
                         transient.unlink()
                 save(output, receipt)
-        if args.focus != "adapters":
+        if args.focus in (None, "integrated"):
             # One fresh, complete baseline proves that the same CPU-executed
             # assertions are reachable before any disposable mutation is scored.
             variants = [("baseline", None), *selected.items()]
@@ -178,11 +178,45 @@ def main():
                 row.update(detected=True, code=code, observed=observed, expected=expected)
                 measured[name] = 1
                 save(output, receipt)
+        if args.focus in (None, "tensor"):
+            for variant in ("baseline", "mutant"):
+                child_root = output / f"tensor-{variant}-{uuid.uuid4().hex[:8]}"
+                child_root.mkdir()
+                argv = ["python3", "tests/tensor_probe.py", "--output-root",
+                        child_root.relative_to(ROOT)]
+                if variant == "mutant":
+                    argv += ["--mutation", "tensor_rounding"]
+                result = run(argv, output, f"tensor-{variant}", receipt, timeout_s=2700,
+                             check=False)
+                found = list(child_root.glob("*/receipt.json"))
+                if len(found) != 1:
+                    raise ValueError("tensor mutation missing unique child receipt")
+                path = found[0]
+                child = json.loads(path.read_text())
+                receipt["children"].append({
+                    "receipt": str(path.relative_to(ROOT)), "sha256": digest(path),
+                })
+                if result["exit_code"] or child["exit_code"]:
+                    raise ValueError("tensor baseline or semantic-sensitivity procedure failed")
+                if variant == "mutant":
+                    if not child["mutant_detected"]:
+                        raise ValueError("tensor rounding mutant lacks semantic comparison rejection")
+                    measured["tensor_rounding"] = 1
+                    receipt["mutants"].append({
+                        "name": "tensor_rounding", "scope": "leaf public tensor interface",
+                        "intended_assertion": "independent balanced tensor numeric/protocol result",
+                        "receipt": str(path.relative_to(ROOT)), "detected": True,
+                    })
+                elif len(child["runs"]) != 4:
+                    raise ValueError("tensor baseline omitted dual-simulator/three-seed comparisons")
+                save(output, receipt)
         coverage = [{"bin": name, "required": 1, "observed": measured.get(name, 0)}
                     for name in REQUIRED]
         (output / "coverage.json").write_text(json.dumps(coverage, indent=2) + "\n")
         required = (tuple(selected) if args.focus == "integrated" else
                     tuple(row[0] for row in MUTATIONS) if args.focus == "adapters" else REQUIRED)
+        if args.focus == "tensor":
+            required = ("tensor_rounding",)
         if any(measured.get(name, 0) != 1 for name in required):
             raise ValueError("mandatory full-system semantic mutation comparisons incomplete; "
                              "see coverage.json (adapter mutants are separate leaf evidence)")
