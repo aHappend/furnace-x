@@ -13,10 +13,23 @@ import sys
 import time
 import uuid
 
+sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from boot_scoring import score_boot
 os.environ.setdefault("FURNACE_VERIFY_DEADLINE", str(time.monotonic() + 2700))
+
+COMPILE_PROFILES = {
+    "baseline": {
+        "verilator": ["--output-split", "20000"],
+        "optimization": "-O2",
+    },
+    "o3-split": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000"],
+        "optimization": "-O3",
+    },
+}
 
 
 def digest(path):
@@ -121,6 +134,7 @@ def main():
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--repair-of", type=Path)
+    parser.add_argument("--compile-profile", choices=COMPILE_PROFILES, default="baseline")
     args = parser.parse_args()
     if args.cycles <= 8 or args.jobs < 1:
         parser.error("cycles must exceed reset duration; jobs must be positive")
@@ -141,6 +155,8 @@ def main():
         "start_utc": now(), "end_utc": None, "exit_code": None,
         "timeout_s": None, "timed_out": False, "commands": [],
         "tool_versions": {}, "seed": args.seed, "cycles_limit": args.cycles,
+        "compile_profile": args.compile_profile,
+        "compile_configuration": COMPILE_PROFILES[args.compile_profile],
         "scope": "Bounded public-pin boot diagnostic, not full behavior/Linux/defects/synthesis acceptance.",
     }
     save(output, receipt)
@@ -202,12 +218,14 @@ def main():
         # Verilator resolves its C++ prerequisite relative to the generated makefile.
         # Supply a portable path from obj/ to the project test source.
         cpp_from_obj = Path(*([".."] * len((relative / "obj").parts))) / "tests/boot_endpoint.cpp"
+        profile = COMPILE_PROFILES[args.compile_profile]
+        optimization = profile["optimization"]
         run([
             "verilator", "--cc", "--exe", "--build", "-j", str(args.jobs),
             "--top-module", "furnace_x4_top", "--Mdir", relative / "obj",
-            "--assert", "-Wno-fatal", "--output-split", "20000",
-            "-MAKEFLAGS", "OPT_FAST=-O2 OPT_SLOW=-O2 OPT_GLOBAL=-O2",
-            "-CFLAGS", "-O2 -std=c++17",
+            "--assert", "-Wno-fatal", *profile["verilator"],
+            "-MAKEFLAGS", f"OPT_FAST={optimization} OPT_SLOW={optimization} OPT_GLOBAL={optimization}",
+            "-CFLAGS", f"{optimization} -std=c++17",
             *[str(p.relative_to(ROOT)) for p in sorted((ROOT / "rtl").glob("*.sv"))],
             "tests/boot_observers.sv",
             cpp_from_obj,

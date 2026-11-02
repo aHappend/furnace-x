@@ -9,8 +9,9 @@ import re
 import sys
 import uuid
 
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from boot_probe import ROOT, digest, now, project_path, run, save
+from boot_probe import COMPILE_PROFILES, ROOT, digest, now, project_path, run, save
 
 
 def main():
@@ -18,6 +19,8 @@ def main():
     parser.add_argument("--before", type=Path, required=True)
     parser.add_argument("--after", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
+    parser.add_argument("--comparison-mode", choices=("legacy-o2", "compiler-profile"),
+                        default="legacy-o2")
     args = parser.parse_args()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = project_path(args.output_root) / f"boot-performance-{stamp}-{uuid.uuid4().hex[:8]}"
@@ -71,6 +74,8 @@ def main():
                 "simulation_duration_s": simulation["duration_s"],
                 "elapsed_s": elapsed / 1e9, "endpoint_compiler": compiler[0],
                 "endpoint_optimization_flags": flags,
+                "compile_profile": child.get("compile_profile"),
+                "compile_configuration": child.get("compile_configuration"),
                 "sampled_phase_fraction_estimates": {
                     name: profile[name] * measured["cycles"] / profile["cycle_samples"] / elapsed
                     for name in ("drive_ns", "low_eval_ns", "endpoint_sample_ns",
@@ -88,11 +93,18 @@ def main():
                      "software_build_receipt_sha256", "tool_versions"):
             if before[name] != after[name]:
                 raise ValueError(f"changed experiment input: {name}")
+        if before["source_sha256"].keys() != after["source_sha256"].keys():
+            raise ValueError("paired source inventories differ")
         changed = {name for name in before["source_sha256"]
                    if before["source_sha256"][name] != after["source_sha256"].get(name)}
-        if changed != {"tests/boot_execution_model.h", "tests/boot_probe.py"}:
+        expected_changed = ({"tests/boot_execution_model.h", "tests/boot_probe.py"}
+                            if args.comparison_mode == "legacy-o2" else set())
+        if changed != expected_changed:
             raise ValueError(f"unexpected paired source differences: {sorted(changed)}")
-        for name in ("boot_endpoint.cpp", "boot_workload_model.h", "boot_observers.sv"):
+        snapshots = ["boot_endpoint.cpp", "boot_workload_model.h", "boot_observers.sv"]
+        if args.comparison_mode == "compiler-profile":
+            snapshots += ["boot_probe.py", "boot_execution_model.h"]
+        for name in snapshots:
             if digest(paths[0].parent / "sources" / name) != digest(
                     paths[1].parent / "sources" / name):
                 raise ValueError(f"paired source snapshot differs: {name}")
@@ -105,11 +117,45 @@ def main():
                 raise ValueError(f"changed measured behavior/comparison count: {name}")
         if digest(paths[0].parent / "uart.txt") != digest(paths[1].parent / "uart.txt"):
             raise ValueError("UART bytes changed")
-        if rows[0]["endpoint_optimization_flags"][-1] != "-Os" or (
-                rows[1]["endpoint_optimization_flags"][-1] != "-O2"):
-            raise ValueError("effective compiler flags did not change as intended")
+        if args.comparison_mode == "legacy-o2":
+            if rows[0]["endpoint_optimization_flags"][-1] != "-Os" or (
+                    rows[1]["endpoint_optimization_flags"][-1] != "-O2"):
+                raise ValueError("effective compiler flags did not change as intended")
+        else:
+            if before["compile_profile"] == after["compile_profile"]:
+                raise ValueError("compiler-profile comparison requires distinct profiles")
+            normalized = []
+            for path, child, row in zip(paths, (before, after), rows):
+                profile = COMPILE_PROFILES[child["compile_profile"]]
+                if child["compile_configuration"] != profile:
+                    raise ValueError("compile profile differs from its declared configuration")
+                if row["endpoint_optimization_flags"][-1] != profile["optimization"]:
+                    raise ValueError("effective endpoint optimization differs from declared profile")
+                command = next(r for r in child["commands"]
+                               if r["stdout"] == "compile.stdout.txt")["argv"].copy()
+                for flag in profile["verilator"]:
+                    command.remove(flag)
+                for flag in (
+                    f'OPT_FAST={profile["optimization"]} OPT_SLOW={profile["optimization"]} OPT_GLOBAL={profile["optimization"]}',
+                    f'{profile["optimization"]} -std=c++17',
+                ):
+                    command.remove(flag)
+                # Output namespaces and their relative C++ paths necessarily differ.
+                command[command.index("--Mdir") + 1] = "<fresh-output>/obj"
+                command[-1] = "<relative>/tests/boot_endpoint.cpp"
+                normalized.append(command)
+                generated = (path.parent / "compile.stdout.txt").read_text().splitlines()
+                fast = [line for line in generated if " -c " in line and
+                        "Vfurnace_x4_top" in line and "__Slow" not in line]
+                if not fast or any(re.findall(r"(?<!\S)-O\S+", line)[-1] !=
+                                   profile["optimization"] for line in fast):
+                    raise ValueError("generated fast RTL compiler flags differ from profile")
+            if normalized[0] != normalized[1]:
+                raise ValueError("compile commands differ beyond explicitly declared optimization flags")
         receipt["comparison"] = {
             "runs": rows, "equal_work_confirmed": True,
+            "comparison_mode": args.comparison_mode,
+            "allowed_source_differences": sorted(expected_changed),
             "elapsed_speedup": rows[0]["elapsed_s"] / rows[1]["elapsed_s"],
             "limitations": "One paired seed on a shared host; sampled timing estimates are not a causal decomposition.",
             "linux_completion": False,
