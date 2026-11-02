@@ -134,7 +134,9 @@ def behavior(output, receipt, seeds):
     receipt["leaf_comparisons"] = adapters(output, receipt)
     child_probe("firmware_probe.py", [], output, receipt, "firmware")
     child_probe("numerical_probe.py", [], output, receipt, "numerical")
-    assert_coverage(output, coverage_requirements("behavior", seeds), {})
+    _, child = child_probe("integrated_probe.py", ["--seeds", ",".join(map(str, seeds))],
+                           output, receipt, "integrated")
+    assert_coverage(output, coverage_requirements("behavior", seeds), child["measurements"])
 
 
 def linux(output, receipt, seeds):
