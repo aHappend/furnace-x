@@ -33,27 +33,30 @@
 
 ---
 
-**Furnace-X** is the system-level integration series within Vulcan's **Furnace** silicon family, uniting specialized engines from **Anvil**, **Billet**, **Rivet**, **Swage**, **Bellows**, and **Crucible** into cohesive multi-engine SoCs with shared DDR4 DMA and hardware command queues.
+**Furnace-X** is the system-level integration series within Vulcan's **Furnace** silicon family, uniting specialized engines from **Hammer** (`RV64GC` Linux CPU), **Anvil** (LLM/Embedding), **Billet** (DSP), **Rivet** (Crypto), **Swage** (ISP), **Bellows** (LZ4/Network), **Crucible** (3D Graphics), and **SABLE** (SAT Verification) into cohesive multi-engine SoCs with shared DDR4 DMA, AXI4 QoS NoC, and Linux CLI application stacks.
 
 ## Silicon Signoff Matrix & Dual-Track Publications (`100 MHz+` Baseline)
 
-| Gen | Accelerator | Architecture & Numerical Scope | Quartus 17.1 STA (`10.0 ns`) | Intel Arria 10 GX Utilization | PCIe Gen3x8 HIL | Academic & Developer Reports |
+| Gen | Accelerator | Architecture & Numerical Scope | Quartus 17.1 STA (`10.0 ns`) | Intel Arria 10 GX Utilization | PCIe Gen3x8 HIL | Evidence & Artifacts |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Gen-1** | **FURNACE-X1** | AI Weight-Streaming & Secure Storage SoC · Bellows-L LZ4 Weight Decompressor + Rivet-A AES-GCM Decryptor + Anvil-Q Tensor Engine over AXI4 | Target `>= 100 MHz` | — | Scheduled | *Planned* |
-| **Gen-2** | **FURNACE-X2** | Multimodal Edge Perception SoC · Swage-S Vision ISP + Billet-T Audio Spectral Frontend + Anvil-E3/Q4 Unified Inference Engine | Target `>= 100 MHz` | — | Scheduled | *Planned* |
-| **Gen-3** | **FURNACE-X3** | Full Seven-Family Heterogeneous Compute SoC with 8GB DDR4 EMIF DMA Controller, QoS NoC Crossbar & Host Ring-Buffer Command Processor | Target `>= 100 MHz` | — | Scheduled | *Planned* |
+| **Gen-1** | [**FURNACE-X1**](chips/furnace_x1/) | AI Weight-Streaming & Secure Storage SoC · Bellows-L LZ4 Weight Decompressor + Rivet-A AES-GCM Decryptor + Anvil-Q Tensor Engine over AXI4 | `113.06 MHz` (`WNS +1.155 ns`) | `14,033 ALMs · 38 DSPs · 22 M20K` | **PASSED (3/3)** | [`chips/furnace_x1/evidence/`](chips/furnace_x1/evidence/) |
+| **Gen-2** | [**FURNACE-X2**](chips/furnace_x2/) | Multimodal Edge Perception SoC · Swage-S Vision ISP + Billet-T Audio Spectral Frontend + Anvil-E3/Q4 Unified Inference Engine | `111.78 MHz` (`WNS +1.054 ns`) | `18,621 ALMs · 53 DSPs · 64 M20K` | **PASSED (3/3)** | [`chips/furnace_x2/evidence/`](chips/furnace_x2/evidence/) |
+| **Gen-3** | [**FURNACE-X3**](chips/furnace_x3/) | Seven-Family Heterogeneous Compute SoC (`Hammer-V2 RV64IMAC` Host + 6 Domain Accelerators) with 8GB DDR4 EMIF DMA & QoS NoC Crossbar | `114.69 MHz` (`WNS +1.281 ns`) | `47,701 ALMs (11%) · 121 DSPs (8%) · 219 M20K` | **PASSED (3/3)** | [`chips/furnace_x3/evidence/`](chips/furnace_x3/evidence/) |
+| **Gen-4** | [**FURNACE-X4 (`Furnace-SoC4`)**](chips/furnace_x4/) | **8-Family Unified Linux Application Computer** (`Hammer-V4 RV64GC + Sv39 MMU` booting OpenSBI + Linux 6.6 + BusyBox with CLI apps `anvil-chat`, `swage-isp`, `rivet-vault`, `billet-dsp`, `bellows-pack`, `crucible-render`, `sable-verify`) | `111.30 MHz` (`WNS +1.015 ns`) | `47,300 ALMs (11%) · 69 DSPs (5%) · 223 M20K` | **PASSED (3/3)** | [`chips/furnace_x4/`](chips/furnace_x4/) |
 
-## Vulcan Seven-Family Workshop Silicon Matrix
+## Vulcan Nine-Family Workshop Silicon Matrix
 
 | Silicon Family | Workshop Metaphor | Domain & Series Repositories |
 | :--- | :--- | :--- |
-| **Anvil** *(Primary Focus)* | Heavy forge anvil bearing core compute loads | AI & Large-Model Compute — [**Anvil-Q** (Quantized LLMs)](https://github.com/aHappend/anvil-q) · [**Anvil-E** (Multimodal Embeddings)](https://github.com/aHappend/anvil-e) |
+| **Anvil** *(Primary Focus)* | Heavy forge anvil bearing core compute loads | AI & Large-Model Compute — [**Anvil-Q** (`W4A16` AWQ, `BF16` FP & `256/512-MAC` HT LLM Engines)](https://github.com/aHappend/anvil-q) · [**Anvil-E** (Multimodal Embeddings)](https://github.com/aHappend/anvil-e) |
+| **Hammer** | Forging hammer driving execution rhythm | General-Purpose RISC-V Processors — [**Hammer-V** (`RV32I` / `RV64IMAC` / `RV64GC` + `Sv39 MMU` Linux Boot)](https://github.com/aHappend/hammer-v) |
+| **Furnace** | Industrial furnace integrating multiple stages | Heterogeneous Application Computers & SoCs — [**Furnace-X** (`Furnace-X1..X3` + `Furnace-SoC4` 8-Family Linux Computer)](https://github.com/aHappend/furnace-x) |
 | **Billet** | Raw metal stock shaped and combined into systems | Digital Signal Processing — [**Billet-T** (FFT/Spectral)](https://github.com/aHappend/billet-t) · [**Billet-F** (FIR/SOS-IIR Filters)](https://github.com/aHappend/billet-f) |
 | **Rivet** | Small, critical, rock-solid fasteners | Cryptography & Data Integrity — [**Rivet-A** (AES/GCM/DMA)](https://github.com/aHappend/rivet-a) · [**Rivet-H** (SHA-256/512/HMAC)](https://github.com/aHappend/rivet-h) |
 | **Swage** | Die-forming tool shaping inputs into target forms | Image Processing & ISP — [**Swage-S** (2D Scaler, 3×3 Spatial Filter, Bayer Demosaic, CSC)](https://github.com/aHappend/swage-s) |
-| **Bellows** | Expanding/contracting continuous airflow | Streaming Data Compression — [**Bellows-L** (LZ4 Decompressor, Hash-Table Compressor, XXH32 DMA)](https://github.com/aHappend/bellows-l) |
+| **Bellows** | Expanding/contracting continuous airflow | Compression & Network Offload — [**Bellows-L** (LZ4/XXH32 DMA)](https://github.com/aHappend/bellows-l) · [**Bellows-N** (100G Line-Rate Network Offload)](https://github.com/aHappend/bellows-n) |
 | **Crucible** | Vessel fusing diverse materials into form | Graphics Processing & Rendering — [**Crucible-G** (Triangle Setup, Tile Rasterizer, Z-Buffer & Texture Shader)](https://github.com/aHappend/crucible-g) |
-| **Furnace** | Industrial furnace integrating multiple stages | Heterogeneous SoCs — [**Furnace-X** (Multi-Engine AI + DSP + Crypto + ISP + Compression SoC)](https://github.com/aHappend/furnace-x) |
+| **SABLE** | Precision benchmark gauge for constraint solving | Hardware Formal Verification — **SABLE** (Clause-Parallel Hardware SAT Solver Engine, `135.57 MHz`) |
 
 ---
 <p align="center"><sub>Author: <strong>Sufeng Guo</strong> · Microsoft Research Asia · <a href="mailto:sufeng_guo@smail.nju.edu.cn">sufeng_guo@smail.nju.edu.cn</a> · <a href="LICENSE">MIT License</a></sub></p>
