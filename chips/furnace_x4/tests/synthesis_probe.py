@@ -17,7 +17,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
     parser.add_argument("--repair-of", type=Path)
-    parser.add_argument("--frontend", choices=("yosys", "icarus"), default="yosys")
+    parser.add_argument("--frontend", choices=("auto", "slang", "yosys", "icarus"),
+                        default="auto")
     args = parser.parse_args()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = project_path(args.output_root) / f"synthesis-{stamp}-{uuid.uuid4().hex[:8]}"
@@ -37,7 +38,8 @@ def main():
         "hierarchy -check -top furnace_x4_top\n"
         "proc\nopt_expr\nopt_clean\ncheck -noinit\n"
         "memory -nomap\nopt_clean\n"
-        "synth -top furnace_x4_top -nomem -noabc\n"
+        "synth -top furnace_x4_top -run begin:coarse\n"
+        "opt -full\ntechmap\nopt -fast\n"
         "check -assert\n"
         "select -assert-none t:$dlatch t:$adlatch t:$dlatchsr t:$div t:$mod\n"
         f"write_json {relative}/netlist.json\n"
@@ -50,7 +52,7 @@ def main():
         "source_sha256": {str(p.relative_to(ROOT)): digest(p) for p in sources},
         "script_sha256": digest(output / "synthesis.ys"),
         "start_utc": now(), "end_utc": None, "exit_code": None,
-        "timeout_s": None, "timed_out": False, "commands": [], "tool_versions": {},
+        "timeout_s": 2700, "timed_out": False, "commands": [], "tool_versions": {},
         "frontend": args.frontend,
         "scope": "Default integrated hierarchy, generic synthesis with inferred memories; no FPGA timing or hardware claim.",
     }
@@ -70,6 +72,31 @@ def main():
         }
         if result.returncode:
             raise RuntimeError("Yosys version query failed")
+        if args.frontend in ("auto", "slang"):
+            # Do not retry the already demonstrated packed-port/vlog95 failures.
+            # Only a loaded, callable frontend may lower this complete hierarchy.
+            probe = run(["yosys", "-Q", "-T", "-m", "slang", "-p",
+                         "help read_slang"], output, "slang-availability", receipt,
+                        check=False)
+            help_text = (output / "slang-availability.stdout.txt").read_text()
+            if probe["exit_code"] or "No such command" in help_text:
+                raise RuntimeError(
+                    "External prerequisite: a Yosys-compatible slang plugin "
+                    "providing read_slang with packed multidimensional port and "
+                    "generate support for the complete default furnace_x4_top. "
+                    "The installed Yosys native frontend and Icarus vlog95 lowering "
+                    "already failed in retained synthesis preparation receipts; "
+                    "no RTL, reduced top or tool installation was substituted."
+                )
+            script = script.replace(
+                "read_verilog -sv " + read_sources,
+                "plugin -i slang\nread_slang --top furnace_x4_top " + read_sources,
+                1,
+            )
+            (output / "synthesis.ys").write_text(script)
+            receipt["script_sha256"] = digest(output / "synthesis.ys")
+            receipt["selected_frontend"] = "slang"
+            save(output, receipt)
         if args.frontend == "icarus":
             result = subprocess.run(
                 ["iverilog", "-V"], cwd=ROOT, capture_output=True, text=True, check=False,

@@ -5,13 +5,16 @@ import argparse
 import datetime
 import hashlib
 import json
+import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import time
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
+os.environ.setdefault("FURNACE_VERIFY_DEADLINE", str(time.monotonic() + 2700))
 
 
 def digest(path):
@@ -34,32 +37,74 @@ def project_path(value):
     return path
 
 
-def run(argv, output, stem, receipt):
+def run(argv, output, stem, receipt, *, timeout_s=600, check=True, cwd=None):
+    deadline = float(os.environ.get("FURNACE_VERIFY_DEADLINE", "inf"))
+    remaining = deadline - time.monotonic()
+    timeout_s = min(timeout_s, remaining)
+    if timeout_s <= 0:
+        raise RuntimeError("2700-second aggregate execution deadline exhausted")
+    working = ROOT if cwd is None else Path(cwd).resolve()
+    working.relative_to(ROOT)
     record = {
-        "argv": [str(item) for item in argv], "cwd": ".",
+        "argv": [str(item) for item in argv], "cwd": str(working.relative_to(ROOT)),
         "start_utc": now(), "end_utc": None, "exit_code": None,
-        "timeout_s": None, "stdout": stem + ".stdout.txt",
-        "stderr": stem + ".stderr.txt",
+        "timeout_s": timeout_s, "stdout": stem + ".stdout.txt",
+        "stderr": stem + ".stderr.txt", "timed_out": False,
     }
+    if any(row.get("stdout") == record["stdout"] for row in receipt["commands"]):
+        raise ValueError(f"refusing to overwrite command logs: {stem}")
     receipt["commands"].append(record)
     save(output, receipt)
     with (output / record["stdout"]).open("w") as stdout, (
         output / record["stderr"]
     ).open("w") as stderr:
-        child = subprocess.Popen(record["argv"], cwd=ROOT, stdout=stdout, stderr=stderr)
-        while child.poll() is None:
-            time.sleep(1)
-            if time.monotonic() - run.last_heartbeat >= 25:
-                print(f"Boot preparation: {stem} running", flush=True)
-                run.last_heartbeat = time.monotonic()
-        record["exit_code"] = child.returncode
-    record["end_utc"] = now()
-    save(output, receipt)
-    if record["exit_code"]:
+        child = None
+        started = time.monotonic()
+        try:
+            child = subprocess.Popen(
+                record["argv"], cwd=working, stdout=stdout, stderr=stderr,
+                start_new_session=True,
+            )
+            while True:
+                left = timeout_s - (time.monotonic() - started)
+                try:
+                    child.wait(timeout=max(0.001, min(25, left)))
+                    break
+                except subprocess.TimeoutExpired:
+                    if time.monotonic() - started >= timeout_s:
+                        record["timed_out"] = True
+                        receipt["timed_out"] = True
+                        break
+                    print(f"Verification: {stem} running", flush=True)
+        except OSError as error:
+            record["launch_error"] = str(error)
+            raise
+        finally:
+            if child is not None:
+                # The process group is owned by this invocation, including make
+                # workers and simulators spawned by nested Python entries.
+                try:
+                    os.killpg(child.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+                try:
+                    child.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    pass
+                try:
+                    os.killpg(child.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                child.wait()
+                record["exit_code"] = child.returncode
+            record["duration_s"] = time.monotonic() - started
+            record["end_utc"] = now()
+            save(output, receipt)
+    if record["timed_out"]:
+        raise RuntimeError(f"{stem} execution timeout; see {output.relative_to(ROOT)}")
+    if check and record["exit_code"]:
         raise RuntimeError(f"{stem} exit={record['exit_code']}; see {output.relative_to(ROOT)}")
-
-
-run.last_heartbeat = time.monotonic()
+    return record
 
 
 def save(output, receipt):

@@ -10,6 +10,9 @@ import subprocess
 import sys
 import uuid
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from boot_probe import run
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -62,9 +65,10 @@ def main():
         "timeout_s": None,
         "timed_out": False,
         "exit_code": None,
-        "stdout": "stdout.txt",
-        "stderr": "stderr.txt",
+        "stdout": "build.stdout.txt",
+        "stderr": "build.stderr.txt",
         "tool_versions": {},
+        "commands": [],
         "scope": "Software build only; no simulation, Linux boot, or synthesis result.",
     }
     if args.repair_of:
@@ -94,11 +98,8 @@ def main():
                 }
                 if result.returncode:
                     raise RuntimeError(f"tool version query failed: {tool}")
-        with (output / "stdout.txt").open("w") as stdout, (
-            output / "stderr.txt"
-        ).open("w") as stderr:
-            result = subprocess.run(argv, cwd=ROOT, stdout=stdout, stderr=stderr, check=False)
-            exit_code = result.returncode
+        run(argv, output, "build", receipt)
+        exit_code = 0
     except (OSError, RuntimeError) as error:
         receipt["diagnostic_error"] = str(error)
         print(str(error), file=sys.stderr)
