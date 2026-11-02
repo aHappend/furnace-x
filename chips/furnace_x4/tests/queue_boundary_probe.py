@@ -15,6 +15,7 @@ from boot_probe import ROOT, digest, now, project_path, run, save
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
+    parser.add_argument("--repair-of", type=Path)
     args = parser.parse_args()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = project_path(args.output_root) / f"queue-boundary-{stamp}-{uuid.uuid4().hex[:8]}"
@@ -33,6 +34,9 @@ def main():
     save(output, receipt)
     status = 1
     try:
+        if args.repair_of:
+            receipt["repair_of"] = str(args.repair_of)
+            receipt["repair_receipt_sha256"] = digest(project_path(args.repair_of))
         for tool, option in (("python3", "--version"), ("iverilog", "-V"),
                              ("vvp", "-V"), ("verilator", "--version")):
             run([tool, option], output, f"{tool}-version", receipt)
@@ -62,7 +66,17 @@ def main():
                         counts["overflow"] != 1 or any(counts[name] <= 0 for name in (
                             "comparisons", "simultaneous", "full", "stalls", "pairs", "fifo_puts", "fifo_takes"))):
                     raise ValueError(f"{stem}: measured queue coverage/assertion failure")
-                receipt["runs"].append({"scope": "leaf", "seed": seed, "simulator": simulator, **counts})
+                conservation = re.findall(r"^QUEUE_CONSERVATION (.+)$", text, re.MULTILINE)
+                if len(conservation) != 1:
+                    raise ValueError(f"{stem}: missing explicit reset cancellation accounting")
+                canceled = {name: int(value) for name, value in re.findall(r"(\w+)=(\d+)", conservation[0])}
+                if counts["fifo_puts"] != counts["fifo_takes"]+canceled["fifo_canceled"] or (
+                        canceled["vision_puts"] != counts["pairs"]+canceled["vision_canceled"] or
+                        canceled["audio_puts"] != counts["pairs"]+canceled["audio_canceled"] or
+                        counts["pairs"] != canceled["fusion_retired"]+canceled["fusion_canceled"]):
+                    raise ValueError(f"{stem}: independent conservation/cancellation mismatch")
+                receipt["runs"].append({"scope": "leaf", "seed": seed, "simulator": simulator,
+                                        **counts, **canceled})
                 save(output, receipt)
             for path in (directory/"obj").iterdir():
                 if path.suffix in (".o", ".a", ".gch"):

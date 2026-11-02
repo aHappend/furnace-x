@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Portable L1 entrypoint. A diagnostic pass never substitutes for suite coverage.
 
-Work in progress: CPU-driven integrated workload scoring is present; remaining
-protocol/privilege bins and semantic mutants are not yet complete. All required
-coverage assertions remain active.
+Work in progress: CPU-driven workloads, tensor arithmetic, stream geometries,
+queue boundaries and semantic mutants are wired. Remaining protocol/cache-fault
+coverage and complete Linux execution are not established. Required assertions
+remain active.
 """
 
 import argparse
@@ -137,6 +138,8 @@ def behavior(output, receipt, seeds):
     child_probe("firmware_probe.py", [], output, receipt, "firmware")
     child_probe("numerical_probe.py", [], output, receipt, "numerical")
     child_probe("tensor_probe.py", [], output, receipt, "tensor")
+    child_probe("stream_boundary_probe.py", [], output, receipt, "stream-boundary")
+    child_probe("queue_boundary_probe.py", [], output, receipt, "queue-boundary")
     _, child = child_probe("integrated_probe.py", ["--seeds", ",".join(map(str, seeds))],
                            output, receipt, "integrated")
     _, leaf = child_probe("interrupt_probe.py", [], output, receipt, "interrupt")
