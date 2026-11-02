@@ -39,7 +39,15 @@ def main():
     parser.add_argument("--focus", choices=("adapters", "integrated"),
                         help="bounded diagnostic subset; default enforces the full mandatory matrix")
     parser.add_argument("--repair-of", type=Path)
+    parser.add_argument("--only", help="comma-separated integrated diagnostic mutants")
     args = parser.parse_args()
+    selected = dict(INTEGRATED_MUTATIONS)
+    if args.only:
+        names = args.only.split(",")
+        if args.focus != "integrated" or len(set(names)) != len(names) or any(
+                name not in INTEGRATED_MUTATIONS for name in names):
+            parser.error("--only requires distinct known mutants and --focus integrated")
+        selected = {name: INTEGRATED_MUTATIONS[name] for name in names}
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = project_path(args.output_root) / f"mutations-{stamp}-{uuid.uuid4().hex[:8]}"
     output.mkdir(parents=True, exist_ok=False)
@@ -54,7 +62,7 @@ def main():
         "cwd": ".", "source_sha256": {str(p.relative_to(ROOT)): digest(p) for p in sources},
         "start_utc": now(), "end_utc": None, "exit_code": None,
         "timeout_s": 2700, "timed_out": False, "commands": [], "mutants": [],
-        "focus": args.focus, "children": [],
+        "focus": args.focus, "selected_integrated_mutants": list(selected), "children": [],
     }
     save(output, receipt)
     status = 1
@@ -107,7 +115,7 @@ def main():
         if args.focus != "adapters":
             # One fresh, complete baseline proves that the same CPU-executed
             # assertions are reachable before any disposable mutation is scored.
-            variants = [("baseline", None), *INTEGRATED_MUTATIONS.items()]
+            variants = [("baseline", None), *selected.items()]
             for name, mutation in variants:
                 child_root = output / f"integrated-{name}-{uuid.uuid4().hex[:8]}"
                 child_root.mkdir()
@@ -142,6 +150,11 @@ def main():
                 if not simulation or simulation["timed_out"] or simulation["exit_code"] != 1:
                     raise ValueError(f"{name}: compile/tool/timeout failure is not sensitivity")
                 message = (path.parent / simulation["stderr"]).read_text()
+                if "public_message" in mutation and re.search(mutation["public_message"], message):
+                    row.update(detected=True, observed_failure=message.strip())
+                    measured[name] = 1
+                    save(output, receipt)
+                    continue
                 if "message" in mutation:
                     if not re.search(mutation["message"], message):
                         raise ValueError(f"{name}: missing intended public-DDR rejection")
@@ -168,7 +181,7 @@ def main():
         coverage = [{"bin": name, "required": 1, "observed": measured.get(name, 0)}
                     for name in REQUIRED]
         (output / "coverage.json").write_text(json.dumps(coverage, indent=2) + "\n")
-        required = (tuple(INTEGRATED_MUTATIONS) if args.focus == "integrated" else
+        required = (tuple(selected) if args.focus == "integrated" else
                     tuple(row[0] for row in MUTATIONS) if args.focus == "adapters" else REQUIRED)
         if any(measured.get(name, 0) != 1 for name in required):
             raise ValueError("mandatory full-system semantic mutation comparisons incomplete; "

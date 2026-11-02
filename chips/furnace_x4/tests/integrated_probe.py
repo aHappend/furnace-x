@@ -56,6 +56,7 @@ INTEGRATED_MUTATIONS = {
         "before": "if (|tag_difference) begin status<=4; state<=ABORT; end",
         "after": "if (1'b0) begin status<=4; state<=ABORT; end",
         "code_low": 0x14, "code_high": 0x14,
+        "public_message": r"DDR semantic write id=(?:[0-9]|1[0-5]) beat=0 at=0x86006000 observed=0 expected=4",
         "assertion": "corrupt-tag descriptor retires with authentication error 4",
     },
     "tensor_weight_sign": {
@@ -63,6 +64,7 @@ INTEGRATED_MUTATIONS = {
         "before": "$signed(weights[4*i+:4])*",
         "after": "$signed({1'b0,weights[4*i+:4]})*",
         "code_low": 0x5000, "code_high": 0x500F,
+        "public_message": r"DDR semantic write id=(?:[0-9]|1[0-5]) beat=0 at=0x8600500[0-9a-f] observed=[0-9a-f]+ expected=[0-9a-f]+",
         "assertion": "signed W4 tensor result matches independent integer dot product",
     },
 }

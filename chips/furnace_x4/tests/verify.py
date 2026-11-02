@@ -174,15 +174,38 @@ def portability(output, receipt):
               if p.is_file()}
     if copied != receipt["source_sha256"]:
         raise ValueError("clean-directory source identity mismatch")
-    child_receipt = {"commands": []}
+    child_receipt = {
+        "schema": 1, "cwd": ".", "source_sha256": copied, "commands": [],
+        "start_utc": now(), "end_utc": None, "exit_code": None,
+        "timeout_s": 2700,
+        "scope": "Fresh software build, compact dual-simulator adapter and real CPU heterogeneous transaction",
+    }
     save(clean, child_receipt)
     try:
-        run(["python3", "sw/build_system.py", "--output", "evidence/system",
+        run(["python3", "tests/software_build.py", "--output-root", "evidence",
              "--jobs", "2"], clean, "software-build", child_receipt, cwd=clean)
-        run(["python3", "tests/verify.py", "--suite", "behavior",
-             "--seeds", "17,89,211", "--output-root", "evidence"],
+        run(["python3", "tests/adapter_probe.py", "--adapter", "mmio",
+             "--output-root", "evidence"], clean, "rtl-startup", child_receipt, cwd=clean)
+        run(["python3", "tests/integrated_probe.py", "--seeds", "17",
+             "--stop-phase", "4", "--output-root", "evidence"],
             clean, "rtl-reproduction", child_receipt, timeout_s=2700, cwd=clean)
+        integrated = list((clean/"evidence").glob("integrated-*/receipt.json"))
+        if len(integrated) != 1:
+            raise ValueError("clean reproduction missing unique integrated receipt")
+        observed = json.loads(integrated[0].read_text())
+        if observed["exit_code"] or len(observed["runs"]) != 1 or (
+                observed["runs"][0]["observed"]["coverage"].get(
+                    "lz4_aes_tensor_submissions", 0) < 1):
+            raise ValueError("clean reproduction omitted actual heterogeneous comparison")
+        for name, expected in copied.items():
+            if digest(clean/name) != expected:
+                raise ValueError(f"clean reproduction modified a delivered source: {name}")
+        child_receipt["exit_code"] = 0
     finally:
+        if child_receipt["exit_code"] is None:
+            child_receipt["exit_code"] = 1
+        child_receipt["end_utc"] = now()
+        save(clean, child_receipt)
         receipt["clean_receipt"] = str((clean / "receipt.json").relative_to(ROOT))
         receipt["clean_receipt_sha256"] = digest(clean / "receipt.json")
 
