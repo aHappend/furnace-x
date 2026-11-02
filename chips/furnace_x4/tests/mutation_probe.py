@@ -5,11 +5,13 @@ import argparse
 import datetime
 import json
 from pathlib import Path
+import re
 import sys
 import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from boot_probe import ROOT, digest, now, project_path, run, save
+from integrated_probe import INTEGRATED_MUTATIONS
 
 
 MUTATIONS = (
@@ -34,28 +36,33 @@ REQUIRED = (
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
+    parser.add_argument("--focus", choices=("adapters", "integrated"),
+                        help="bounded diagnostic subset; default enforces the full mandatory matrix")
     args = parser.parse_args()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = project_path(args.output_root) / f"mutations-{stamp}-{uuid.uuid4().hex[:8]}"
     output.mkdir(parents=True, exist_ok=False)
     relative = output.relative_to(ROOT)
-    sources = [ROOT / "tests" / name for name in (
-        "mutation_probe.py", "boot_probe.py", "mmio_contract.sv", "cpu_adapter_contract.sv",
-    )] + [ROOT / "rtl" / name for name in (
-        "furnace_x4_mmio_bridge.sv", "furnace_x4_cpu_axi512_bridge.sv",
-    )]
+    sources = sorted(
+        p for directory in ("tests", "rtl", "sw/taskgraph", "design")
+        for p in (ROOT / directory).rglob("*")
+        if p.is_file() and "__pycache__" not in p.parts
+    )
     receipt = {
         "schema": 1, "argv": ["python3", "tests/mutation_probe.py", *sys.argv[1:]],
         "cwd": ".", "source_sha256": {str(p.relative_to(ROOT)): digest(p) for p in sources},
         "start_utc": now(), "end_utc": None, "exit_code": None,
         "timeout_s": 2700, "timed_out": False, "commands": [], "mutants": [],
+        "focus": args.focus, "children": [],
     }
     save(output, receipt)
     status = 1
     try:
         run(["verilator", "--version"], output, "verilator-version", receipt)
         measured = {}
-        for name, kind, before, after, assertion in MUTATIONS:
+        for name, kind, before, after, assertion in (
+            MUTATIONS if args.focus != "integrated" else ()
+        ):
             top = "mmio_contract" if kind == "mmio" else "cpu_adapter_contract"
             module = "furnace_x4_mmio_bridge" if kind == "mmio" else "furnace_x4_cpu_axi512_bridge"
             original = (ROOT / "rtl" / f"{module}.sv").read_text()
@@ -93,12 +100,71 @@ def main():
                     if transient.suffix in (".o", ".a", ".gch"):
                         transient.unlink()
                 save(output, receipt)
+        if args.focus != "adapters":
+            # One fresh, complete baseline proves that the same CPU-executed
+            # assertions are reachable before any disposable mutation is scored.
+            variants = [("baseline", None), *INTEGRATED_MUTATIONS.items()]
+            for name, mutation in variants:
+                child_root = output / f"integrated-{name}-{uuid.uuid4().hex[:8]}"
+                child_root.mkdir()
+                argv = ["python3", "tests/integrated_probe.py", "--output-root",
+                        child_root.relative_to(ROOT), "--seeds", "17", "--cycles", "10000000"]
+                if mutation:
+                    argv += ["--mutation", name]
+                result = run(argv, output, f"integrated-{name}", receipt,
+                             timeout_s=2700, check=False)
+                found = list(child_root.glob("*/receipt.json"))
+                if len(found) != 1:
+                    raise ValueError(f"{name}: missing unique source-bound child receipt")
+                path = found[0]
+                child = json.loads(path.read_text())
+                receipt["children"].append({
+                    "receipt": str(path.relative_to(ROOT)), "sha256": digest(path),
+                })
+                for source, expected in child["source_sha256"].items():
+                    if digest(project_path(Path(source))) != expected:
+                        raise ValueError(f"{name}: source changed since child execution")
+                if not mutation:
+                    if result["exit_code"] or child["exit_code"]:
+                        raise ValueError("integrated mutation baseline did not pass")
+                    if not child["runs"] or not child["runs"][0]["observed"]["complete"]:
+                        raise ValueError("integrated baseline omitted successful comparisons")
+                    continue
+                row = {"name": name, "intended_assertion": mutation["assertion"],
+                       "receipt": str(path.relative_to(ROOT)), "detected": False}
+                receipt["mutants"].append(row)
+                simulation = next((r for r in child["commands"]
+                                   if r["stdout"] == "simulation-17.stdout.txt"), None)
+                if not simulation or simulation["timed_out"] or simulation["exit_code"] != 1:
+                    raise ValueError(f"{name}: compile/tool/timeout failure is not sensitivity")
+                message = (path.parent / simulation["stderr"]).read_text()
+                matches = re.findall(
+                    r"CPU assertion/trap: F ([0-9a-f]{16}) ([0-9a-f]{16}) ([0-9a-f]{16})",
+                    message,
+                )
+                if len(matches) != 1:
+                    raise ValueError(f"{name}: missing intended CPU numerical/protocol rejection")
+                code, observed, expected = [int(v, 16) for v in matches[0]]
+                if not (mutation["code_low"] <= code <= mutation["code_high"]) or observed == expected:
+                    raise ValueError(f"{name}: rejection does not match intended semantic assertion")
+                if name == "authentication_bypass" and (observed, expected) != (0, 4):
+                    raise ValueError("authentication mutant did not reach actual corrupt-tag retirement")
+                if name == "authenticated_weight_commit" and (observed, expected) != (0, 1):
+                    raise ValueError("commit mutant did not reach actual successful tensor retirement")
+                row.update(detected=True, code=code, observed=observed, expected=expected)
+                measured[name] = 1
+                save(output, receipt)
         coverage = [{"bin": name, "required": 1, "observed": measured.get(name, 0)}
                     for name in REQUIRED]
         (output / "coverage.json").write_text(json.dumps(coverage, indent=2) + "\n")
-        if any(row["observed"] != row["required"] for row in coverage):
+        required = (tuple(INTEGRATED_MUTATIONS) if args.focus == "integrated" else
+                    tuple(row[0] for row in MUTATIONS) if args.focus == "adapters" else REQUIRED)
+        if any(measured.get(name, 0) != 1 for name in required):
             raise ValueError("mandatory full-system semantic mutation comparisons incomplete; "
                              "see coverage.json (adapter mutants are separate leaf evidence)")
+        for source, expected in receipt["source_sha256"].items():
+            if digest(project_path(Path(source))) != expected:
+                raise ValueError(f"source changed during mutation execution: {source}")
         status = 0
     except (OSError, ValueError, RuntimeError) as error:
         receipt["error"] = str(error)

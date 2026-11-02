@@ -15,6 +15,31 @@ from boot_probe import ROOT, digest, now, project_path, run, save
 from workload_model import FIXTURE_BASE, fixtures
 
 
+INTEGRATED_MUTATIONS = {
+    "authenticated_weight_commit": {
+        "module": "furnace_x2_top.sv",
+        "before": "mm_weights<=candidate_weights; mm_weights_valid<=1;",
+        "after": "mm_weights<=candidate_weights; mm_weights_valid<=0;",
+        "code_low": 0x1008, "code_high": 0x1008,
+        "assertion": "successful authenticated retirement establishes weights-valid",
+    },
+    "authentication_bypass": {
+        "module": "furnace_aes128_gcm.sv",
+        "before": "if (|tag_difference) begin status<=4; state<=ABORT; end",
+        "after": "if (1'b0) begin status<=4; state<=ABORT; end",
+        "code_low": 0x14, "code_high": 0x14,
+        "assertion": "corrupt-tag descriptor retires with authentication error 4",
+    },
+    "tensor_weight_sign": {
+        "module": "furnace_tensor8.sv",
+        "before": "$signed(weights[4*i+:4])*",
+        "after": "$signed({1'b0,weights[4*i+:4]})*",
+        "code_low": 0x5000, "code_high": 0x500F,
+        "assertion": "signed W4 tensor result matches independent integer dot product",
+    },
+}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
@@ -22,6 +47,7 @@ def main():
     parser.add_argument("--cycles", type=int, default=80000000)
     parser.add_argument("--stop-phase", type=int, choices=range(1, 9), default=8)
     parser.add_argument("--repair-of", type=Path)
+    parser.add_argument("--mutation", choices=tuple(INTEGRATED_MUTATIONS))
     args = parser.parse_args()
     seeds = tuple(int(s) for s in args.seeds.split(","))
     if not seeds or len(set(seeds)) != len(seeds) or args.cycles <= 8:
@@ -43,6 +69,7 @@ def main():
         "timeout_s": 2700, "timed_out": False, "commands": [],
         "tool_versions": {}, "seeds": seeds, "cycles_limit": args.cycles,
         "stop_phase": args.stop_phase,
+        "mutation": args.mutation,
         "scope": "Actual M-mode CPU, accepted fabric and public DDR/UART. Not Linux/privilege coverage.",
         "measurements": {}, "runs": [],
     }
@@ -89,12 +116,30 @@ def main():
              relative / "firmware.bin"], output, "firmware-binary", receipt)
         run(["riscv64-unknown-elf-objdump", "-d", relative / "firmware.elf"],
             output, "firmware-disassembly", receipt)
+        rtl_sources = sorted((ROOT / "rtl").glob("*.sv"))
+        if args.mutation:
+            mutation = INTEGRATED_MUTATIONS[args.mutation]
+            disposable = output / "mutated-rtl"
+            disposable.mkdir()
+            receipt["mutated_source_sha256"] = {}
+            for path in rtl_sources:
+                text = path.read_text()
+                if path.name == mutation["module"]:
+                    if text.count(mutation["before"]) != 1:
+                        raise ValueError(f"{args.mutation}: mutation site is not unique")
+                    text = text.replace(mutation["before"], mutation["after"], 1)
+                target = disposable / path.name
+                target.write_text(text)
+                receipt["mutated_source_sha256"][str(target.relative_to(ROOT))] = digest(target)
+            rtl_sources = sorted(disposable.glob("*.sv"))
+            receipt["intended_assertion"] = mutation["assertion"]
+            save(output, receipt)
         cpp_from_obj = Path(*([".."]*len((relative / "obj").parts))) / "tests/integrated_endpoint.cpp"
         run(["verilator", "--cc", "--exe", "--build", "-j", "2",
              "--top-module", "furnace_x4_top", "--Mdir", relative / "obj",
              "--assert", "-Wno-fatal", "--output-split", "20000",
              "-CFLAGS", "-O2 -std=c++17",
-             *[str(p.relative_to(ROOT)) for p in sorted((ROOT / "rtl").glob("*.sv"))],
+             *[str(p.relative_to(ROOT)) for p in rtl_sources],
              cpp_from_obj], output, "rtl-compile", receipt)
         for seed in seeds:
             data, expected = fixtures(seed)
@@ -102,11 +147,25 @@ def main():
             fixture.write_bytes(data)
             (output / f"expected-{seed}.json").write_text(json.dumps(expected, indent=2) + "\n")
             firmware = output / "firmware.bin"
+            source = output / f"dma-source-{seed}.bin"
+            with source.open("wb") as stream:
+                for at in range(0, 1048576, 8):
+                    stream.write(struct.pack("<Q", 0x0706050403020100 ^ (at << 32) ^ at))
+            destination = output / f"dma-destination-{seed}.bin"
+            destination.write_bytes(b"\xa5"*(1048576+128))
             index = output / f"images-{seed}.txt"
             index.write_text(
                 f"2147483648 {firmware.stat().st_size} {firmware.relative_to(ROOT)}\n"
                 f"{FIXTURE_BASE} {len(data)} {fixture.relative_to(ROOT)}\n"
+                f"2249195520 {source.stat().st_size} {source.relative_to(ROOT)}\n"
+                f"2251292608 {destination.stat().st_size} {destination.relative_to(ROOT)}\n"
             )
+            receipt.setdefault("generated_sha256", {}).update({
+                str(p.relative_to(ROOT)): digest(p)
+                for p in (fixture, source, destination, index, firmware,
+                          output / f"expected-{seed}.json", output / "task.bin")
+            })
+            save(output, receipt)
             run([relative / "obj/Vfurnace_x4_top", index.relative_to(ROOT),
                  relative / f"uart-{seed}.txt", str(args.cycles), str(seed),
                  relative / f"summary-{seed}.txt", relative / f"coverage-{seed}.json",
