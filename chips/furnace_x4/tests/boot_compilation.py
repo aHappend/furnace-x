@@ -57,6 +57,10 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
     if profile.get("generated_fixedpoint"):
         from generated_eval import optimize
         receipt.setdefault("generated_evaluation", {})[stem] = optimize(ROOT / obj, digest)
+        if profile.get("generated_dependency"):
+            from generated_dependency import optimize as dependency_optimize
+            receipt.setdefault("generated_dependency", {})[stem] = dependency_optimize(
+                ROOT / obj, digest)
         if profile.get("generated_scalar"):
             from generated_scalar import optimize as scalar_optimize
             receipt.setdefault("generated_scalar", {})[stem] = scalar_optimize(ROOT / obj, digest)

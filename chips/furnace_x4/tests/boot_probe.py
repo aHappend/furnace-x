@@ -49,6 +49,14 @@ COMPILE_PROFILES = {
         "generated_fixedpoint": True,
         "generated_schedule_profile": True,
     },
+    "dependency-candidate": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000"],
+        "optimization": "-O3",
+        "pgo_training_cycles": 2000000,
+        "generated_fixedpoint": True,
+        "generated_dependency": True,
+    },
     "scalar-baseline": {
         "verilator": ["-O3", "--output-split", "10000",
                       "--output-split-cfuncs", "10000"],
