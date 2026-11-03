@@ -9,7 +9,7 @@ import uuid
 from boot_probe import COMPILE_PROFILES, ROOT, digest, project_path, run, save
 
 
-def binding(receipt, profile, audit, logical=False):
+def binding(receipt, profile, audit, logical=False, checkpoint=False):
     return {
         "source_sha256": receipt["source_sha256"],
         "tool_versions": receipt["tool_versions"],
@@ -18,11 +18,13 @@ def binding(receipt, profile, audit, logical=False):
         "configuration": COMPILE_PROFILES[profile],
         "audit_state": audit,
         **({"logical_state": True} if logical else {}),
+        **({"checkpoint_endpoint": True} if checkpoint else {}),
     }
 
 
 def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
-                 profile_directory=None, audit=False, logical=False, stem="compile"):
+                 profile_directory=None, audit=False, logical=False, stem="compile",
+                 checkpoint=False):
     profile = COMPILE_PROFILES[profile_name]
     relative = output.relative_to(ROOT)
     obj = relative / "obj" if obj is None else obj
@@ -45,13 +47,14 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
         link.append(flag)
         if phase == "use":
             flags += ["-Wmissing-profile", "-Werror=coverage-mismatch"]
-    cpp = Path(*([".."] * len(obj.parts))) / "tests/boot_endpoint.cpp"
+    endpoint = "boot_checkpoint_endpoint.cpp" if checkpoint else "boot_endpoint.cpp"
+    cpp = Path(*([".."] * len(obj.parts))) / "tests" / endpoint
     command = [
         "verilator", "--cc", "--exe",
         *([] if profile.get("generated_fixedpoint") or logical else ["--build"]),
         "-j", str(jobs),
         "--top-module", "furnace_x4_top", "--Mdir", obj,
-        "--assert", "-Wno-fatal", *(["--savable"] if audit else []),
+        "--assert", "-Wno-fatal", *(["--savable"] if audit or checkpoint else []),
         *profile["verilator"], "-MAKEFLAGS",
         f"OPT_FAST={optimization} OPT_SLOW={optimization} OPT_GLOBAL={optimization}",
         "-CFLAGS", " ".join(flags),
@@ -103,27 +106,47 @@ def clean_objects(obj):
             path.unlink()
 
 
-def build_pgo(output, receipt, jobs, image_index, *, audit=False, logical=False, profile_name="o3-pgo"):
+def build_pgo(output, receipt, jobs, image_index, *, audit=False, logical=False,
+              profile_name="o3-pgo", checkpoint=False):
     profile_directory = output.relative_to(ROOT) / "compiler-profiles"
     project_path(profile_directory).mkdir()
     obj = output.relative_to(ROOT) / "obj"
     executable = compile_boot(
         output, receipt, jobs, profile_name, obj=obj, phase="generate",
         profile_directory=profile_directory, audit=audit, logical=logical, stem="compile-generate",
+        checkpoint=checkpoint,
     )
     cycles = COMPILE_PROFILES[profile_name]["pgo_training_cycles"]
-    training = run([
-        executable, image_index, output.relative_to(ROOT) / "training-uart.txt",
-        str(cycles), "17", output.relative_to(ROOT) / "training-summary.txt",
-        output.relative_to(ROOT) / "training-measurements.json",
-    ], output, "profile-training", receipt, check=False)
-    observed = json.loads((output / "training-measurements.json").read_text())
-    if training["exit_code"] != 1 or observed["simulation_exit"] != 1 or (
+    if checkpoint:
+        training_output = output / "checkpoint-images" / f"training-{uuid.uuid4().hex[:8]}"
+        training_output.mkdir(parents=True)
+        training_argv = [
+            executable, image_index, training_output.relative_to(ROOT),
+            str(cycles), "17", "-",
+            (training_output / "final").relative_to(ROOT), "-", "0",
+        ]
+        measured_path = training_output / "execution-measurements.json"
+        summary_path = training_output / "simulation-summary.txt"
+    else:
+        training_argv = [
+            executable, image_index, output.relative_to(ROOT) / "training-uart.txt",
+            str(cycles), "17", output.relative_to(ROOT) / "training-summary.txt",
+            output.relative_to(ROOT) / "training-measurements.json",
+        ]
+        measured_path = output / "training-measurements.json"
+        summary_path = output / "training-summary.txt"
+    training = run(training_argv, output, "profile-training", receipt, check=False)
+    observed = json.loads(measured_path.read_text())
+    if training["exit_code"] != (0 if checkpoint else 1) or observed["simulation_exit"] != 1 or (
             observed["cycles"] != cycles or observed["retired"] <= 0 or
             observed["equal_comparisons"] <= 0 or observed["require_comparisons"] <= 0):
         raise ValueError("PGO training did not reach its intended compared cycle boundary")
-    if "FAIL: cycle budget exhausted without complete workload UART record" not in (
-            output / "training-summary.txt").read_text():
+    if checkpoint:
+        metrics = json.loads((training_output / "metrics.json").read_text())
+        if metrics["complete_boot"] or metrics["outcome"] != "continuation":
+            raise ValueError("checkpoint PGO training has an unexpected completion")
+    elif "FAIL: cycle budget exhausted without complete workload UART record" not in (
+            summary_path).read_text():
         raise ValueError("PGO training has an unexpected semantic failure")
     profiles = sorted(project_path(profile_directory).rglob("*.gcda"))
     if not profiles:
@@ -137,6 +160,7 @@ def build_pgo(output, receipt, jobs, image_index, *, audit=False, logical=False,
     executable = compile_boot(
         output, receipt, jobs, profile_name, obj=obj, phase="use",
         profile_directory=profile_directory, audit=audit, logical=logical, stem="compile",
+        checkpoint=checkpoint,
     )
     diagnostics = (output / ("compile-build.stderr.txt" if
                    COMPILE_PROFILES[profile_name].get("generated_fixedpoint")
@@ -153,10 +177,11 @@ def build_pgo(output, receipt, jobs, image_index, *, audit=False, logical=False,
     return executable
 
 
-def reusable_boot(cache, output, receipt, jobs, profile_name, *, audit=False, logical=False):
+def reusable_boot(cache, output, receipt, jobs, profile_name, *, audit=False,
+                  logical=False, checkpoint=False):
     """Only share within the caller's fresh output namespace, never globally."""
     manifest_path = cache / "executable.json"
-    expected = binding(receipt, profile_name, audit, logical)
+    expected = binding(receipt, profile_name, audit, logical, checkpoint)
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text())
         executable = project_path(Path(manifest["executable"]))
@@ -193,10 +218,10 @@ def reusable_boot(cache, output, receipt, jobs, profile_name, *, audit=False, lo
         if "pgo_training_cycles" in COMPILE_PROFILES[profile_name]:
             executable = build_pgo(
                 compile_output, compiled, jobs, output.relative_to(ROOT) / "image-index.txt",
-                audit=audit, logical=logical, profile_name=profile_name)
+                audit=audit, logical=logical, profile_name=profile_name, checkpoint=checkpoint)
         else:
             executable = compile_boot(compile_output, compiled, jobs, profile_name,
-                                      audit=audit, logical=logical)
+                                      audit=audit, logical=logical, checkpoint=checkpoint)
         compiled["exit_code"] = 0
     finally:
         compiled["end_utc"] = now()

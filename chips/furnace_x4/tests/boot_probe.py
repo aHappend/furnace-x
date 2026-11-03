@@ -218,9 +218,14 @@ def main():
                         help="Also retain every identified RTL field and the exact context archive")
     parser.add_argument("--compile-only", action="store_true",
                         help="Prepare one invocation-local executable without a boot acceptance claim")
+    parser.add_argument("--checkpoint-endpoint", action="store_true",
+                        help="Compile the lossless segment endpoint for invocation-local orchestration")
     parser.add_argument("--until-complete", action="store_true",
                         help="Run to scored completion, bounded by the inherited execution deadline")
     args = parser.parse_args()
+    if args.checkpoint_endpoint and not (args.compile_only and args.invocation_cache
+                                         and args.audit_state and args.logical_state):
+        parser.error("--checkpoint-endpoint requires compile-only, invocation-cache and both state audits")
     if args.logical_state and not args.audit_state:
         parser.error("--logical-state requires --audit-state")
     if args.until_complete:
@@ -313,7 +318,8 @@ def main():
             # Child output roots and the cache share the Linux invocation root.
             cache.relative_to(project_path(args.output_root).parent)
             executable = reusable_boot(cache, output, receipt, args.jobs, args.compile_profile,
-                                       audit=args.audit_state, logical=args.logical_state)
+                                       audit=args.audit_state, logical=args.logical_state,
+                                       checkpoint=args.checkpoint_endpoint)
         elif "pgo_training_cycles" in COMPILE_PROFILES[args.compile_profile]:
             executable = build_pgo(output, receipt, args.jobs, relative / "image-index.txt",
                                    audit=args.audit_state, logical=args.logical_state,

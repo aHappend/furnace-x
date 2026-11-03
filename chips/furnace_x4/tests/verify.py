@@ -243,9 +243,11 @@ def linux_runs(output, receipt, seeds, build, *, cycles=None, audit=False,
 
 
 def linux(output, receipt, seeds):
+    from boot_segmentation import linux_runs as segmented_linux_runs
+
     child_probe("boot_model_probe.py", [], output, receipt, "boot-oracle-unit")
     build = software(output, receipt)
-    measured = linux_runs(output, receipt, seeds, build)
+    measured = segmented_linux_runs(output, receipt, seeds, build)
     assert_coverage(output, coverage_requirements("linux", seeds), measured)
 
 
