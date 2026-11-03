@@ -51,6 +51,14 @@ def audit(text, types):
         elif word == ")":
             if calls:
                 calls.pop()
+        if word == "vlSelf" and i and i + 1 < len(ts) and (
+                ts[i - 1][0] in ("(", ",") and ts[i + 1][0] in (")", ",")):
+            callee = calls[-1] if calls else ""
+            if not (re.fullmatch(r"\w+___024root___\w+", callee) or
+                    (callee == "bind" and any(
+                        ts[j][0] == "cache" and ts[j + 1][0] == "." and
+                        ts[j + 2][0] == "bind" for j in range(max(0, i - 5), i - 2)))):
+                unsafe.update(types)
         if word != "vlSelf" or i + 2 >= len(ts) or ts[i + 1][0] != "->":
             continue
         field = ts[i + 2][0]
@@ -161,7 +169,10 @@ def transform(sources, header):
                     fields = sorted(set(FIELD.findall(chunk)))
                     entries.append((number, chunk))
                     selected.append({"region": number, "function": match[1],
-                                     "fields": fields, "body_bytes": len(chunk)})
+                                     "fields": fields, "body_bytes": len(chunk),
+                                     "local_variables": sorted(
+                                         set(re.findall(r"\b[A-Za-z_]\w*\b",
+                                                        FIELD.sub("", chunk))) & locals_)})
                 else:
                     entries.append((None, chunk))
             functions[match[1]] = (init, entries)
@@ -265,6 +276,9 @@ struct State {
     std::array<bool, """ + str(len(fields)) + r"""> input_seen{};
 };
 inline thread_local State state;
+#ifdef FURNACE_DEPENDENCY_CONTRACT
+inline uint64_t executed = 0, skipped = 0, invalidations = 0;
+#endif
 inline State& bind(const void* owner) {
     if (state.owner != owner) {
         state = State{};
@@ -272,6 +286,14 @@ inline State& bind(const void* owner) {
         state.dirty.fill(true);
     }
     return state;
+}
+inline void invalidate(const void* owner) {
+    auto& s = bind(owner);
+    s.dirty.fill(true);
+    s.input_seen.fill(false);
+#ifdef FURNACE_DEPENDENCY_CONTRACT
+    ++invalidations;
+#endif
 }
 inline void touch(const void* owner, unsigned field) {
     auto& s = bind(owner);
@@ -281,7 +303,7 @@ inline void touch(const void* owner, unsigned field) {
 }
 inline void boundary(const void* owner, bool reset) {
     auto& s = bind(owner);
-    if (!s.reset_seen || s.reset != reset) s.dirty.fill(true);
+    if (!s.reset_seen || s.reset != reset) invalidate(owner);
     s.reset = reset;
     s.reset_seen = true;
 }
@@ -295,6 +317,9 @@ inline bool take(const void* owner, unsigned region) {
     auto& s = bind(owner);
     const bool dirty = s.dirty[region];
     s.dirty[region] = false;
+#ifdef FURNACE_DEPENDENCY_CONTRACT
+    if (dirty) ++executed; else ++skipped;
+#endif
     return dirty;
 }
 }

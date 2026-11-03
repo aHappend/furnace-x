@@ -12,6 +12,7 @@ import datetime
 import json
 import os
 from pathlib import Path
+import re
 import sys
 import time
 import uuid
@@ -23,7 +24,8 @@ from verify import SEEDS, sources
 
 
 def contract(output, receipt):
-    from generated_dependency import transform
+    from generated_dependency import audit, pure_region, transform
+    from generated_scalar import scalar_fields
     header = r"""
 struct Vfurnace_x4_top___024root {
     VL_IN8(rst_n,0,0);
@@ -33,6 +35,8 @@ struct Vfurnace_x4_top___024root {
     IData/*31:0*/ alternate;
     IData/*31:0*/ feedback;
     IData/*31:0*/ unknown;
+    IData/*31:0*/ copied;
+    IData/*31:0*/ stable;
     IData/*31:0*/ index;
     IData/*31:0*/ array[4];
 };
@@ -49,16 +53,23 @@ struct Vfurnace_x4_top___024root {
     }
     vlSelf->output = vlSelf->middle ^ local;
     vlSelf->alternate = vlSelf->input + 3U;
+    vlSelf->stable = vlSelf->input * 11U;
     vlSelf->output = vlSelf->output + vlSelf->alternate;
     vlSelf->feedback = (vlSelf->feedback < 9U) ? vlSelf->feedback + 1U : 9U;
     vlSelf->array[vlSelf->index & 3U] = vlSelf->input;
     vlSelf->output = vlSelf->output ^ vlSelf->array[(vlSelf->index + 1U) & 3U];
     escape(vlSelf->unknown);
+    vlSelf->copied = vlSelf->unknown;
 """
     tail = r"""
 void model___nba_sequent__TOP__0(Vfurnace_x4_top___024root* vlSelf) {
     if (vlSelf->input & 2U) { vlSelf->middle = vlSelf->input ^ 0x55U; }
     if (vlSelf->input & 4U) { vlSelf->output = vlSelf->input + 19U; }
+    if (vlSelf->input & 8U) { vlSelf->stable = vlSelf->input + 123U; }
+}
+void disturb(Vfurnace_x4_top___024root* vlSelf) {
+    vlSelf->middle = vlSelf->input + 13U;
+    vlSelf->stable = vlSelf->input + 99U;
 }
 void model___eval(Vfurnace_x4_top___024root* vlSelf) {
     model___ico_sequent__TOP__0(vlSelf);
@@ -66,7 +77,7 @@ void model___eval(Vfurnace_x4_top___024root* vlSelf) {
     model___ico_sequent__TOP__0(vlSelf);
 }
 """
-    original = signature + body + "\n}\n" + tail
+    original = (signature + body + "\n}\n" + tail).replace("model___", "model___024root___")
     init = r"""
 void initialize(Vfurnace_x4_top___024root* vlSelf) {
     vlSelf->middle = 0;
@@ -76,18 +87,34 @@ void initialize(Vfurnace_x4_top___024root* vlSelf) {
 """
     transformed, sideband, report = transform(
         {"model.cpp": original, "model__Slow.cpp": init}, header)
+    receipt["contract"] = report
+    save(output, receipt)
     if not report["regions"] or report["unconditional_regions"] < 3 or (
             "unknown" not in report["excluded_fields"]):
         raise ValueError("dependency contract did not retain unsupported/alias regions")
     if report["writers"].get("middle", 0) < 3 or (
             report["writers"].get("output", 0) < 4):
         raise ValueError("dependency contract omitted conditional/multiple/init writers")
-    local_regions = [row for row in report["regions"] if row["body_bytes"] >=
-                     len("local = vlSelf->input * 7U;")]
-    if not local_regions or "local" not in next(
-            item for item in transformed["model.cpp"].split("// Body\n")[1:]
-            if "local =" in item):
+    local_regions = [row for row in report["regions"] if "local" in row["local_variables"]]
+    if len(local_regions) != 1 or not {"middle", "output"} <= set(local_regions[0]["fields"]):
         raise ValueError("dependency contract lost local lifetime")
+    types = scalar_fields(header)
+    unsupported = (
+        ("vlSelf->middle++;", "middle"),
+        ("vlSelf->middle += 1U;", "middle"),
+        ("if (1) vlSelf->middle = 1U;", "middle"),
+        ("escape(vlSelf->middle);", "middle"),
+        ("auto &alias = vlSelf->middle;", "middle"),
+        ("escape(&vlSelf->middle);", "middle"),
+        ("escape(vlSelf);", "middle"),
+    )
+    for code, field in unsupported:
+        unsafe, _writers = audit(code, types)
+        if field not in unsafe or pure_region(code, set(), types, unsafe):
+            raise ValueError("dependency audit accepted an unsupported writer/alias: " + code)
+    if pure_region("vlSelf->output = vlSelf->array[vlSelf->index];", set(), types, set()):
+        raise ValueError("dependency audit guarded an unsupported array alias")
+    report["unsupported_writer_rejections"] = len(unsupported) + 1
     (output / "generated_dependency.h").write_text(sideband)
     definitions = r"""
 #include <cassert>
@@ -100,9 +127,11 @@ using IData = uint32_t;
 #define VL_IN(name,hi,lo) IData name
 #define VL_OUT(name,hi,lo) IData name
 #define VL_INLINE_OPT
+#define FURNACE_DEPENDENCY_CONTRACT
 void escape(IData& value) { value ^= 0x31U; }
 """
     reference = original.replace("model___", "reference___")
+    reference = reference.replace("void disturb(", "void reference_disturb(")
     reference_init = init.replace("initialize", "reference_initialize")
     program = definitions + header + reference + reference_init + "\n" + (
         transformed["model.cpp"] + transformed["model__Slow.cpp"]) + r"""
@@ -114,7 +143,7 @@ int main() {
         random ^= random << 13; random ^= random >> 17; random ^= random << 5;
         if (i % 7 == 0) actual.input = expected.input = random;
         if (i % 13 == 0) actual.output = expected.output = random ^ i;
-        if (i % 17 == 0) actual.middle = expected.middle = random + i;
+        if (i % 17 == 0) { disturb(&actual); reference_disturb(&expected); }
         actual.index = expected.index = i & 3U;
         actual.array[(i + 1) & 3U] = expected.array[(i + 1) & 3U] = random;
         actual.rst_n = expected.rst_n = (i % 19 > 2);
@@ -124,18 +153,24 @@ int main() {
         // Repeated evaluation tests fixed points and intentionally nonconvergent
         // WAW regions without changing the model's original iteration count.
         for (unsigned j = 0; j < 3; ++j) {
-            model___eval(&actual); reference___eval(&expected);
+            model___024root___eval(&actual); reference___024root___eval(&expected);
             assert(std::memcmp(&actual, &expected, sizeof(actual)) == 0);
             ++compared;
         }
         if (i % 29 == 0) {
             other.input = other_expected.input = random ^ 123U;
-            model___eval(&other); reference___eval(&other_expected);
+            model___024root___eval(&other); reference___024root___eval(&other_expected);
             assert(std::memcmp(&other, &other_expected, sizeof(other)) == 0);
             ++compared;
         }
     }
-    std::cout << "DEPENDENCY full_state_comparisons=" << compared << "\n";
+    assert(furnace_dependency::executed > 0);
+    assert(furnace_dependency::skipped > 0);
+    assert(furnace_dependency::invalidations > 1000);
+    std::cout << "DEPENDENCY full_state_comparisons=" << compared
+        << " executed=" << furnace_dependency::executed
+        << " skipped=" << furnace_dependency::skipped
+        << " reset_invalidations=" << furnace_dependency::invalidations << "\n";
 }
 """
     (output / "dependency-contract.cpp").write_text(program)
@@ -146,6 +181,26 @@ int main() {
         output, "dependency-contract-build", receipt)
     run([output.relative_to(ROOT) / "dependency-contract"],
         output, "dependency-contract-run", receipt)
+    # Drop only the notification on an external WAW writer. The untouched full
+    # state oracle must reject it with a semantic assertion, not a build failure.
+    mutant, count = re.subn(
+        r"(vlSelf->stable = vlSelf->input \+ 99U;\s*"
+        r"if \(furnace_dependency_before != vlSelf->stable\) )"
+        r"furnace_dependency::touch\(vlSelf, \d+\);",
+        r"\1(void)0;", program)
+    if count != 1:
+        raise ValueError("dependency WAW sensitivity site is not unique")
+    (output / "dependency-mutant.cpp").write_text(mutant)
+    run(["g++", "-std=c++17", "-O2", output.relative_to(ROOT) / "dependency-mutant.cpp",
+         "-o", output.relative_to(ROOT) / "dependency-mutant"],
+        output, "dependency-mutant-build", receipt)
+    result = run(["sh", "-c", 'ulimit -c 0; exec "$1"', "dependency-mutant",
+                  output.relative_to(ROOT) / "dependency-mutant"],
+                 output, "dependency-mutant-run", receipt, check=False)
+    if result["exit_code"] == 0 or "std::memcmp(&actual, &expected" not in (
+            output / result["stderr"]).read_text():
+        raise ValueError("dependency WAW sensitivity did not trigger full-state assertion")
+    report["waw_notification_mutant_detected"] = True
     receipt["contract"] = report
     receipt["contract"]["log"] = "dependency-contract-run.stdout.txt"
     save(output, receipt)
