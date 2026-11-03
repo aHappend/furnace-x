@@ -42,6 +42,13 @@ COMPILE_PROFILES = {
         "pgo_training_cycles": 2000000,
         "generated_fixedpoint": True,
     },
+    "schedule-profile": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000"],
+        "optimization": "-O3",
+        "generated_fixedpoint": True,
+        "generated_schedule_profile": True,
+    },
     "o3-lto": {
         "verilator": ["-O3", "--output-split", "10000",
                       "--output-split-cfuncs", "10000"],

@@ -57,6 +57,10 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
     if profile.get("generated_fixedpoint"):
         from generated_eval import optimize
         receipt.setdefault("generated_evaluation", {})[stem] = optimize(ROOT / obj, digest)
+        if profile.get("generated_schedule_profile"):
+            from generated_schedule import instrument
+            receipt.setdefault("generated_schedule_profile", {})[stem] = instrument(
+                ROOT / obj, digest)
         save(output, receipt)
         run(["make", "-C", obj, "-f", "Vfurnace_x4_top.mk", "-j", str(jobs),
              f"OPT_FAST={optimization}", f"OPT_SLOW={optimization}",
