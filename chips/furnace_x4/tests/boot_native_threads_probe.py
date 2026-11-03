@@ -3,6 +3,7 @@
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -187,6 +188,31 @@ def logical_preflight(output, receipt, baseline, candidate, *, syntax_capture=Fa
         if not roots or not (Path(roots[0]) / "include/verilated.h").is_file():
             raise ValueError("cannot identify the installed Verilator include directory")
         includes = Path(roots[0]) / "include"
+        from boot_lifetime import CASTS, SCALAR_PURE, balanced
+        from boot_logical_state import clean_cpp
+        functions_header = clean_cpp((includes / "verilated_funcs.h").read_text())
+        helpers = {}
+        for name in sorted(SCALAR_PURE - CASTS):
+            matches = list(re.finditer(
+                r"static inline (?:IData|QData) " + re.escape(name) +
+                r"\(([^()]*)\)\s+(?:VL_PURE|VL_MT_SAFE)\s*\{", functions_header))
+            if len(matches) != 1 or re.search(r"[*&]", matches[0][1]):
+                raise ValueError("audited scalar helper no longer has a scalar-only signature: " + name)
+            match = matches[0]
+            end = balanced(functions_header, match.end() - 1)
+            body = functions_header[match.end():end - 1]
+            if re.search(r"\b(?:vlSelf|vlSymsp|voidSelf)\b", body):
+                raise ValueError("audited scalar helper accesses model state: " + name)
+            helpers[name] = {"scalar_signature": match[1].strip(),
+                             "definition_sha256": hashlib.sha256(
+                                 functions_header[match.start():end].encode()).hexdigest()}
+        receipt["logical_runtime_library"] = {
+            "headers_sha256": {name: digest(includes / name) for name in (
+                "verilated_funcs.h", "verilated_threads.h", "verilated_threads.cpp")},
+            "scalar_helpers": helpers,
+            "scope": "Source-bound scalar helper and scheduler API audit; not a scheduler-state proof.",
+        }
+        save(output, receipt)
         result = run(["g++", "--version"], output, "comparator-cxx-version", receipt)
         receipt.setdefault("tool_versions", {})["g++"] = (output / result["stdout"]).read_text()
         from boot_logical_state_test import exporter_fixture

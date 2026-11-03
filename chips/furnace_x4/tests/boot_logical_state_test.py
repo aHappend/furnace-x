@@ -532,6 +532,30 @@ class LogicalStateSensitivity(unittest.TestCase):
             "redeclared_condition": (writer + reader + "void entry(Root* vlSelf) { "
                                       "if (enable) writer(vlSelf); int enable = 1; "
                                       "if (enable) reader(vlSelf); }", False),
+            "prefix_member_increment": (writer + reader + "void entry(Root* vlSelf) { "
+                                        "if (vlSelf->enable) writer(vlSelf); ++vlSelf->enable; "
+                                        "if (vlSelf->enable) reader(vlSelf); }", False),
+            "prefix_local_increment": (writer + reader + "void entry(Root* vlSelf) { "
+                                       "if (enable) writer(vlSelf); ++enable; "
+                                       "if (enable) reader(vlSelf); }", False),
+            "shift_assignment": (writer + reader + "void entry(Root* vlSelf) { "
+                                  "if (vlSelf->enable) writer(vlSelf); vlSelf->enable <<= 1; "
+                                  "if (vlSelf->enable) reader(vlSelf); }", False),
+            "effectful_condition": (writer + reader + "void entry(Root* vlSelf) { "
+                                     "if (++vlSelf->enable) writer(vlSelf); "
+                                     "if (++vlSelf->enable) reader(vlSelf); }", False),
+            "comma_declaration": (writer + reader + "void entry(Root* vlSelf) { "
+                                   "if (enable) writer(vlSelf); int dummy = 0, enable = 1; "
+                                   "if (enable) reader(vlSelf); }", False),
+            "audited_scalar_helpers": (
+                "void entry(Root* vlSelf) { vlSelf->scratch = VL_MULS_QQQ(49, "
+                "VL_EXTENDS_QI(64, 32, vlSelf->a), vlSelf->b); consume(vlSelf->scratch); }", True),
+            "helper_self_read": (
+                "void entry(Root* vlSelf) { vlSelf->scratch = VL_SHIFTL_III(32,32,32,"
+                "vlSelf->scratch, 1U); consume(vlSelf->scratch); }", False),
+            "unknown_helper": (
+                "void entry(Root* vlSelf) { vlSelf->scratch = unknown(vlSelf->a); "
+                "consume(vlSelf->scratch); }", False),
         }
         with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
             folder = Path(directory)
@@ -609,7 +633,8 @@ class LogicalStateSensitivity(unittest.TestCase):
             f"vlSelf->__Vm_mtaskstate_final__nba.waitUntilUpstreamDone({parity});\n}}\n")
         constructor = "__Vm_mtaskstate_2(1U), __Vm_mtaskstate_final__nba(2U)"
         for variant in ("correct", "wrong_fanin", "wrong_parity", "missing_final_join",
-                        "unordered", "unknown_task_operation", "extra_entry", "duplicate_signal"):
+                        "unordered", "unknown_task_operation", "extra_entry", "duplicate_signal",
+                        "read_only_fanout"):
             with self.subTest(variant=variant), tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
                 code, init = body, constructor
                 if variant == "wrong_fanin":
@@ -631,14 +656,47 @@ class LogicalStateSensitivity(unittest.TestCase):
                 elif variant == "duplicate_signal":
                     code = code.replace("vlSelf->__Vm_mtaskstate_2.signalUpstreamDone(even_cycle);",
                                         "vlSelf->__Vm_mtaskstate_2.signalUpstreamDone(even_cycle); " * 2)
+                elif variant == "read_only_fanout":
+                    code = code.replace("consume(vlSelf->scratch)", "vlSelf->result = vlSelf->scratch")
+                    signal = "vlSelf->__Vm_mtaskstate_2.signalUpstreamDone(even_cycle);\n"
+                    code = code.replace(signal, signal + (
+                        "Verilated::mtaskId(3);\n"
+                        "if ((8ULL & vlSelf->__VnbaTriggered.word(0U))) { reader(vlSelf); }\n"
+                        "Verilated::endOfThreadMTask(vlSymsp->__Vm_evalMsgQp);\n"), 1)
                 folder = Path(directory)
                 (folder / "generated.cpp").write_text(code)
                 (folder / (root + "__Slow.cpp")).write_text(init)
                 row = entry_proofs(folder, [root + ".scratch"], clean_cpp, closing)[root + ".scratch"]
-                self.assertEqual(row["proven"], variant == "correct", row)
+                self.assertEqual(row["proven"], variant in ("correct", "read_only_fanout"), row)
                 if variant == "correct":
                     self.assertEqual(row["native_task_graph"]["tasks"], 2)
                     self.assertEqual(row["ordered_native_regions"], ["1", "2"])
+
+    def test_wide_and_array_storage_lifetimes(self):
+        from boot_lifetime import entry_proofs
+        from boot_logical_state import clean_cpp, closing
+
+        identity = "fixture___024root.scratch"
+        for shape, words in (([], 3), ([2, 3], 1)):
+            indices = (["[0U]", "[1U]", "[2U]"] if not shape else
+                       [f"[{i}U][{j}U]" for i in range(2) for j in range(3)])
+            for variant in ("complete", "missing_tail", "read_before_tail", "bad_index"):
+                with self.subTest(shape=shape, variant=variant), tempfile.TemporaryDirectory(
+                        dir=FIXTURE_ROOT) as directory:
+                    stores = [f"vlSelf->scratch{index} = vlSelf->data;" for index in indices]
+                    reads = "".join(f"consume(vlSelf->scratch{index});" for index in indices)
+                    if variant == "missing_tail":
+                        stores.pop()
+                    if variant == "read_before_tail":
+                        stores.insert(0, reads)
+                    if variant == "bad_index":
+                        stores[-1] = "vlSelf->scratch[99U] = 0U;"
+                    body = "void entry(Root* vlSelf) {" + "".join(stores) + reads + "}"
+                    folder = Path(directory)
+                    (folder / "generated.cpp").write_text(body)
+                    row = entry_proofs(folder, [identity], clean_cpp, closing, {
+                        identity: {"shape": shape, "words": words}})[identity]
+                    self.assertEqual(row["proven"], variant == "complete", row)
 
 
 if __name__ == "__main__":

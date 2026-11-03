@@ -7,6 +7,7 @@ edge. Unsupported syntax, aliases, recursion and path explosion fail closed.
 """
 
 from dataclasses import dataclass
+import math
 import re
 
 
@@ -18,12 +19,13 @@ TOKEN = re.compile(r"\b[A-Za-z_]\w*\b")
 CALL = re.compile(r"\b(\w+)\s*\(")
 RULE = "structured-interprocedural-entry-value-deadness-v1"
 CASTS = {"CData", "SData", "IData", "QData"}
+SCALAR_PURE = CASTS | {"VL_EXTENDS_QI", "VL_MULS_QQQ", "VL_SHIFTRS_QQI", "VL_SHIFTL_III"}
 
 
 def pure_calls(text):
     remaining = re.sub(
         r"\bvlSelf->__V(?:stl|ico|act|nba)Triggered\.(?:word|any)\([^()]*\)", "", text)
-    return all(call[1] in CASTS for call in CALL.finditer(remaining))
+    return all(call[1] in SCALAR_PURE for call in CALL.finditer(remaining))
 
 
 def balanced(text, start):
@@ -152,7 +154,9 @@ def writes(text):
     result = set()
     for match in REF.finditer(text):
         tail = text[match.end():]
-        if re.match(r"\s*(?:\[[^\]]*\]\s*)*(?:=(?!=)|[+\-*/&|^]?=|\+\+|--)", tail):
+        prefix = text[:match.start()].rstrip()
+        if re.match(r"\s*(?:\[[^\]]*\]\s*)*(?:=(?!=)|[+\-*/%&|^]=|<<=|>>=|\+\+|--)", tail) or (
+                prefix.endswith(("++", "--"))):
             result.add("member:" + match[1])
         elif re.match(r"\s*\.\s*\w+\s*\(", tail) and not (
                 re.fullmatch(r"__V(?:stl|ico|act|nba)Triggered", match[1]) and
@@ -162,6 +166,10 @@ def writes(text):
     local = re.match(r"\s*(\w+)\s*(?:=(?!=)|[+\-*/&|^]=|\+\+|--)", text)
     if local:
         result.add("local:" + local[1])
+    for match in re.finditer(r"\b(\w+)\s*(?:=(?!=)|[+\-*/%&|^]=|<<=|>>=|\+\+|--)", text):
+        result.add("local:" + match[1])
+    for match in re.finditer(r"(?:\+\+|--)\s*(\w+)\b", text):
+        result.add("local:" + match[1])
     declaration = re.match(
         r"\s*(?:CData|SData|IData|QData|bool|int|size_t|unsigned(?:\s+int)?)\s+(\w+)\b", text)
     if declaration:
@@ -181,7 +189,7 @@ def atom(text):
 
 @dataclass(frozen=True)
 class State:
-    defined: bool = False
+    defined: int = 0
     flag: int | None = None
     predicates: frozenset = frozenset()
 
@@ -331,14 +339,34 @@ class Lifetime:
     def relevant(self, node, wanted):
         return bool(self.info(node)[0] & wanted)
 
-    def prove(self, identity):
+    def prove(self, identity, spec=None):
         target = identity.split(".", 1)[1]
+        shape = [] if spec is None else list(spec["shape"])
+        if spec is not None and spec["words"] > 1:
+            shape.append(spec["words"])
+        units = math.prod(shape)
         guard = None
         if target.startswith(("__Vdlyvval__", "__Vdlyvdim")):
             # Selection is only a hypothesis. The complete caller/branch
             # analysis below must prove every guarded read on every entry.
             suffix = re.sub(r"^__Vdly(?:vval|vdim\d+)__", "", target)
             guard = "__Vdlyvset__" + suffix
+            candidates = set()
+
+            def guards(node):
+                if node is None:
+                    return
+                match = re.fullmatch(r"\s*vlSelf->(__Vdlyvset__\w+)\s*", node.text)
+                if node.kind == "if" and match and self.relevant(node.children[0], {target}):
+                    candidates.add(match[1])
+                for child in node.children:
+                    guards(child)
+
+            for row in self.functions.values():
+                if target in row["refs"]:
+                    guards(row["tree"])
+            if len(candidates) == 1:
+                guard = next(iter(candidates))
         wanted = {target} | ({guard} if guard else set())
         proof = {
             "rule": RULE, "identity": identity, "guard_hypothesis": guard,
@@ -346,6 +374,7 @@ class Lifetime:
             "unclassified_pointer_escapes": self.escape, "proven": False,
             "boundary": "Each generated entry, including each native worker, starts independently.",
             "native_schedule_error": self.graph_error,
+            "storage_shape": shape, "storage_units": units,
         }
         failure = None
         if self.errors:
@@ -366,6 +395,8 @@ class Lifetime:
             proof["failure"] = failure
             return proof
         self.target, self.guard, self.wanted = target, guard, wanted
+        self.storage_shape, self.storage_units = shape, units
+        self.full_mask = (1 << units) - 1
         self.proof = proof
         self.stack = []
         self.atom_dependencies = {}
@@ -396,6 +427,12 @@ class Lifetime:
                 for state in states}
 
     def bounded(self, states):
+        # Once the whole old value is dead, future control-path distinctions
+        # cannot resurrect it. Keeping those distinctions causes exponential
+        # growth without providing additional lifetime information.
+        if any(state.defined == self.full_mask for state in states):
+            states = {state for state in states if state.defined != self.full_mask}
+            states.add(State(self.full_mask))
         if len(states) > 256:
             raise ValueError("generated branch-state bound exceeded; lifetime unresolved")
         return states
@@ -410,12 +447,21 @@ class Lifetime:
         if self.graph and name == self.graph["evaluator"]:
             selected = [key for key in self.graph["order"]
                         if self.relevant(self.graph["regions"][key], self.wanted)]
+            mutable = {"member:" + field for field in self.wanted}
+            writers = {key for key in selected if self.info(
+                self.graph["regions"][key])[1] & mutable}
             for index, key in enumerate(selected):
-                if any(previous not in self.graph["ancestors"][key] for previous in selected[:index]):
+                if any(previous not in self.graph["ancestors"][key] and (
+                        previous in writers or key in writers) for previous in selected[:index]):
                     raise ValueError("field/guard accesses have unordered native task lifetimes")
             other_writes = set().union(*(
                 self.info(node)[1] for key, node in self.graph["regions"].items()
                 if key not in selected))
+            # Unordered read-only fanout cannot define the target/guard, but its
+            # writes to other condition operands cannot establish correlations
+            # for a different reader in an arbitrary topological linearization.
+            other_writes |= set().union(*(
+                self.info(self.graph["regions"][key])[1] for key in selected if key not in writers))
             old_concurrent = self.concurrent_modifications
             self.concurrent_modifications = other_writes
             states = self.invalidate(states, other_writes)
@@ -432,11 +478,30 @@ class Lifetime:
         return self.bounded(continuing | returned)
 
     def reads(self, text, states):
-        count = sum(ref[1] == self.target for ref in REF.finditer(text))
-        if count:
-            if any(not state.defined for state in states):
+        for ref in REF.finditer(text):
+            if ref[1] != self.target:
+                continue
+            suffix = re.match(r"\s*((?:\[\s*(?:0x[0-9a-fA-F]+|[0-9]+)U?\s*\]\s*)+)",
+                              text[ref.end():])
+            required = self.index_mask(suffix[1]) if suffix else self.full_mask
+            if any(state.defined & required != required for state in states):
                 raise ValueError("entry value can reach a read in " + self.stack[-1])
-            self.proof["reads_checked"] += count
+            self.proof["reads_checked"] += 1
+
+    def index_mask(self, indices):
+        if not indices:
+            return self.full_mask
+        constants = re.findall(r"\[\s*(0x[0-9a-fA-F]+|[0-9]+)U?\s*\]", indices)
+        if len(constants) != len(self.storage_shape) or (
+                re.sub(r"\[\s*(?:0x[0-9a-fA-F]+|[0-9]+)U?\s*\]", "", indices).strip()):
+            raise ValueError("unproved dynamic/partial storage index")
+        offset = 0
+        for constant, extent in zip(constants, self.storage_shape):
+            value = int(constant, 16 if constant.startswith("0x") else 10)
+            if value >= extent:
+                raise ValueError("storage index outside declared extent")
+            offset = offset * extent + value
+        return 1 << offset
 
     def expression(self, text, states):
         # A generated call carrying the model pointer is only supported as a
@@ -455,6 +520,7 @@ class Lifetime:
                 return self.function(name, states)
             return self.invalidate(states, self.modifies[name])
         self.reads(text, states)
+        states = self.invalidate(states, writes(text))
         if not pure_calls(text):
             states = self.invalidate(states, dependencies(text))
         return states
@@ -474,7 +540,8 @@ class Lifetime:
             states = self.expression(node.text, states)
             key = atom(node.text)
             self.atom_dependencies[key] = dependencies(node.text)
-            stable = pure_calls(node.text) and not (
+            stable = pure_calls(node.text) and not re.search(
+                r"\+\+|--|(?<![=<>!])=(?!=)", node.text) and not (
                 self.atom_dependencies[key] & self.concurrent_modifications)
             if not stable:
                 # Such predicates may change asynchronously. Do not retain or
@@ -513,19 +580,23 @@ class Lifetime:
             if expression:
                 states = self.expression(expression, states)
             return set(), states
-        assignment = re.fullmatch(r"\s*vlSelf->(\w+)\s*=(?!=)(.*);\s*", text, re.S)
+        assignment = re.fullmatch(
+            r"\s*vlSelf->(\w+)\s*((?:\[[^\]]+\]\s*)*)=(?!=)(.*);\s*", text, re.S)
         if assignment:
-            field, rhs = assignment[1], assignment[2]
+            field, indices, rhs = assignment[1], assignment[2], assignment[3]
+            states = self.expression(indices, states)
             states = self.expression(rhs, states)
             states = self.invalidate(states, {"member:" + field})
             if field == self.target:
                 # C++ casts are pure. Do not infer a definition from an unknown
                 # helper that might access an escaped pointer or not return.
-                if any(call[1] not in CASTS
+                if any(call[1] not in SCALAR_PURE
                        for call in CALL.finditer(rhs)):
-                    raise ValueError("unsupported helper in scalar definition")
+                    helpers = sorted({call[1] for call in CALL.finditer(rhs) if call[1] not in SCALAR_PURE})
+                    raise ValueError("unsupported helper in storage definition: " + ",".join(helpers))
                 self.proof["definitions_checked"] += 1
-                states = {State(True, state.flag, state.predicates) for state in states}
+                mask = self.index_mask(indices)
+                states = {State(state.defined | mask, state.flag, state.predicates) for state in states}
             if field == self.guard:
                 value = re.fullmatch(r"\s*([01])U?\s*", rhs)
                 states = {State(state.defined, int(value[1]) if value else None,
@@ -535,6 +606,6 @@ class Lifetime:
         return self.invalidate(states, writes(text)), set()
 
 
-def entry_proofs(directory, names, clean_cpp, closing):
+def entry_proofs(directory, names, clean_cpp, closing, specs=None):
     analysis = Lifetime(directory, clean_cpp, closing)
-    return {name: analysis.prove(name) for name in names}
+    return {name: analysis.prove(name, None if specs is None else specs[name]) for name in names}

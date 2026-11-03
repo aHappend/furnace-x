@@ -374,8 +374,8 @@ def accounting(left, right, left_directory, right_directory):
     }
     from boot_lifetime import entry_proofs
     interprocedural = {
-        "baseline": entry_proofs(left_directory, backend_only["baseline"], clean_cpp, closing),
-        "candidate": entry_proofs(right_directory, backend_only["candidate"], clean_cpp, closing),
+        "baseline": entry_proofs(left_directory, backend_only["baseline"], clean_cpp, closing, a),
+        "candidate": entry_proofs(right_directory, backend_only["candidate"], clean_cpp, closing, b),
     }
     for name in sorted(a.keys() | b.keys()):
         if name in a and name in b:
@@ -388,7 +388,9 @@ def accounting(left, right, left_directory, right_directory):
             if not proof["proven"] and interprocedural[owner][name]["proven"]:
                 proof = interprocedural[owner][name]
             spec = a.get(name, b.get(name))
-            proven = proof["proven"] and not spec["shape"] and spec["words"] == 1
+            proven = proof["proven"] and (
+                proof["rule"] != "whole-scalar-definition-before-first-access-in-every-function"
+                or not spec["shape"] and spec["words"] == 1)
             rows[name] = {
                 "disposition": "dead_entry_value" if proven else "unresolved",
                 "backend": owner, "proof": proof,
@@ -435,11 +437,15 @@ def validate_accounting(plan):
             interprocedural = (proof.get("rule") == RULE and proof.get("entries")
                                and proof.get("reads_checked", 0) > 0
                                and proof.get("definitions_checked", 0) > 0
+                               and proof.get("storage_shape") == (
+                                   spec["shape"] + ([spec["words"]] if spec["words"] > 1 else []))
+                               and proof.get("storage_units") == (
+                                   math.prod(spec["shape"]) * spec["words"])
                                and not proof.get("failure"))
             if row.get("disposition") != "dead_entry_value" or row.get("backend") != owner or (
                     not proof.get("proven") or not (local or interprocedural) or
                     proof.get("identity") != name or proof.get("unclassified_pointer_escapes") or
-                    spec["shape"] or spec["words"] != 1):
+                    (local and (spec["shape"] or spec["words"] != 1))):
                 raise ValueError("unproved backend-only state: " + name)
     if not plan["complete"]:
         raise ValueError("logical comparison preflight is incomplete")
