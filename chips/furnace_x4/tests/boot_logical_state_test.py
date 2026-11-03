@@ -348,6 +348,71 @@ class LogicalStateSensitivity(unittest.TestCase):
         self.assertEqual(len(rows), 2)
         self.assertTrue(all(row["disposition"] == "unresolved" for row in rows.values()))
 
+    def test_deferred_deletion_source_and_runtime_sensitivity(self):
+        from boot_scheduler import (
+            accounting, DELETER_RULE, RUNTIME_RULE, RUNTIME_SHA256, validate_accounting,
+            validate_runtime,
+        )
+
+        cls = "fixture__Syms"
+        identity = cls + ".__Vm_deleter"
+        runtime = {"rule": RUNTIME_RULE, "source_sha256": dict(RUNTIME_SHA256)}
+        validate_runtime(runtime)
+        for name in RUNTIME_SHA256:
+            altered = copy.deepcopy(runtime)
+            altered["source_sha256"][name] = "unreviewed-library"
+            with self.subTest(runtime=name), self.assertRaisesRegex(ValueError, "runtime library"):
+                validate_runtime(altered)
+        with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as temporary:
+            directory = Path(temporary)
+            header = directory / (cls + ".h")
+            source = directory / "fixture.cpp"
+            header.write_text("VlDeleter __Vm_deleter;\n")
+            source.write_text("vlSymsp->__Vm_deleter.deleteAll();\n")
+            model = {"classes": {cls: {
+                "fields": {}, "unserialized_data": {},
+                "unserialized_scheduler": {"__Vm_deleter": "VlDeleter"}}}}
+
+            def rebind():
+                model["generated_sha256"] = {
+                    path.name: sha256(path) for path in directory.iterdir()}
+
+            # The generated-name prefix is part of the production inventory.
+            cls = "Vfixture__Syms"
+            identity = cls + ".__Vm_deleter"
+            model["classes"][cls] = model["classes"].pop("fixture__Syms")
+            header = header.rename(directory / (cls + ".h"))
+            source = source.rename(directory / "Vfixture.cpp")
+            rebind()
+            rows = accounting(model, directory, runtime)
+            self.assertEqual(rows[identity]["disposition"], "empty_by_construction")
+            self.assertEqual(rows[identity]["proof"]["rule"], DELETER_RULE)
+            plan = {"baseline": model, "candidate": copy.deepcopy(model),
+                    "unserialized": {owner + ":" + identity: copy.deepcopy(rows[identity])
+                                     for owner in ("baseline", "candidate")}}
+            validate_accounting(plan)
+            for key, value in (("queues", {"m_newGarbage": 1, "m_deleteNow": 0}),
+                               ("uses", []), ("generated_sha256", {})):
+                altered = copy.deepcopy(plan)
+                altered["unserialized"]["candidate:" + identity]["proof"][key] = value
+                with self.subTest(proof=key), self.assertRaisesRegex(ValueError, "queue accounting"):
+                    validate_accounting(altered)
+            original = source.read_text()
+            for extra in ("vlSymsp->__Vm_deleter.put(object);\n",
+                          "auto *escaped = &vlSymsp->__Vm_deleter;\n",
+                          "consume(vlSymsp->__Vm_deleter);\n",
+                          "VlClassRef<Object> indirect;\n"):
+                source.write_text(original + extra)
+                rebind()
+                with self.subTest(source=extra):
+                    self.assertEqual(accounting(model, directory, runtime)[identity][
+                        "disposition"], "unresolved")
+            source.write_text(original)
+            rebind()
+            source.write_text(original + "// changed after source binding\n")
+            self.assertEqual(accounting(model, directory, runtime)[identity][
+                "disposition"], "unresolved")
+
     def test_exact_context_host_ram_uart_and_observations(self):
         plan = archive_plan()
         with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:

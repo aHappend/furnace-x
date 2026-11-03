@@ -162,9 +162,20 @@ def fulltop_preflight(output, receipt):
 
 def logical_preflight(output, receipt, baseline, candidate, *, syntax_capture=False):
     from boot_logical_state import accounting, schema, validate_accounting, write_exporter
+    from boot_scheduler import runtime_library
+
+    version = run(["verilator", "-V"], output, "verilator-build-configuration", receipt)
+    configuration = (output / version["stdout"]).read_text()
+    roots = re.findall(r"^\s*VERILATOR_ROOT\s*=\s*(.+?)\s*$", configuration, re.M)
+    if not roots or not (Path(roots[0]) / "include/verilated.h").is_file():
+        raise ValueError("cannot identify the installed Verilator include directory")
+    includes = Path(roots[0]) / "include"
+    runtime = runtime_library(includes)
+    receipt["scheduler_runtime_library"] = runtime
+    save(output, receipt)
 
     left, right = schema(baseline), schema(candidate)
-    plan = accounting(left, right, baseline, candidate)
+    plan = accounting(left, right, baseline, candidate, runtime)
     path = output / "logical-state-accounting.json"
     with path.open("x") as stream:
         stream.write(json.dumps(plan, indent=2) + "\n")
@@ -190,12 +201,6 @@ def logical_preflight(output, receipt, baseline, candidate, *, syntax_capture=Fa
     }
     save(output, receipt)
     if syntax_capture:
-        version = run(["verilator", "-V"], output, "verilator-build-configuration", receipt)
-        configuration = (output / version["stdout"]).read_text()
-        roots = re.findall(r"^\s*VERILATOR_ROOT\s*=\s*(.+?)\s*$", configuration, re.M)
-        if not roots or not (Path(roots[0]) / "include/verilated.h").is_file():
-            raise ValueError("cannot identify the installed Verilator include directory")
-        includes = Path(roots[0]) / "include"
         from boot_lifetime import CASTS, SCALAR_PURE, balanced
         from boot_logical_state import clean_cpp
         functions_header = clean_cpp((includes / "verilated_funcs.h").read_text())
@@ -255,6 +260,9 @@ def comparator_diagnostic(output, receipt, retained):
     directory.relative_to(ROOT / "evidence/preparation")
     if previous.get("serialization_schema_differences") is None:
         raise ValueError("retained receipt does not contain the original schema failure")
+    for name, expected in previous["source_sha256"].items():
+        if name.startswith("rtl/") and digest(project_path(Path(name))) != expected:
+            raise ValueError("RTL differs from retained code-generation input: " + name)
     receipt["retained_schema_input"] = {
         "receipt": str(retained), "sha256": digest(path),
         "scope": "Historical generated C++ inputs for comparator development only.",
@@ -277,6 +285,79 @@ def comparator_diagnostic(output, receipt, retained):
     save(output, receipt)
     return logical_preflight(output, receipt, directory / "schema-o3-pgo-fixedpoint",
                              directory / "schema-native-threads-candidate", syntax_capture=True)
+
+
+def capture_diagnostic(output, receipt, build_receipt, cycles):
+    """Execute a short initialized full-top prefix; no throughput/promotion claim."""
+    from boot_logical_state import accounting, equivalent, schema, validate_accounting
+
+    pairs, models, directories = {}, {}, {}
+    for owner, profile in (("baseline", "o3-pgo-fixedpoint"),
+                           ("candidate", "native-threads-candidate")):
+        root = output / f"capture-{owner}-{uuid.uuid4().hex[:8]}"
+        root.mkdir()
+        # The nested entry bounds every build, training and simulation leaf by
+        # 600 s and inherits this diagnostic's original aggregate deadline.
+        record = run([
+            "python3", "tests/boot_probe.py", "--build-receipt", build_receipt,
+            "--seed", "17", "--cycles", str(cycles), "--compile-profile", profile,
+            "--audit-state", "--logical-state", "--output-root", root.relative_to(ROOT),
+        ], output, f"capture-{owner}-execute", receipt, timeout_s=2700, check=False)
+        found = list(root.glob("boot-*/receipt.json"))
+        if len(found) != 1:
+            raise ValueError("missing unique full-top capture receipt")
+        path = found[0]
+        child = json.loads(path.read_text())
+        receipt.setdefault("children", []).append({
+            "receipt": str(path.relative_to(ROOT)), "sha256": digest(path)})
+        save(output, receipt)
+        simulation = next((row for row in child["commands"]
+                           if row["stdout"] == "simulation.stdout.txt"), None)
+        if simulation is None or record["exit_code"] != 1 or child["exit_code"] != 1 or (
+                simulation["exit_code"] != 1 or simulation["timed_out"]):
+            raise ValueError("full-top capture did not reach its intended compared boundary")
+        if "FAIL: cycle budget exhausted without complete workload UART record" not in (
+                path.parent / "simulation-summary.txt").read_text():
+            raise ValueError("full-top capture contains a semantic failure")
+        observed = child["execution_observations"]
+        if observed["cycles"] != cycles or any(observed[key] <= 0 for key in (
+                "retired", "equal_comparisons", "require_comparisons")):
+            raise ValueError("full-top capture lacks compared instruction execution")
+        capture = child["logical_capture"]["compile"]
+        model_path = project_path(Path(capture["schema"]))
+        if digest(model_path) != capture["schema_sha256"]:
+            raise ValueError("compiled capture schema identity changed")
+        directories[owner] = model_path.parent
+        models[owner] = schema(model_path.parent)
+        if models[owner] != json.loads(model_path.read_text()):
+            raise ValueError("executed generated source differs from capture schema")
+        pairs[owner] = {
+            "seed": 17, "observed": observed, "final_state": child["final_state"],
+            "uart_sha256": digest(path.parent / "uart.txt"),
+            "state_directory": child["final_state_directory"],
+            "receipt": str(path.relative_to(ROOT)),
+        }
+        receipt.setdefault("fulltop_capture_validation", {})[owner] = pairs[owner]
+        save(output, receipt)
+    plan = accounting(models["baseline"], models["candidate"],
+                      directories["baseline"], directories["candidate"],
+                      receipt["scheduler_runtime_library"])
+    manifest = output / "executed-logical-state-accounting.json"
+    with manifest.open("x") as stream:
+        stream.write(json.dumps(plan, indent=2) + "\n")
+    receipt["executed_logical_accounting"] = {
+        "manifest": manifest.name, "sha256": digest(manifest), "complete": plan["complete"]}
+    save(output, receipt)
+    validate_accounting(plan)
+    result = equivalent(
+        plan, pairs["baseline"], pairs["candidate"],
+        project_path(Path(pairs["baseline"]["state_directory"])),
+        project_path(Path(pairs["candidate"]["state_directory"])))
+    receipt["fulltop_capture_comparison"] = result
+    receipt["fulltop_capture_scope"] = (
+        "Seed 17 initialized full 128-MiB RAM prefix only, not a Linux completion, "
+        "three-seed performance measurement or backend promotion.")
+    save(output, receipt)
 
 
 def measure(output, receipt, cycles, comparison_plan):
@@ -388,6 +469,8 @@ def main():
     parser.add_argument("--mode", choices=("support", "preflight", "measure", "cleanup", "comparator"),
                         default="support")
     parser.add_argument("--retained-schema", type=Path)
+    parser.add_argument("--capture-build-receipt", type=Path,
+                        help="Also validate actual initialized full-top prefix captures")
     parser.add_argument("--cleanup-of", type=Path)
     parser.add_argument("--cycles", type=int, default=5000000)
     parser.add_argument("--experiment-origin", type=Path,
@@ -453,6 +536,8 @@ def main():
         if args.mode == "comparator":
             receipt["scope"] = "Comparator sensitivity and retained-codegen state accounting only."
             comparator_diagnostic(output, receipt, args.retained_schema)
+            if args.capture_build_receipt:
+                capture_diagnostic(output, receipt, args.capture_build_receipt, args.cycles)
             status = 0
             return 0
         if args.mode == "cleanup":

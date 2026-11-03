@@ -60,16 +60,6 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
         "tests/boot_observers.sv", cpp,
     ]
     run(command, output, stem, receipt)
-    if logical:
-        from boot_logical_state import schema, write_exporter
-        model = schema(ROOT / obj)
-        write_exporter(ROOT / obj, model)
-        receipt.setdefault("logical_capture", {})[stem] = {
-            "schema": str(obj / "logical-schema.json"),
-            "schema_sha256": digest(ROOT / obj / "logical-schema.json"),
-            "exporter_sha256": digest(ROOT / obj / "boot_logical_capture.h"),
-        }
-        save(output, receipt)
     if profile.get("generated_fixedpoint"):
         from generated_eval import optimize
         receipt.setdefault("generated_evaluation", {})[stem] = optimize(ROOT / obj, digest)
@@ -87,6 +77,18 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
             from generated_schedule import instrument
             receipt.setdefault("generated_schedule_profile", {})[stem] = instrument(
                 ROOT / obj, digest)
+        save(output, receipt)
+    if logical:
+        from boot_logical_state import schema, write_exporter
+        # Bind lifetime proofs to what make actually compiles, after all
+        # generated-C++ transformations, not the pre-transformation inventory.
+        model = schema(ROOT / obj)
+        write_exporter(ROOT / obj, model)
+        receipt.setdefault("logical_capture", {})[stem] = {
+            "schema": str(obj / "logical-schema.json"),
+            "schema_sha256": digest(ROOT / obj / "logical-schema.json"),
+            "exporter_sha256": digest(ROOT / obj / "boot_logical_capture.h"),
+        }
         save(output, receipt)
     if profile.get("generated_fixedpoint") or logical:
         run(["make", "-C", obj, "-f", "Vfurnace_x4_top.mk", "-j", str(jobs),

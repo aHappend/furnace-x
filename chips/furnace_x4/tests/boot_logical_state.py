@@ -363,7 +363,7 @@ def unserialized_fields(left, right):
     return unsaved
 
 
-def accounting(left, right, left_directory, right_directory):
+def accounting(left, right, left_directory, right_directory, runtime=None):
     """Account for the union. Unproved layout differences cannot be compared."""
     a, b = flat_fields(left), flat_fields(right)
     rows = {}
@@ -402,7 +402,7 @@ def accounting(left, right, left_directory, right_directory):
         f"{owner}:{name}": row
         for owner, model, directory in (("baseline", left, left_directory),
                                         ("candidate", right, right_directory))
-        for name, row in scheduler_accounting(model, directory).items()
+        for name, row in scheduler_accounting(model, directory, runtime).items()
     }
     return {
         "schema": 1, "fields": rows, "backend_only": backend_only, "unserialized": unsaved,

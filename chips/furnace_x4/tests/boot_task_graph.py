@@ -42,6 +42,8 @@ def task_graph(analysis, directory, clean_cpp, Node, atom):
                 if current is not None:
                     raise ValueError("symbol alias after native task start")
                 continue
+            if final_signals:
+                raise ValueError("native worker accesses state after signaling its final join")
             start = re.fullmatch(r"Verilated::mtaskId\((\d+)\);", atom(text))
             stop = re.fullmatch(
                 r"Verilated::endOfThreadMTask\(vlSymsp->__Vm_evalMsgQp\);", atom(text))
