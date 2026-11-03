@@ -77,6 +77,7 @@ def main():
         run([
             "python3", "tests/boot_performance_probe.py", "--before", before,
             "--after", after, "--comparison-mode", "compiler-profile",
+            "--cost-receipt", args.cost_receipt,
             "--output-root", comparison_root.relative_to(ROOT),
         ], output, "comparison", receipt)
         found = list(comparison_root.glob("boot-performance-*/receipt.json"))
@@ -89,20 +90,7 @@ def main():
             "receipt": str(found[0].relative_to(ROOT)), "sha256": digest(found[0]),
         })
         receipt["comparison"] = comparison["comparison"]
-        cost_path = project_path(args.cost_receipt).parent / "analysis.json"
-        cost = json.loads(cost_path.read_text())
-        receipt["cost_analysis_sha256"] = digest(cost_path)
-        speedup = comparison["comparison"]["elapsed_speedup"]
-        receipt["execution_replanning"] = {
-            "historical_measured_seed17_prefix_s":
-                cost["measured_prefix_simulation_s_including_serialization"],
-            "historical_complete_boot": cost["complete_boot"],
-            "projected_three_prefix_s_at_measured_speedup":
-                cost["three_seed_prefix_projection_s"] / speedup,
-            "aggregate_budget_s": 2700,
-            "complete_boot_cost": "unknown",
-            "projection_limit": "Early equal-work speedup is not a measured complete-boot speedup.",
-        }
+        receipt["execution_replanning"] = comparison["execution_replanning"]
         for name, expected in receipt["source_sha256"].items():
             if digest(project_path(Path(name))) != expected:
                 raise ValueError(f"source changed during comparison: {name}")

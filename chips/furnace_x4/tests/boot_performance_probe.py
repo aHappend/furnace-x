@@ -21,6 +21,8 @@ def main():
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
     parser.add_argument("--comparison-mode", choices=("legacy-o2", "compiler-profile"),
                         default="legacy-o2")
+    parser.add_argument("--repair-of", type=Path)
+    parser.add_argument("--cost-receipt", type=Path)
     args = parser.parse_args()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = project_path(args.output_root) / f"boot-performance-{stamp}-{uuid.uuid4().hex[:8]}"
@@ -39,6 +41,9 @@ def main():
     save(output, receipt)
     status = 1
     try:
+        if args.repair_of:
+            receipt["repair_of"] = str(args.repair_of)
+            receipt["repair_receipt_sha256"] = digest(project_path(args.repair_of))
         run(["python3", "--version"], output, "python-version", receipt)
         paths = [project_path(args.before), project_path(args.after)]
         rows = []
@@ -163,7 +168,7 @@ def main():
                 all_compiles = [line for line in generated
                                 if re.search(r"(?:g\+\+|c\+\+).* -c ", line)]
                 links = [line for line in generated
-                         if re.search(r"(?:g\+\+|c\+\+).* -o Vfurnace_x4_top ", line)]
+                         if re.search(r"(?:g\+\+|c\+\+).* -o Vfurnace_x4_top(?:\s|$)", line)]
                 if len(links) != 1:
                     raise ValueError("missing unique effective linker invocation")
                 row["linker_invocation"] = links[0]
@@ -191,6 +196,28 @@ def main():
                 if after.get("compile_profile") == "o3-lto" else None
             ),
         }
+        if args.cost_receipt:
+            cost_receipt_path = project_path(args.cost_receipt)
+            cost_receipt = json.loads(cost_receipt_path.read_text())
+            if cost_receipt["exit_code"] != 0:
+                raise ValueError("cost audit receipt did not pass")
+            cost_path = cost_receipt_path.parent / "analysis.json"
+            cost = json.loads(cost_path.read_text())
+            receipt["retained_inputs"].update({
+                str(p.relative_to(ROOT)): digest(p)
+                for p in (cost_receipt_path, cost_path)
+            })
+            receipt["execution_replanning"] = {
+                "historical_measured_seed17_prefix_s":
+                    cost["measured_prefix_simulation_s_including_serialization"],
+                "historical_complete_boot": cost["complete_boot"],
+                "projected_three_prefix_s_at_measured_speedup":
+                    cost["three_seed_prefix_projection_s"] /
+                    receipt["comparison"]["elapsed_speedup"],
+                "aggregate_budget_s": 2700,
+                "complete_boot_cost": "unknown",
+                "projection_limit": "Early equal-work speedup is not a measured complete-boot speedup.",
+            }
         status = 0
     except (OSError, ValueError, KeyError, StopIteration, RuntimeError) as error:
         receipt["error"] = str(error)
