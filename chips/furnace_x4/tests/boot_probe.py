@@ -42,6 +42,15 @@ COMPILE_PROFILES = {
         "pgo_training_cycles": 2000000,
         "generated_fixedpoint": True,
     },
+    "native-threads-candidate": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000",
+                      "--threads", "2", "--threads-dpi", "none"],
+        "optimization": "-O3",
+        "compiler_flags": ["-DFURNACE_BOOT_NATIVE_THREADS=2"],
+        "pgo_training_cycles": 2000000,
+        "generated_fixedpoint": True,
+    },
     "schedule-profile": {
         "verilator": ["-O3", "--output-split", "10000",
                       "--output-split-cfuncs", "10000"],
