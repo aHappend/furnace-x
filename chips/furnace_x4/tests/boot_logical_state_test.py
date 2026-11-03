@@ -165,6 +165,7 @@ def exporter_fixture(output, receipt):
 class LogicalStateSensitivity(unittest.TestCase):
     def test_changed_python_entrypoints_compile(self):
         for name in ("boot_logical_state.py", "boot_logical_state_test.py",
+                     "boot_lifetime.py",
                      "boot_native_threads_probe.py", "boot_probe.py",
                      "boot_compilation.py", "verify.py"):
             path = Path(__file__).with_name(name)
@@ -444,6 +445,133 @@ class LogicalStateSensitivity(unittest.TestCase):
                     (folder / "generated.cpp").write_text(body)
                     proof = scratch_proofs(folder, ["fixture___024root.scratch"])
                     self.assertEqual(proof["fixture___024root.scratch"]["proven"], expected)
+
+    def test_interprocedural_lifetimes_and_counterexamples(self):
+        from boot_lifetime import entry_proofs
+        from boot_logical_state import clean_cpp, closing
+
+        writer = "void writer(Root* vlSelf) { vlSelf->scratch = vlSelf->state; }\n"
+        reader = "void reader(Root* vlSelf) { consume(vlSelf->scratch); }\n"
+        cases = {
+            "ordered_calls": (writer + reader +
+                              "void entry(Root* vlSelf) { writer(vlSelf); reader(vlSelf); }", True),
+            "reordered_calls": (writer + reader +
+                                "void entry(Root* vlSelf) { reader(vlSelf); writer(vlSelf); }", False),
+            "separate_entries": (writer + reader, False),
+            "correlated_conditions": (writer + reader + "void entry(Root* vlSelf) { "
+                                      "if (vlSelf->enable) writer(vlSelf); "
+                                      "if (vlSelf->enable) reader(vlSelf); }", True),
+            "changed_condition": (writer + reader + "void entry(Root* vlSelf) { "
+                                  "if (vlSelf->enable) writer(vlSelf); vlSelf->enable = 1U; "
+                                  "if (vlSelf->enable) reader(vlSelf); }", False),
+            "hidden_condition_write": (writer + reader +
+                                       "void change(Root* vlSelf) { vlSelf->enable = 1U; }\n"
+                                       "void entry(Root* vlSelf) { "
+                                       "if (vlSelf->enable) writer(vlSelf); change(vlSelf); "
+                                       "if (vlSelf->enable) reader(vlSelf); }", False),
+            "external_condition_write": (writer + reader + "void entry(Root* vlSelf) { "
+                                         "if (vlSelf->enable) writer(vlSelf); "
+                                         "external(vlSelf->enable); "
+                                         "if (vlSelf->enable) reader(vlSelf); }", False),
+            "unstable_condition": (writer + reader + "void entry(Root* vlSelf) { "
+                                   "if (external()) writer(vlSelf); "
+                                   "if (external()) reader(vlSelf); }", False),
+            "early_return": (
+                "void writer(Root* vlSelf) { if (vlSelf->enable) return; "
+                "vlSelf->scratch = 1U; }\n" + reader +
+                "void entry(Root* vlSelf) { writer(vlSelf); reader(vlSelf); }", False),
+            "conditional_definition": ("void entry(Root* vlSelf) { if (vlSelf->enable) "
+                                       "vlSelf->scratch = 1U; consume(vlSelf->scratch); }", False),
+            "compound_call": (writer +
+                              "void entry(Root* vlSelf) { consume(vlSelf->scratch, writer(vlSelf)); }",
+                              False),
+            "self_read": ("void entry(Root* vlSelf) { vlSelf->scratch = vlSelf->scratch + 1U; }",
+                          False),
+            "partial_array_store": ("void entry(Root* vlSelf) { vlSelf->scratch[0] = 1U; "
+                                    "consume(vlSelf->scratch); }", False),
+            "zero_iteration": ("void entry(Root* vlSelf) { while (vlSelf->enable) { "
+                               "vlSelf->scratch = 1U; } consume(vlSelf->scratch); }", False),
+            "loop_local_lifetime": ("void entry(Root* vlSelf) { while (vlSelf->enable) { "
+                                    "vlSelf->scratch = 1U; consume(vlSelf->scratch); } }", True),
+            "loop_read_first": ("void entry(Root* vlSelf) { while (vlSelf->enable) { "
+                                "consume(vlSelf->scratch); vlSelf->scratch = 1U; } }", False),
+            "opaque_pointer": (writer + reader + "void entry(Root* vlSelf) { "
+                                "writer(vlSelf); external(vlSelf); reader(vlSelf); }", False),
+            "opaque_symbol_pointer": (writer + reader + "void entry(Root* vlSelf) { "
+                                       "writer(vlSelf); external(vlSelf->vlSymsp); "
+                                       "reader(vlSelf); }", False),
+            "unknown_syntax": ("void entry(Root* vlSelf) { goto later; vlSelf->scratch = 1U; "
+                               "later: consume(vlSelf->scratch); }", False),
+            "returned_callee": (
+                "bool reader(Root* vlSelf) { return vlSelf->scratch; }\n"
+                "bool entry(Root* vlSelf) { return reader(vlSelf); }", False),
+            "bool_helper": (
+                "bool helper(Root* vlSelf) { vlSelf->scratch = 1U; consume(vlSelf->scratch); "
+                "return true; }\nvoid entry(Root* vlSelf) { helper(vlSelf); }", True),
+            "scope_and_ternary": (
+                "void entry(Root* vlSelf) { vlSelf->scratch = vlSelf->enable ? 1U : 0U; "
+                "Consumer::observe(vlSelf->scratch); }", True),
+            "native_worker_prologue": (
+                "void Vroot____Vthread__0(void* voidSelf, bool even_cycle) {\n"
+                "VL_DEBUG_IF(VL_DBG_MSGF(\"worker\"); );\n"
+                "Vroot* const __restrict vlSelf VL_ATTR_UNUSED = static_cast<Vroot*>(voidSelf);\n"
+                "Vtop__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;\n"
+                "Verilated::mtaskId(1); vlSelf->scratch = 1U; consume(vlSelf->scratch); }", True),
+            "cross_worker": (
+                "void A____Vthread__0(Root* vlSelf) { vlSelf->scratch = 1U; }\n"
+                "void B____Vthread__1(Root* vlSelf) { consume(vlSelf->scratch); }", False),
+            "local_shadow": ("void entry(Root* vlSelf) { int scratch = 0; "
+                             "vlSelf->scratch = 1U; consume(vlSelf->scratch); }", False),
+            "redeclared_condition": (writer + reader + "void entry(Root* vlSelf) { "
+                                      "if (enable) writer(vlSelf); int enable = 1; "
+                                      "if (enable) reader(vlSelf); }", False),
+        }
+        with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
+            folder = Path(directory)
+            for name, (body, expected) in cases.items():
+                with self.subTest(name=name):
+                    (folder / "generated.cpp").write_text(body)
+                    proof = entry_proofs(folder, ["fixture___024root.scratch"], clean_cpp, closing)
+                    row = proof["fixture___024root.scratch"]
+                    self.assertEqual(row["proven"], expected, row)
+
+    def test_guarded_payload_requires_complete_flag_lifetime(self):
+        from boot_lifetime import entry_proofs
+        from boot_logical_state import clean_cpp, closing
+
+        payload = "__Vdlyvval__array__v0"
+        flag = "__Vdlyvset__array__v0"
+        reader = f"void reader(Root* vlSelf) {{ if (vlSelf->{flag}) consume(vlSelf->{payload}); }}\n"
+        producer = (f"void producer(Root* vlSelf) {{ if (vlSelf->enable) {{ "
+                    f"vlSelf->{payload} = vlSelf->data; vlSelf->{flag} = 1U; }} }}\n")
+        for variant in ("correct", "missing_reset", "missing_payload", "reordered",
+                        "early_return", "different_guard", "reset_after_producer"):
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
+                reset = f"vlSelf->{flag} = 0U; "
+                calls = "producer(vlSelf); reader(vlSelf);"
+                prefix = producer + reader
+                if variant == "missing_reset":
+                    reset = ""
+                if variant == "missing_payload":
+                    prefix = prefix.replace(f"vlSelf->{payload} = vlSelf->data;", "")
+                if variant == "reordered":
+                    calls = "reader(vlSelf); producer(vlSelf);"
+                if variant == "early_return":
+                    prefix = prefix.replace(f"vlSelf->{payload} =", "if (vlSelf->bad) return; "
+                                             f"vlSelf->{payload} =")
+                    # A flag published before an early return is not safe.
+                    prefix = prefix.replace("if (vlSelf->bad) return;",
+                                            f"vlSelf->{flag} = 1U; if (vlSelf->bad) return;")
+                if variant == "different_guard":
+                    prefix = prefix.replace(f"if (vlSelf->{flag})", "if (vlSelf->other)")
+                if variant == "reset_after_producer":
+                    reset, calls = "", f"producer(vlSelf); vlSelf->{flag} = 0U; reader(vlSelf);"
+                body = prefix + "void entry(Root* vlSelf) { " + reset + calls + " }"
+                folder = Path(directory)
+                (folder / "generated.cpp").write_text(body)
+                row = entry_proofs(folder, ["fixture___024root." + payload],
+                                   clean_cpp, closing)["fixture___024root." + payload]
+                self.assertEqual(row["proven"], variant == "correct", row)
 
 
 if __name__ == "__main__":

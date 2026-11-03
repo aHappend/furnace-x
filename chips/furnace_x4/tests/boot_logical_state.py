@@ -3,8 +3,8 @@
 
 This is an execution-backend diagnostic, not a functional RTL oracle. A name
 match alone never authorizes omission of a backend-only field. The only current
-omission rule proves that every generated function overwrites the entire scalar
-before its first read; split-function NBA temporaries remain unresolved.
+omission rules prove complete scalar definitions before every entry-value read.
+Unproved split-function, guarded-array and scheduler state remains unresolved.
 """
 
 import hashlib
@@ -372,6 +372,11 @@ def accounting(left, right, left_directory, right_directory):
         "baseline": scratch_proofs(left_directory, backend_only["baseline"]),
         "candidate": scratch_proofs(right_directory, backend_only["candidate"]),
     }
+    from boot_lifetime import entry_proofs
+    interprocedural = {
+        "baseline": entry_proofs(left_directory, backend_only["baseline"], clean_cpp, closing),
+        "candidate": entry_proofs(right_directory, backend_only["candidate"], clean_cpp, closing),
+    }
     for name in sorted(a.keys() | b.keys()):
         if name in a and name in b:
             if a[name] != b[name]:
@@ -380,11 +385,14 @@ def accounting(left, right, left_directory, right_directory):
         else:
             owner = "baseline" if name in a else "candidate"
             proof = proofs[owner][name]
+            if not proof["proven"] and interprocedural[owner][name]["proven"]:
+                proof = interprocedural[owner][name]
             spec = a.get(name, b.get(name))
             proven = proof["proven"] and not spec["shape"] and spec["words"] == 1
             rows[name] = {
                 "disposition": "dead_entry_value" if proven else "unresolved",
                 "backend": owner, "proof": proof,
+                "interprocedural_attempt": interprocedural[owner][name],
             }
     unsaved = unserialized_fields(left, right)
     return {
@@ -420,12 +428,18 @@ def validate_accounting(plan):
             owner = "baseline" if name in a else "candidate"
             spec = a.get(name, b.get(name))
             proof = row.get("proof", {})
+            from boot_lifetime import RULE
+            local = (proof.get("rule") == "whole-scalar-definition-before-first-access-in-every-function"
+                     and proof.get("uses") and all(
+                         use["unconditional_scalar_definition"] for use in proof["uses"]))
+            interprocedural = (proof.get("rule") == RULE and proof.get("entries")
+                               and proof.get("reads_checked", 0) > 0
+                               and proof.get("definitions_checked", 0) > 0
+                               and not proof.get("failure"))
             if row.get("disposition") != "dead_entry_value" or row.get("backend") != owner or (
-                    not proof.get("proven") or not proof.get("uses") or
+                    not proof.get("proven") or not (local or interprocedural) or
                     proof.get("identity") != name or proof.get("unclassified_pointer_escapes") or
-                    proof.get("rule") != "whole-scalar-definition-before-first-access-in-every-function"
-                    or not all(use["unconditional_scalar_definition"] for use in proof["uses"])
-                    or spec["shape"] or spec["words"] != 1):
+                    spec["shape"] or spec["words"] != 1):
                 raise ValueError("unproved backend-only state: " + name)
     if not plan["complete"]:
         raise ValueError("logical comparison preflight is incomplete")
