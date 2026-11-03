@@ -158,13 +158,13 @@ def behavior(output, receipt, seeds):
 
 
 def linux_runs(output, receipt, seeds, build, *, cycles=None, audit=False,
-               cache=None, stem="boot"):
+               cache=None, stem="boot", profile="o3-pgo-fixedpoint"):
     """One local compilation, then disjoint processes with one inherited deadline."""
     measured = {}
     cache = output / f"boot-executable-{uuid.uuid4().hex[:8]}" if cache is None else cache
     common = [
         "--build-receipt", str(build.relative_to(ROOT)),
-        "--compile-profile", "o3-pgo-fixedpoint",
+        "--compile-profile", profile,
         "--invocation-cache", str(cache.relative_to(ROOT)),
         *(["--audit-state"] if audit else []),
     ]

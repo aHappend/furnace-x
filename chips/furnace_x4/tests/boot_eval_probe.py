@@ -70,19 +70,22 @@ def main():
         build_finished = time.monotonic()
         receipt["fresh_software_and_oracle_s"] = build_finished - started
         cache = output / f"shared-executable-{uuid.uuid4().hex[:8]}"
-        expected_error = None
-        try:
-            linux_runs(output, receipt, SEEDS, build, cycles=baseline["cycles_limit"],
-                       audit=True, cache=cache, stem="equal-work")
-        except ValueError as error:
-            expected_error = str(error)
-        if expected_error != "; ".join(f"seed{seed}: boot exit=1" for seed in SEEDS) and (
-                set((expected_error or "").split("; ")) != {
-                    f"seed{seed}: boot exit=1" for seed in SEEDS}):
-            raise ValueError(f"unexpected prefix outcome: {expected_error}")
-        rows = []
-        prior_by_seed = {row["seed"]: row for row in baseline["comparison"]["sequential"]}
-        for entry in receipt["boot_runs"]:
+        def prefix(profile, stem, local_cache):
+            expected_error = None
+            try:
+                linux_runs(output, receipt, SEEDS, build, cycles=baseline["cycles_limit"],
+                           audit=True, cache=local_cache, stem=stem, profile=profile)
+            except ValueError as error:
+                expected_error = str(error)
+            if set((expected_error or "").split("; ")) != {
+                    f"seed{seed}: boot exit=1" for seed in SEEDS}:
+                raise ValueError(f"unexpected prefix outcome: {expected_error}")
+            return list(receipt["boot_runs"])
+
+        reference_runs = prefix("o3-pgo", "reference",
+                                output / f"reference-executable-{uuid.uuid4().hex[:8]}")
+        candidate_runs = prefix("o3-pgo-fixedpoint", "equal-work", cache)
+        def observation(entry):
             path = project_path(Path(entry["receipt"]))
             child = json.loads(path.read_text())
             command = next(c for c in child["commands"] if c["stdout"] == "simulation.stdout.txt")
@@ -90,27 +93,37 @@ def main():
                     "FAIL: cycle budget exhausted without complete workload UART record" not in
                     (path.parent / "simulation-summary.txt").read_text()):
                 raise ValueError("candidate failed before the equal-work boundary")
-            old_images = project_path(Path(baseline["build_receipt"])).parent / "system/images/images.json"
-            new_images = project_path(Path(child["image_manifest"]))
-            if digest(old_images) != digest(new_images):
-                raise ValueError("fresh software images differ from the baseline")
             for name in ("python3", "verilator", "g++", "make"):
                 old = baseline["tool_versions"][name]
                 if child["tool_versions"][name]["stdout"] != old:
                     raise ValueError(f"equal-work tool changed: {name}")
-            row = {
+            return {
                 "seed": entry["seed"], "observed": child["execution_observations"],
                 "final_state": child["final_state"], "uart_sha256": digest(path.parent / "uart.txt"),
                 "simulation_s": command["duration_s"],
             }
+        reference_by_seed = {entry["seed"]: entry for entry in reference_runs}
+        prior_by_seed = {entry["seed"]: observation(entry) for entry in reference_runs}
+        rows = []
+        for entry in candidate_runs:
+            path = project_path(Path(entry["receipt"]))
+            child = json.loads(path.read_text())
+            original = json.loads(project_path(Path(
+                reference_by_seed[entry["seed"]]["receipt"])).read_text())
+            for name in ("image_manifest_sha256", "software_build_receipt_sha256",
+                         "source_sha256", "tool_versions"):
+                if child[name] != original[name]:
+                    raise ValueError(f"paired experiment input differs: {name}")
+            row = observation(entry)
             equivalent(prior_by_seed[entry["seed"]], row)
             rows.append(row)
         prefix_finished = time.monotonic()
         receipt["equal_work"] = {
             "complete_state_uart_coverage_counters_equal": True, "runs": rows,
+            "reference_runs": reference_runs,
             "fresh_build_compile_training_overlap_and_serialization_s": prefix_finished - started,
             "incremental_simulation_speedups": {
-                str(row["seed"]): prior_by_seed[row["seed"]]["duration_s"] / row["simulation_s"]
+                str(row["seed"]): prior_by_seed[row["seed"]]["simulation_s"] / row["simulation_s"]
                 for row in rows},
             "limitation": "Prefix equivalence is not complete Linux acceptance.",
         }
