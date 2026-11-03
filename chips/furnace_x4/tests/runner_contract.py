@@ -84,6 +84,72 @@ int main() {
             raise AssertionError(f"fixed-point optimizer accepted side effect: {forbidden}")
 
 
+def replay_contract(output, receipt):
+    from generated_replay import statements, transform
+    header = ROOT / "tests/generated_replay.h"
+    (output / header.name).write_bytes(header.read_bytes())
+    prefix = ("VL_INLINE_OPT void model___ico_sequent__TOP__0"
+              "(Vfurnace_x4_top___024root* vlSelf) {\n"
+              "// Init\nIData/*31:0*/ temporary;\ntemporary = 0;\n// Body\n")
+    statement = ("    if (vlSelf->input & 1U) {\n"
+                 "        temporary = vlSelf->input + vlSelf->array[vlSelf->index & 3U];\n"
+                 "    } else { temporary = vlSelf->input * 7U; }\n"
+                 "    vlSelf->output = temporary ^ vlSelf->output;\n")
+    original = prefix + statement * 1000 + "\n}"
+    changed, rows = transform(original)
+    assert len(rows) == 1 and len(rows[0]["regions"]) >= 2
+    assert all("temporary" in region["fields"] for region in rows[0]["regions"])
+    assert list(statements("if (x) { y=1; } else { y=2; }\nx=3;")) == [
+        "if (x) { y=1; } else { y=2; }", "\nx=3;"]
+    for forbidden in ("callback();", "return;", "while (1) {}", "escape(vlSelf);"):
+        assert not transform(prefix + statement * 500 + forbidden + "\n}")[1]
+    original = original.replace("model___ico_sequent__TOP__0", "reference")
+    program = r'''
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+using IData = uint32_t;
+#define VL_INLINE_OPT
+struct Vfurnace_x4_top___024root { uint32_t input, output, index, array[4]; };
+''' + original + "\n" + changed + r'''
+int main() {
+    Vfurnace_x4_top___024root a{3,5,0,{1,2,3,4}}, b = a, other = a;
+    for (unsigned i = 0; i < 500; ++i) {
+        if (i % 7 == 0) { a.input = i; a.index = i & 3; a.array[i & 3] ^= i; }
+        b = a;
+        reference(&b);
+        model___ico_sequent__TOP__0(&a);
+        assert(std::memcmp(&a, &b, sizeof(a)) == 0);
+        if (i % 23 == 0) {
+            auto expected = other;
+            reference(&expected); model___ico_sequent__TOP__0(&other);
+            assert(std::memcmp(&other, &expected, sizeof(other)) == 0);
+        }
+    }
+    using namespace furnace_replay;
+    Cache cache;
+    unsigned value = 4;
+    const Field fields[] = {{&value, sizeof(value)}};
+    assert(!cache.reuse(&value, fields));
+    value = 9; cache.capture();
+    value = 4; assert(cache.reuse(&value, fields)); assert(value == 9);
+    value = 5; assert(!cache.reuse(&value, fields));
+    value = 10; cache.capture();
+    value = 5; assert(cache.reuse(&value, fields)); assert(value == 10);
+    unsigned another = 5;
+    const Field rebound[] = {{&another, sizeof(another)}};
+    assert(!cache.reuse(&value, rebound));
+    another = 12; cache.capture();
+    another = 5; assert(cache.reuse(&value, rebound)); assert(another == 12);
+}
+'''
+    (output / "replay.cpp").write_text(program)
+    run(["g++", "-std=c++17", "-O3", output.relative_to(ROOT) / "replay.cpp",
+         "-o", output.relative_to(ROOT) / "replay"], output, "replay-build", receipt)
+    run([output.relative_to(ROOT) / "replay"], output, "replay-run", receipt)
+    receipt["comparisons"] += 518
+
+
 def reject_stale_compilation(manifest_path, output, receipt):
     from boot_compilation import reusable_boot
     manifest = json.loads(manifest_path.read_text())
@@ -121,6 +187,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reuse-manifest", type=Path,
                         help="Retained executable fixture for non-executing identity-guard checks")
+    parser.add_argument("--repair-of", type=Path)
     args = parser.parse_args()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = ROOT / "evidence/preparation" / f"runner-{stamp}-{uuid.uuid4().hex[:8]}"
@@ -131,14 +198,20 @@ def main():
             "tests/boot_probe.py", "tests/boot_compilation.py",
             "tests/runner_contract.py", "tests/verify.py",
             "tests/generated_eval.py", "tests/generated_eval_cache.h",
+            "tests/generated_replay.py", "tests/generated_replay.h",
         )}, "start_utc": now(), "end_utc": None, "exit_code": None,
         "timeout_s": 600, "commands": [], "comparisons": 0,
     }
     save(output, receipt)
+    if args.repair_of:
+        receipt["repair_of"] = str(args.repair_of)
+        receipt["repair_receipt_sha256"] = digest(project_path(args.repair_of))
+        save(output, receipt)
     status = 1
     try:
         run(["python3", "--version"], output, "version", receipt)
         fixedpoint_contract(output, receipt)
+        replay_contract(output, receipt)
         run(["python3", "tests/verify.py", "--help"], output, "entrypoint-help", receipt)
         help_text = (output / "entrypoint-help.stdout.txt").read_text()
         assert "{behavior,linux,defects,synthesis,portability}" in help_text
