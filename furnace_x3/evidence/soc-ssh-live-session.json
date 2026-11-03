@@ -1,0 +1,51 @@
+{
+  "chip": "FURNACE-X3",
+  "command": "x3-pipeline",
+  "bellows_n_nic": {
+    "rx_packets": 130,
+    "tx_packets": 130,
+    "rx_bytes": 18561,
+    "tx_bytes": 24961,
+    "crc32c_verified": 130,
+    "rss_queue_hits": [
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      18,
+      16
+    ],
+    "last_crc32c_hex": "0xc7c25825",
+    "last_rss_queue": 6,
+    "last_board_telemetry": null
+  },
+  "arria10_board_execution": {
+    "host": "NETSYS17",
+    "chip_id": "0x0054006c4b0f3025",
+    "status": "0x000000030000060e",
+    "hw_cycles": 160895,
+    "mem_beats": "0x000000e0000005a8",
+    "vec": [
+      "0x000000000092e155",
+      "0x000000000092e155",
+      "0x0000000000080959",
+      "0xffffffffff7fd6ab",
+      "0xffffffffffb93214",
+      "0x00000000001dc09f"
+    ],
+    "raw_stdout": "",
+    "pcie_roundtrip_s": 8.841,
+    "stimulus_applied": {
+      "4096": 19,
+      "4104": -11,
+      "4428": 4,
+      "4432": 2048,
+      "4436": 7,
+      "4437": 11,
+      "4438": 13
+    }
+  },
+  "timestamp": "2026-11-03T15:33:28Z"
+}
