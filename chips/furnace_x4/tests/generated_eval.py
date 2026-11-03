@@ -42,11 +42,14 @@ def transform(text):
                             for name in fields)
         before = (
             "    static thread_local furnace_generated::FixedPointCache cache;\n"
-            "    const furnace_generated::Field fields[] = {\n"
-            + entries + "\n    };\n"
-            "    if (cache.reuse(vlSelf, fields)) return;\n"
+            "    if (cache.owner != vlSelf) {\n"
+            "        const furnace_generated::Field fields[] = {\n"
+            + entries + "\n        };\n"
+            "        cache.bind(vlSelf, fields);\n"
+            "    }\n"
+            "    if (cache.reuse()) return;\n"
         )
-        after = "\n    cache.fixed = cache.matches(fields);"
+        after = "\n    cache.fixed = cache.matches();"
         rows.append({"function": match[1], "fields": fields, "body_bytes": len(code)})
         return (f"VL_INLINE_OPT void {match[1]}(Vfurnace_x4_top___024root* vlSelf) {{"
                 + init + "// Body\n" + before + code + after + "\n}")

@@ -49,6 +49,16 @@ int main() {
         assert(!sequential.fixed);
     }
     assert(a.counter == 100);
+    unsigned char storage[16]{};
+    FixedPointCache fragments;
+    const Field fields[] = {{storage + 12, 4}, {storage + 4, 4}, {storage, 4}};
+    fragments.bind(storage, fields);
+    assert(fragments.ranges.size() == 2 && fragments.bytes.size() == 12);
+    assert(!fragments.reuse());
+    fragments.fixed = fragments.matches();
+    assert(fragments.reuse());
+    storage[8] = 1; assert(fragments.reuse());
+    storage[12] = 1; assert(!fragments.reuse());
 }
 '''
     (output / "fixedpoint.cpp").write_text(program)
@@ -57,7 +67,7 @@ int main() {
          "-o", output.relative_to(ROOT) / "fixedpoint"],
         output, "fixedpoint-build", receipt)
     run([output.relative_to(ROOT) / "fixedpoint"], output, "fixedpoint-run", receipt)
-    receipt["comparisons"] += 211
+    receipt["comparisons"] += 217
     prefix = ("VL_INLINE_OPT void model___nba_sequent__TOP__2"
               "(Vfurnace_x4_top___024root* vlSelf) {\n// Body\n")
     body = "    vlSelf->aes__DOT__out = vlSelf->aes__DOT__in;\n" * 10000
