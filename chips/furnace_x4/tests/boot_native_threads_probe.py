@@ -6,6 +6,7 @@ import datetime
 import json
 import os
 from pathlib import Path
+import re
 import sys
 import time
 import uuid
@@ -54,6 +55,112 @@ def resources():
             path.read_text().strip() if path.exists() else "not exposed"
         )
     print(json.dumps(result, indent=2))
+
+
+def clean_completed_objects(output, receipt, prior_path):
+    prior = json.loads(prior_path.read_text())
+    directory = prior_path.parent
+    directory.relative_to(ROOT / "evidence/preparation")
+    if not directory.name.startswith("boot-native-threads-") or (
+            prior.get("argv", [])[:2] != ["python3", "tests/boot_native_threads_probe.py"]):
+        raise ValueError("cleanup target is not this probe's preparation output")
+    if prior.get("end_utc") is None or prior.get("exit_code") is None or any(
+            row.get("end_utc") is None for row in prior["commands"]):
+        raise ValueError("cleanup target has unfinished commands")
+    receipt["cleanup_of"] = {
+        "receipt": str(prior_path.relative_to(ROOT)), "sha256": digest(prior_path)}
+    files = [path for path in sorted(directory.rglob("*"))
+             if path.is_file() and path.suffix in (".o", ".a", ".gch")]
+    receipt["removed_transient_objects"] = [
+        {"path": str(path.relative_to(ROOT)), "sha256": digest(path),
+         "bytes": path.stat().st_size} for path in files]
+    save(output, receipt)
+    for path in files:
+        path.resolve().relative_to(directory.resolve())
+        path.unlink()
+    receipt["cleanup_completed"] = True
+    save(output, receipt)
+
+
+def serialization_schema(directory):
+    schema = {}
+    generated = {}
+    for path in sorted(directory.glob("*.cpp")):
+        text = path.read_text()
+        for match in re.finditer(r"void (\w+)::__Vserialize\(VerilatedSerialize& os\) \{", text):
+            start = match.end()
+            depth = 1
+            end = start
+            while end < len(text) and depth:
+                depth += (text[end] == "{") - (text[end] == "}")
+                end += 1
+            if depth:
+                raise ValueError(f"unclosed generated serializer: {path.name}")
+            body = text[start:end - 1]
+            schema[match[1]] = {
+                "body": " ".join(body.split()),
+                "writes": [" ".join(value.split())
+                           for value in re.findall(r"\bos\s*<<\s*(.*?);", body, re.S)],
+            }
+            generated[str(path.relative_to(ROOT))] = digest(path)
+    if not schema or not any(name.endswith("___024root") for name in schema):
+        raise ValueError("complete generated RTL serializer is missing")
+    return schema, generated
+
+
+def fulltop_preflight(output, receipt):
+    """Reject incompatible complete archives before compiling any candidate."""
+    from boot_probe import COMPILE_PROFILES
+
+    schemas = {}
+    for name in ("o3-pgo-fixedpoint", "native-threads-candidate"):
+        directory = output / f"schema-{name}"
+        run([
+            "verilator", "--cc", "--savable", "--assert", "-Wno-fatal",
+            "--top-module", "furnace_x4_top", "--Mdir", directory.relative_to(ROOT),
+            *COMPILE_PROFILES[name]["verilator"],
+            *[path.relative_to(ROOT) for path in sorted((ROOT / "rtl").glob("*.sv"))],
+            "tests/boot_observers.sv",
+        ], output, f"schema-{name}", receipt)
+        schema, generated = serialization_schema(directory)
+        manifest = output / f"schema-{name}.json"
+        manifest.write_text(json.dumps(schema, indent=2) + "\n")
+        schemas[name] = schema
+        receipt.setdefault("serialization_schemas", {})[name] = {
+            "manifest": manifest.name, "sha256": digest(manifest),
+            "generated_sha256": generated,
+            "serializer_count": len(schema),
+            "write_count": sum(len(row["writes"]) for row in schema.values()),
+        }
+        save(output, receipt)
+    baseline = schemas["o3-pgo-fixedpoint"]
+    candidate = schemas["native-threads-candidate"]
+    differences = {}
+    for name in sorted(baseline.keys() | candidate.keys()):
+        left, right = baseline.get(name), candidate.get(name)
+        if left == right:
+            continue
+        a = set(left["writes"]) if left else set()
+        b = set(right["writes"]) if right else set()
+        differences[name] = {
+            "baseline_only_writes": sorted(a - b),
+            "candidate_only_writes": sorted(b - a),
+            "common_writes": len(a & b),
+            "identical_body": False,
+        }
+    receipt["serialization_schema_differences"] = differences
+    save(output, receipt)
+    if differences:
+        receipt["save_state_compatibility"] = "incompatible with existing exact archive comparison"
+        raise ValueError(
+            "full-top native threading changes the complete serialized RTL schema. "
+            "Raw archive equality cannot compare these models; no fields, checksums or "
+            "backend state were excluded or normalized. No candidate C++ build or "
+            "simulation is permitted by this preflight. A proven complete-state "
+            "comparison method is needed before a paired experiment."
+        )
+    receipt["save_state_compatibility"] = "identical complete generated serialization schemas"
+    save(output, receipt)
 
 
 def measure(output, receipt, cycles):
@@ -144,7 +251,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--resources", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--repair-of", type=Path, action="append")
-    parser.add_argument("--mode", choices=("support", "measure"), default="support")
+    parser.add_argument("--mode", choices=("support", "preflight", "measure", "cleanup"),
+                        default="support")
+    parser.add_argument("--cleanup-of", type=Path)
     parser.add_argument("--cycles", type=int, default=5000000)
     parser.add_argument("--experiment-origin", type=Path,
                         help="Retain the original support/setup experiment's aggregate deadline")
@@ -153,6 +262,8 @@ def main():
     if args.resources:
         resources()
         return 0
+    if args.mode == "cleanup" and args.cleanup_of is None:
+        parser.error("--mode cleanup requires --cleanup-of")
     started = time.monotonic()
     deadline = min(float(os.environ.get("FURNACE_VERIFY_DEADLINE", "inf")), started + 2700)
     origin = None
@@ -202,6 +313,11 @@ def main():
         for tool in ("python3", "verilator"):
             record = run([tool, "--version"], output, tool + "-version", receipt)
             receipt.setdefault("tool_versions", {})[tool] = (output / record["stdout"]).read_text()
+        if args.mode == "cleanup":
+            clean_completed_objects(output, receipt, project_path(args.cleanup_of))
+            receipt["scope"] = "Completed diagnostic object cleanup only; no new simulation."
+            status = 0
+            return 0
         run(["python3", "tests/boot_native_threads_probe.py", "--resources"],
             output, "cpu-resources", receipt)
         receipt["resources"] = json.loads((output / "cpu-resources.stdout.txt").read_text())
@@ -228,6 +344,8 @@ def main():
                 "No full-top candidate was built and no output-only substitute was used."
             )
         receipt["save_state_compatibility"] = "code generation accepted; paired comparison still required"
+        if args.mode in ("preflight", "measure"):
+            fulltop_preflight(output, receipt)
         if args.mode == "measure":
             measure(output, receipt, args.cycles)
         status = 0
