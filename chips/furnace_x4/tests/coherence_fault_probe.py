@@ -59,8 +59,9 @@ def main():
             measured = {k: int(v) for k, v in re.findall(r"(\w+)=(\d+)", lines[0])}
             if any(measured[name] != value for name, value in {
                     "fault_cases": 6, "cancel_cases": 1, "cpu_recoveries": 7,
-                    "fabric_recoveries": 7, "accepted_aw": 7, "accepted_ar": 14,
-                    "accepted_w": 523, "retired_b": 6, "retired_r": 527,
+                    "fabric_recoveries": 11, "ordinary_errors": 4,
+                    "accepted_aw": 11, "accepted_ar": 18,
+                    "accepted_w": 527, "retired_b": 10, "retired_r": 531,
                     "canceled_b": 1, "canceled_r": 3}.items()):
                 raise ValueError(f"incomplete fault settlement/cancellation coverage: {measured}")
             if measured["comparisons"] <= 0:
