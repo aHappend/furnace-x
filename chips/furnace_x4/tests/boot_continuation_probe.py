@@ -28,6 +28,7 @@ def main():
     parser.add_argument("--state", type=Path, required=True)
     parser.add_argument("--segment-cycles", type=int, default=40000000)
     parser.add_argument("--segments", type=int, default=2)
+    parser.add_argument("--reuse-executable", action="store_true")
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
     args = parser.parse_args()
     if not 1 <= args.segments <= 4 or not 1 <= args.segment_cycles <= 40000000:
@@ -40,7 +41,9 @@ def main():
         "schema": 1, "argv": ["python3", "tests/boot_continuation_probe.py", *sys.argv[1:]],
         "cwd": ".", "start_utc": now(), "end_utc": None, "exit_code": None,
         "timeout_s": 2700, "timed_out": False, "commands": [], "segments": [],
-        "source_sha256": {str(p.relative_to(ROOT)): digest(p) for p in sources()},
+        "source_sha256": {str(p.relative_to(ROOT)): digest(p) for p in sources()
+                          if p.parent != ROOT / "tests" or p.name.startswith("boot")
+                          or p.name in ("verify.py", "workload_model.py")},
         "scope": "Measured continuation; incomplete segments are not successful Linux boots.",
     }
     save(output, receipt)
@@ -104,6 +107,8 @@ def main():
         receipt["ram"] = manifest["ram"]
         compile_rows = [c for c in previous["commands"]
                         if c["argv"][0] == "verilator" and "--cc" in c["argv"]]
+        if not compile_rows and "compilation" in previous:
+            compile_rows = [previous["compilation"]]
         if len(compile_rows) != 1 or compile_rows[0]["exit_code"]:
             raise ValueError("predecessor compilation provenance missing")
         old_command = compile_rows[0]["argv"]
@@ -130,11 +135,22 @@ def main():
         for path in (ROOT / "tests").glob("boot*"):
             if path.is_file():
                 (snapshots / path.name).write_bytes(path.read_bytes())
-        obj = relative / f"obj-{uuid.uuid4().hex[:8]}"
-        command = list(old_command)
-        command[command.index("--Mdir") + 1] = str(obj)
-        command[-1] = str(Path(*([".."] * len(obj.parts))) / "tests/boot_checkpoint_endpoint.cpp")
-        run(command, output, "compile", receipt)
+        if args.reuse_executable:
+            if "executable_sha256" not in previous or any(
+                    previous["source_sha256"].get("tests/" + name) != digest(ROOT / "tests" / name)
+                    for name in ("boot_checkpoint_endpoint.cpp", "boot_checkpoint_state.h",
+                                 "boot_endpoint.cpp", "boot_execution_model.h",
+                                 "boot_workload_model.h", "boot_observers.sv")):
+                raise ValueError("reusable executable lacks exact source/hash provenance")
+            obj = old_obj.relative_to(ROOT)
+            receipt["compilation"] = compile_rows[0]
+            receipt["reused_executable"] = True
+        else:
+            obj = relative / f"obj-{uuid.uuid4().hex[:8]}"
+            command = list(old_command)
+            command[command.index("--Mdir") + 1] = str(obj)
+            command[-1] = str(Path(*([".."] * len(obj.parts))) / "tests/boot_checkpoint_endpoint.cpp")
+            run(command, output, "compile", receipt)
         if generated_identity(ROOT / obj) != old_identity:
             raise ValueError("generated RTL/serialization layout differs from predecessor")
         executable = obj / "Vfurnace_x4_top"
@@ -143,6 +159,12 @@ def main():
         storage = output / "checkpoint-images"
         storage.mkdir()
         for number in range(args.segments):
+            for name, value in receipt["source_sha256"].items():
+                if digest(ROOT / name) != value:
+                    raise ValueError(f"source changed before restoration: {name}")
+            for image in manifest["images"]:
+                if digest(manifest_path.parent / image["file"]) != image["sha256"]:
+                    raise ValueError("image changed before restoration")
             before = identity(state)
             if before != prior["identity"]:
                 raise ValueError("checkpoint changed before restoration")
@@ -200,8 +222,8 @@ def main():
             "complete_boot": bool(endpoint["complete_boot"]),
             "three_seed_simulation_projection_s": elapsed / cycles * endpoint["end_cycle"] * 3,
             "projection_is_lower_bound": not bool(endpoint["complete_boot"]),
-            "compilation_s": next(c["duration_s"] for c in receipt["commands"]
-                                  if c["stdout"] == "compile.stdout.txt"),
+            "compilation_s": sum(c["duration_s"] for c in receipt["commands"]
+                                 if c["stdout"] == "compile.stdout.txt"),
             "limitation": "No aggregate saving from sharding; projection excludes software build.",
         }
         for name, value in receipt["source_sha256"].items():
