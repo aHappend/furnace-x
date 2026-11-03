@@ -154,7 +154,9 @@ def writes(text):
         tail = text[match.end():]
         if re.match(r"\s*(?:\[[^\]]*\]\s*)*(?:=(?!=)|[+\-*/&|^]?=|\+\+|--)", tail):
             result.add("member:" + match[1])
-        elif re.match(r"\s*\.\s*\w+\s*\(", tail):
+        elif re.match(r"\s*\.\s*\w+\s*\(", tail) and not (
+                re.fullmatch(r"__V(?:stl|ico|act|nba)Triggered", match[1]) and
+                re.match(r"\s*\.\s*(?:word|any)\s*\(", tail)):
             # Treat even a read-only method as potentially modifying its receiver.
             result.add("member:" + match[1])
     local = re.match(r"\s*(\w+)\s*(?:=(?!=)|[+\-*/&|^]=|\+\+|--)", text)
@@ -252,6 +254,7 @@ class Lifetime:
                     self.escape.append({"function": name, "reason": "unknown worker entry"})
                 else:
                     self.spawned.add(match[1])
+                    self.calls[name].add(match[1])
                     allowed.append((match.start(), match.end()))
             for match in re.finditer(r"\bvlSelf\b(?!->)", body):
                 if any(start <= match.start() < end for start, end in allowed):
@@ -289,6 +292,15 @@ class Lifetime:
                     self.modifies[name].update(self.modifies[callee])
                 changed |= before != len(self.modifies[name])
         self.node_cache = {}
+        self.graph = None
+        self.graph_error = None
+        if self.workers:
+            from boot_task_graph import task_graph
+            try:
+                self.graph = task_graph(self, directory, clean_cpp, Node, atom)
+                self.entries -= self.workers
+            except (OSError, KeyError, ValueError) as exc:
+                self.graph_error = str(exc)
 
     def tree_writes(self, node):
         if node is None:
@@ -333,6 +345,7 @@ class Lifetime:
             "entries": [], "reads_checked": 0, "definitions_checked": 0,
             "unclassified_pointer_escapes": self.escape, "proven": False,
             "boundary": "Each generated entry, including each native worker, starts independently.",
+            "native_schedule_error": self.graph_error,
         }
         failure = None
         if self.errors:
@@ -345,7 +358,7 @@ class Lifetime:
             failure = "unclassified generated model-pointer escape"
         relevant_entries = sorted(name for name in self.entries if target in self.transitive[name])
         touching_workers = [name for name in self.workers if self.transitive[name] & wanted]
-        if len(touching_workers) > 1:
+        if len(touching_workers) > 1 and self.graph is None:
             failure = "field/guard crosses native workers without a happens-before proof"
         if not relevant_entries:
             failure = failure or "no generated execution entry reaches this field"
@@ -358,6 +371,11 @@ class Lifetime:
         self.atom_dependencies = {}
         self.concurrent_modifications = set().union(*(
             self.modifies[name] for name in self.workers if name not in touching_workers))
+        if self.graph:
+            proof["native_task_graph"] = self.graph["proof"]
+            proof["boundary"] = (
+                "Each external generated entry; native task definitions propagate only through "
+                "proven happens-before edges, never an arbitrary topological linearization.")
         try:
             for name in relevant_entries:
                 proof["entries"].append(name)
@@ -389,6 +407,26 @@ class Lifetime:
         if row["tree"] is None:
             raise ValueError("unparsed generated function " + name + ": " + row["error"])
         self.stack.append(name)
+        if self.graph and name == self.graph["evaluator"]:
+            selected = [key for key in self.graph["order"]
+                        if self.relevant(self.graph["regions"][key], self.wanted)]
+            for index, key in enumerate(selected):
+                if any(previous not in self.graph["ancestors"][key] for previous in selected[:index]):
+                    raise ValueError("field/guard accesses have unordered native task lifetimes")
+            other_writes = set().union(*(
+                self.info(node)[1] for key, node in self.graph["regions"].items()
+                if key not in selected))
+            old_concurrent = self.concurrent_modifications
+            self.concurrent_modifications = other_writes
+            states = self.invalidate(states, other_writes)
+            for key in selected:
+                self.proof.setdefault("ordered_native_regions", []).append(key)
+                states, returned = self.visit(self.graph["regions"][key], states)
+                if returned:
+                    raise ValueError("unclassified native task early return")
+            self.concurrent_modifications = old_concurrent
+            self.stack.pop()
+            return self.invalidate(states, self.modifies[name])
         continuing, returned = self.visit(row["tree"], states)
         self.stack.pop()
         return self.bounded(continuing | returned)

@@ -165,7 +165,7 @@ def exporter_fixture(output, receipt):
 class LogicalStateSensitivity(unittest.TestCase):
     def test_changed_python_entrypoints_compile(self):
         for name in ("boot_logical_state.py", "boot_logical_state_test.py",
-                     "boot_lifetime.py",
+                     "boot_lifetime.py", "boot_task_graph.py",
                      "boot_native_threads_probe.py", "boot_probe.py",
                      "boot_compilation.py", "verify.py"):
             path = Path(__file__).with_name(name)
@@ -517,6 +517,13 @@ class LogicalStateSensitivity(unittest.TestCase):
                 "Vroot* const __restrict vlSelf VL_ATTR_UNUSED = static_cast<Vroot*>(voidSelf);\n"
                 "Vtop__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;\n"
                 "Verilated::mtaskId(1); vlSelf->scratch = 1U; consume(vlSelf->scratch); }", True),
+            "read_only_trigger_on_other_worker": (
+                writer + reader +
+                "void A____Vthread__0(Root* vlSelf) { "
+                "if (8ULL & vlSelf->__VnbaTriggered.word(0U)) writer(vlSelf); "
+                "if (8ULL & vlSelf->__VnbaTriggered.word(0U)) reader(vlSelf); }\n"
+                "void B____Vthread__1(Root* vlSelf) { "
+                "if (8ULL & vlSelf->__VnbaTriggered.word(0U)) unrelated(); }", True),
             "cross_worker": (
                 "void A____Vthread__0(Root* vlSelf) { vlSelf->scratch = 1U; }\n"
                 "void B____Vthread__1(Root* vlSelf) { consume(vlSelf->scratch); }", False),
@@ -572,6 +579,66 @@ class LogicalStateSensitivity(unittest.TestCase):
                 row = entry_proofs(folder, ["fixture___024root." + payload],
                                    clean_cpp, closing)["fixture___024root." + payload]
                 self.assertEqual(row["proven"], variant == "correct", row)
+
+    def test_native_task_happens_before_and_scheduler_mutations(self):
+        from boot_lifetime import entry_proofs
+        from boot_logical_state import clean_cpp, closing
+
+        root = "Vfixture___024root"
+        worker0, worker1 = (root + "____Vthread__nba__" + str(i) for i in (0, 1))
+        parity = "vlSymsp->__Vm_even_cycle__nba"
+        body = (
+            f"void writer({root}* vlSelf) {{ vlSelf->scratch = 1U; }}\n"
+            f"void reader({root}* vlSelf) {{ consume(vlSelf->scratch); }}\n"
+            f"void {worker0}({root}* vlSelf, bool even_cycle) {{\n"
+            "Verilated::mtaskId(1);\n"
+            "if ((8ULL & vlSelf->__VnbaTriggered.word(0U))) { writer(vlSelf); }\n"
+            "Verilated::endOfThreadMTask(vlSymsp->__Vm_evalMsgQp);\n"
+            "vlSelf->__Vm_mtaskstate_2.signalUpstreamDone(even_cycle);\n"
+            "vlSelf->__Vm_mtaskstate_final__nba.signalUpstreamDone(even_cycle);\n}\n"
+            f"void {worker1}({root}* vlSelf, bool even_cycle) {{\n"
+            "vlSelf->__Vm_mtaskstate_2.waitUntilUpstreamDone(even_cycle);\n"
+            "Verilated::mtaskId(2);\n"
+            "if ((8ULL & vlSelf->__VnbaTriggered.word(0U))) { reader(vlSelf); }\n"
+            "Verilated::endOfThreadMTask(vlSymsp->__Vm_evalMsgQp);\n"
+            "vlSelf->__Vm_mtaskstate_final__nba.signalUpstreamDone(even_cycle);\n}\n"
+            f"void {root}___eval_nba({root}* vlSelf) {{\n"
+            f"{parity} = !{parity};\n"
+            f"vlSymsp->__Vm_threadPoolp->workerp(0)->addTask(&{worker0}, vlSelf, {parity});\n"
+            f"{worker1}(vlSelf, {parity});\nVerilated::mtaskId(0);\n"
+            f"vlSelf->__Vm_mtaskstate_final__nba.waitUntilUpstreamDone({parity});\n}}\n")
+        constructor = "__Vm_mtaskstate_2(1U), __Vm_mtaskstate_final__nba(2U)"
+        for variant in ("correct", "wrong_fanin", "wrong_parity", "missing_final_join",
+                        "unordered", "unknown_task_operation", "extra_entry", "duplicate_signal"):
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
+                code, init = body, constructor
+                if variant == "wrong_fanin":
+                    init = init.replace("_2(1U)", "_2(2U)")
+                elif variant == "wrong_parity":
+                    code = code.replace(f"{worker1}(vlSelf, {parity})",
+                                        f"{worker1}(vlSelf, !{parity})")
+                elif variant == "missing_final_join":
+                    code = code.replace(
+                        f"vlSelf->__Vm_mtaskstate_final__nba.waitUntilUpstreamDone({parity});", "")
+                elif variant == "unordered":
+                    code = code.replace("vlSelf->__Vm_mtaskstate_2.signalUpstreamDone(even_cycle);", "")
+                    code = code.replace("vlSelf->__Vm_mtaskstate_2.waitUntilUpstreamDone(even_cycle);", "")
+                    init = "__Vm_mtaskstate_final__nba(2U)"
+                elif variant == "unknown_task_operation":
+                    code = code.replace("writer(vlSelf); }", "writer(vlSelf); extra(); }")
+                elif variant == "extra_entry":
+                    code += f"void extra({root}* vlSelf) {{ reader(vlSelf); }}\n"
+                elif variant == "duplicate_signal":
+                    code = code.replace("vlSelf->__Vm_mtaskstate_2.signalUpstreamDone(even_cycle);",
+                                        "vlSelf->__Vm_mtaskstate_2.signalUpstreamDone(even_cycle); " * 2)
+                folder = Path(directory)
+                (folder / "generated.cpp").write_text(code)
+                (folder / (root + "__Slow.cpp")).write_text(init)
+                row = entry_proofs(folder, [root + ".scratch"], clean_cpp, closing)[root + ".scratch"]
+                self.assertEqual(row["proven"], variant == "correct", row)
+                if variant == "correct":
+                    self.assertEqual(row["native_task_graph"]["tasks"], 2)
+                    self.assertEqual(row["ordered_native_regions"], ["1", "2"])
 
 
 if __name__ == "__main__":
