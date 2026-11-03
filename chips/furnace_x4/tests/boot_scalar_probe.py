@@ -190,8 +190,11 @@ def measure(output, receipt):
             child = json.loads(path.read_text())
             receipt["children"].append({"receipt": str(path.relative_to(ROOT)), "sha256": digest(path)})
             save(output, receipt)
-            simulation = next(c for c in child["commands"]
-                              if c["stdout"] == "simulation.stdout.txt")
+            simulation = next((c for c in child["commands"]
+                               if c["stdout"] == "simulation.stdout.txt"), None)
+            if simulation is None:
+                raise ValueError("scalar pairing has no simulation: " +
+                                 child.get("diagnostic_error", str(record["exit_code"])))
             if record["exit_code"] != 1 or child["exit_code"] != 1 or (
                     simulation["exit_code"] != 1 or simulation["timed_out"]):
                 raise ValueError("scalar pairing failed before intended cycle boundary")
