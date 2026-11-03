@@ -4,6 +4,7 @@
 import json
 from pathlib import Path
 import re
+import uuid
 
 from boot_probe import COMPILE_PROFILES, ROOT, digest, project_path, run, save
 
@@ -134,7 +135,7 @@ def reusable_boot(cache, output, receipt, jobs, profile_name, *, audit=False):
     if cache.exists():
         raise ValueError("occupied boot cache without a completed compilation manifest")
     cache.mkdir()
-    compile_output = cache / "compilation"
+    compile_output = cache / f"compilation-{uuid.uuid4().hex[:8]}"
     compile_output.mkdir()
     compiled = {
         "schema": 1, "argv": receipt["argv"], "cwd": ".",

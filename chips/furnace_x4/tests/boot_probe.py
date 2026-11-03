@@ -189,7 +189,8 @@ def main():
     }
     save(output, receipt)
     for name in ("boot_probe.py", "boot_endpoint.cpp", "boot_execution_model.h",
-                 "boot_workload_model.h", "boot_observers.sv"):
+                 "boot_workload_model.h", "boot_observers.sv", "boot_compilation.py",
+                 "boot_checkpoint_state.h", "boot_scoring.py", "workload_model.py"):
         snapshot = output / "sources" / name
         snapshot.parent.mkdir(exist_ok=True)
         snapshot.write_bytes((ROOT / "tests" / name).read_bytes())
