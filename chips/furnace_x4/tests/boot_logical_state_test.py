@@ -165,7 +165,7 @@ def exporter_fixture(output, receipt):
 class LogicalStateSensitivity(unittest.TestCase):
     def test_changed_python_entrypoints_compile(self):
         for name in ("boot_logical_state.py", "boot_logical_state_test.py",
-                     "boot_lifetime.py", "boot_task_graph.py",
+                     "boot_lifetime.py", "boot_task_graph.py", "boot_scheduler.py",
                      "boot_native_threads_probe.py", "boot_probe.py",
                      "boot_compilation.py", "verify.py"):
             path = Path(__file__).with_name(name)
@@ -261,6 +261,92 @@ class LogicalStateSensitivity(unittest.TestCase):
         plan["unserialized"].clear()
         with self.assertRaisesRegex(ValueError, "omitted or introduced unserialized"):
             validate_accounting(plan)
+
+    def test_scheduler_omission_parity_pending_and_pointer_sensitivity(self):
+        from boot_scheduler import capture_fields, compare, validate_capture
+
+        model = fixture_model()
+        root = model["classes"]["fixture___024root"]
+        root["unserialized_scheduler"] = {
+            "__VnbaTriggered": "VlTriggerVec<65>",
+            "__Vm_mtaskstate_final__nba": "VlMTaskVertex",
+        }
+        model["classes"]["fixture__Syms"] = {
+            "fields": {}, "unserialized_scheduler": {},
+            "unserialized_data": {
+                "__Vm_even_cycle__nba": {
+                    "bits": 1, "shape": [], "element_bytes": 1, "words": 1},
+                "__Vm_even_cycle__ico": {
+                    "bits": 1, "shape": [], "element_bytes": 1, "words": 1},
+            },
+        }
+        trigger = "fixture___024root.__VnbaTriggered"
+        vertex = "fixture___024root.__Vm_mtaskstate_final__nba"
+        parity = "fixture__Syms.__Vm_even_cycle__nba"
+        unused = "fixture__Syms.__Vm_even_cycle__ico"
+        values = {trigger: bytes(16), vertex: b"\x02", parity: b"\x01", unused: b"\x00"}
+        self.assertEqual(set(capture_fields(model)), set(values))
+        plan = {"baseline": model, "candidate": copy.deepcopy(model)}
+        self.assertEqual(compare(plan, values, values)["scheduler_exact_trigger_bytes"], 16)
+        changed = dict(values)
+        changed[trigger] = bytes(15) + b"\x80"
+        with self.assertRaisesRegex(ValueError, "scheduler trigger mismatch"):
+            compare(plan, values, changed)
+        for field in values:
+            changed = dict(values)
+            del changed[field]
+            with self.subTest(omitted=field), self.assertRaisesRegex(ValueError, "omitted"):
+                validate_capture(model, changed)
+        for field, corrupt in ((vertex, b"\x00"), (vertex, b"\x03"),
+                               (vertex, b"\x01"), (parity, b"\x00"),
+                               (parity, b"\x02"), (unused, b"\x01")):
+            changed = dict(values)
+            changed[field] = corrupt
+            with self.subTest(field=field, value=corrupt), self.assertRaisesRegex(
+                    ValueError, "pending task|parity mismatch"):
+                validate_capture(model, changed)
+        for field, spec in (("__Vm_modelp", "Vfurnace_x4_top* const"),
+                            ("__Vm_threadPoolp", "VlThreadPool*")):
+            identity = "fixture__Syms." + field
+            model["classes"]["fixture__Syms"]["unserialized_scheduler"][field] = spec
+            values[identity] = b"\x01"
+            validate_capture(model, values)
+            changed = dict(values)
+            changed[identity] = b"\x00"
+            with self.assertRaisesRegex(ValueError, "pointer topology"):
+                validate_capture(model, changed)
+
+    def test_scheduler_opaque_state_cannot_be_promoted_by_capture(self):
+        from boot_scheduler import capture_fields
+
+        plan = fixture_plan()
+        root = plan["candidate"]["classes"]["fixture___024root"]
+        root["unserialized_scheduler"]["__Vm_deleter"] = "VlDeleter"
+        plan["unserialized"] = unserialized_fields(plan["baseline"], plan["candidate"])
+        self.assertNotIn("fixture___024root.__Vm_deleter", capture_fields(plan["candidate"]))
+        with self.assertRaisesRegex(ValueError, "settled-boundary proof"):
+            validate_accounting(plan)
+        row = next(iter(plan["unserialized"].values()))
+        row["disposition"] = "settled_capture"
+        row["proof"] = {"rule": "settled-scheduler-capture-v1",
+                        "identity": "fixture___024root.__Vm_deleter",
+                        "capture": {"bytes": 1, "capture": "empty"},
+                        "generated_sha256": {}}
+        with self.assertRaisesRegex(ValueError, "unproved settled-boundary"):
+            validate_accounting(plan)
+
+    def test_scheduler_missing_graph_keeps_vertex_and_pool_unresolved(self):
+        from boot_scheduler import accounting
+
+        model = fixture_model()
+        model["classes"]["fixture___024root"]["unserialized_scheduler"] = {
+            "__Vm_mtaskstate_final__nba": "VlMTaskVertex",
+            "__Vm_threadPoolp": "VlThreadPool*",
+        }
+        with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
+            rows = accounting(model, Path(directory))
+        self.assertEqual(len(rows), 2)
+        self.assertTrue(all(row["disposition"] == "unresolved" for row in rows.values()))
 
     def test_exact_context_host_ram_uart_and_observations(self):
         plan = archive_plan()

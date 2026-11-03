@@ -172,11 +172,19 @@ def logical_preflight(output, receipt, baseline, candidate, *, syntax_capture=Fa
     for row in plan["fields"].values():
         key = row["disposition"]
         counts[key] = counts.get(key, 0) + 1
+    scheduler_counts = {}
+    for row in plan["unserialized"].values():
+        key = row["disposition"]
+        scheduler_counts[key] = scheduler_counts.get(key, 0) + 1
     receipt["logical_comparator"] = {
         "manifest": path.name, "sha256": digest(path), "dispositions": counts,
         "baseline_directory": str(baseline.relative_to(ROOT)),
         "candidate_directory": str(candidate.relative_to(ROOT)),
         "unserialized_fields": len(plan["unserialized"]), "complete": plan["complete"],
+        "unserialized_dispositions": scheduler_counts,
+        "unresolved_scheduler_fields": [
+            name for name, row in plan["unserialized"].items()
+            if row["disposition"] == "unresolved"],
         "baseline_serialized_fields": sum(len(row["fields"]) for row in left["classes"].values()),
         "candidate_serialized_fields": sum(len(row["fields"]) for row in right["classes"].values()),
     }
@@ -272,9 +280,10 @@ def comparator_diagnostic(output, receipt, retained):
 
 
 def measure(output, receipt, cycles, comparison_plan):
-    from boot_logical_state import equivalent
+    from boot_logical_state import equivalent, validate_accounting
     from verify import SEEDS, assert_coverage, coverage_requirements, linux_runs, software
 
+    validate_accounting(comparison_plan)
     started = time.monotonic()
     build = software(output, receipt)
     receipt["fresh_software_s"] = time.monotonic() - started

@@ -346,7 +346,7 @@ def main():
         if args.audit_state:
             names = ["rtl-context.bin", "host.bin", "ram.bin"]
             if args.logical_state:
-                names += ["context.bin", "logical-state.bin"]
+                names += ["context.bin", "logical-state.bin", "scheduler-state.bin"]
             receipt["final_state"] = {
                 name: {"sha256": digest(state / name), "bytes": (state / name).stat().st_size}
                 for name in names

@@ -3,8 +3,9 @@
 
 This is an execution-backend diagnostic, not a functional RTL oracle. A name
 match alone never authorizes omission of a backend-only field. The only current
-omission rules prove complete scalar definitions before every entry-value read.
-Unproved split-function, guarded-array and scheduler state remains unresolved.
+omission rules prove complete definitions before every entry-value read.
+Scheduler witnesses supplement, never replace, serialized field comparisons.
+Opaque scheduler state without a complete proof remains unresolved.
 """
 
 import hashlib
@@ -396,12 +397,18 @@ def accounting(left, right, left_directory, right_directory):
                 "backend": owner, "proof": proof,
                 "interprocedural_attempt": interprocedural[owner][name],
             }
-    unsaved = unserialized_fields(left, right)
+    from boot_scheduler import accounting as scheduler_accounting
+    unsaved = {
+        f"{owner}:{name}": row
+        for owner, model, directory in (("baseline", left, left_directory),
+                                        ("candidate", right, right_directory))
+        for name, row in scheduler_accounting(model, directory).items()
+    }
     return {
         "schema": 1, "fields": rows, "backend_only": backend_only, "unserialized": unsaved,
         "baseline": left, "candidate": right,
-        "complete": not unsaved and all(row["disposition"] != "unresolved"
-                                       for row in rows.values()),
+        "complete": all(row["disposition"] != "unresolved"
+                        for row in (*rows.values(), *unsaved.values())),
         "sampling_boundary": (
             "After the last synchronous eval() returns and its native task join finishes; "
             "no extra eval, reset, PRNG draw, observer or scoreboard operation is inserted. "
@@ -413,13 +420,8 @@ def validate_accounting(plan):
     a, b = flat_fields(plan["baseline"]), flat_fields(plan["candidate"])
     if set(plan["fields"]) != a.keys() | b.keys():
         raise ValueError("logical accounting omitted or introduced state")
-    if plan["unserialized"] != unserialized_fields(plan["baseline"], plan["candidate"]):
-        raise ValueError("logical accounting omitted or introduced unserialized state")
-    if plan["unserialized"]:
-        count = sum(row["disposition"] == "unresolved" for row in plan["fields"].values())
-        raise ValueError(f"{count} backend fields remain unresolved; "
-                         f"{len(plan['unserialized'])} unserialized generated fields "
-                         "lack a settled-boundary proof")
+    from boot_scheduler import validate_accounting as validate_scheduler_accounting
+    validate_scheduler_accounting(plan)
     for name, row in plan["fields"].items():
         if name in a and name in b:
             if row != {"disposition": "compare_exact", "baseline": name, "candidate": name}:
@@ -564,11 +566,16 @@ def validate_raw_capture(model, folder, fields):
 
 def equivalent(plan, left, right, left_folder, right_folder):
     """The native path only: the existing same-layout raw comparator is unchanged."""
+    from boot_scheduler import capture_fields, compare as compare_scheduler, inventory
+
+    validate_accounting(plan)
     expected_state = {"rtl-context.bin", "host.bin", "ram.bin", "context.bin", "logical-state.bin"}
-    for row, folder in ((left, left_folder), (right, right_folder)):
-        if row["final_state"].keys() != expected_state:
+    for row, folder, model in ((left, left_folder, plan["baseline"]),
+                               (right, right_folder, plan["candidate"])):
+        names = expected_state | ({"scheduler-state.bin"} if inventory(model) else set())
+        if row["final_state"].keys() != names:
             raise ValueError("equal-work snapshot field set mismatch")
-        for name in sorted(expected_state - {"ram.bin"}):
+        for name in sorted(names - {"ram.bin"}):
             path = folder / name
             if row["final_state"][name] != {"sha256": sha256(path), "bytes": path.stat().st_size}:
                 raise ValueError("equal-work retained snapshot identity mismatch: " + name)
@@ -588,7 +595,13 @@ def equivalent(plan, left, right, left_folder, right_folder):
     b = read_fields(right_folder / "logical-state.bin", flat_fields(plan["candidate"]))
     raw = {"baseline": validate_raw_capture(plan["baseline"], left_folder, a),
            "candidate": validate_raw_capture(plan["candidate"], right_folder, b)}
-    return {**compare_fields(plan, a, b), "raw_archive_validation": raw}
+    scheduler = []
+    for owner, folder in (("baseline", left_folder), ("candidate", right_folder)):
+        model = plan[owner]
+        scheduler.append(read_fields(folder / "scheduler-state.bin", capture_fields(model))
+                         if inventory(model) else {})
+    return {**compare_fields(plan, a, b), "raw_archive_validation": raw,
+            **compare_scheduler(plan, *scheduler)}
 
 
 def write_exporter(directory, model):
@@ -613,6 +626,7 @@ def write_exporter(directory, model):
         "        out.write(static_cast<const char *>(value), bytes);",
         "    };",
     ]
+    opening = list(lines[4:])
     for cls, row in classes.items():
         if cls not in model.get("active_classes", classes):
             continue
@@ -631,5 +645,12 @@ def write_exporter(directory, model):
                 f'    field("{cls}.{name}", &{expression}, sizeof({expression}));',
             ]
     lines += ['    out.close();', '    if (!out) throw std::runtime_error("logical capture write failed");', "}"]
+    from boot_scheduler import exporter_lines, inventory
+    if inventory(model):
+        lines += [line.replace("furnace_logical_capture(", "furnace_scheduler_capture(")
+                  for line in opening]
+        lines += exporter_lines(model)
+        lines += ['    out.close();',
+                  '    if (!out) throw std::runtime_error("scheduler capture write failed");', "}"]
     (directory / "boot_logical_capture.h").write_text("\n".join(lines) + "\n")
     (directory / "logical-schema.json").write_text(json.dumps(model, indent=2) + "\n")
