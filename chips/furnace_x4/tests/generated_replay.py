@@ -2,8 +2,8 @@
 """Memoize deterministic statement regions in disposable Verilator C++ only.
 
 The key includes every referenced model field and initialized local variable,
-including written fields. A hit restores their exact post-region bytes. This
-preserves repeated non-fixed-point mappings as well as local temporaries.
+including written fields. Reuse requires a proven model-state fixed point and
+restores local post-region bytes. Guards have compile-time field sizes/offsets.
 """
 
 import re
@@ -98,13 +98,36 @@ def transform(text):
             if not fields or len(fields) > 256:
                 rendered.append(chunk)
                 continue
-            entries = "\n".join(f"        {{&{name}, sizeof({name})}}," for name in fields)
+            declarations = "\n".join(
+                f"        decltype({name}) field_{index};"
+                for index, name in enumerate(fields))
+            checks = " &&\n            ".join(
+                f"furnace_replay::same(before.field_{index}, {name})"
+                for index, name in enumerate(fields))
+            model_checks = " &&\n            ".join(
+                f"furnace_replay::same(before.field_{index}, {name})"
+                for index, name in enumerate(fields) if name.startswith("vlSelf->")) or "true"
+            snapshots = "\n".join(
+                f"        furnace_replay::copy(before.field_{index}, {name});"
+                for index, name in enumerate(fields))
+            restore_locals = "\n".join(
+                f"        furnace_replay::copy({name}, after.field_{index});"
+                for index, name in enumerate(fields) if not name.startswith("vlSelf->"))
+            save_locals = "\n".join(
+                f"        furnace_replay::copy(after.field_{index}, {name});"
+                for index, name in enumerate(fields) if not name.startswith("vlSelf->"))
             rendered.append(
-                f"\n    static thread_local furnace_replay::Cache replay_{number};\n"
-                "    {\n    const furnace_replay::Field fields[] = {\n"
-                + entries + "\n    };\n"
-                f"    if (!replay_{number}.reuse(vlSelf, fields)) {{\n"
-                + chunk + f"\n        replay_{number}.capture();\n    }}\n    }}\n")
+                "\n    {\n    struct Snapshot {\n" + declarations + "\n    };\n"
+                "    static thread_local Snapshot before{}, after{};\n"
+                "    static thread_local const void* owner = nullptr;\n"
+                "    static thread_local bool fixed = false;\n"
+                f'    static thread_local furnace_replay::Counter counter("{match[1]}", {number});\n'
+                "    ++counter.calls;\n"
+                "    if (fixed && owner == vlSelf &&\n            " + checks + ") {\n"
+                "        ++counter.hits;\n" + restore_locals + "\n"
+                "    } else {\n        owner = vlSelf;\n" + snapshots + "\n"
+                + chunk + "\n        fixed = " + model_checks + ";\n"
+                + save_locals + "\n    }\n    }\n")
             records.append({"region": number, "body_bytes": len(chunk), "fields": fields})
         if not records:
             return match[0]

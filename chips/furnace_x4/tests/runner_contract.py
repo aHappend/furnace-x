@@ -126,28 +126,17 @@ int main() {
             assert(std::memcmp(&other, &expected, sizeof(other)) == 0);
         }
     }
-    using namespace furnace_replay;
-    Cache cache;
-    unsigned value = 4;
-    const Field fields[] = {{&value, sizeof(value)}};
-    assert(!cache.reuse(&value, fields));
-    value = 9; cache.capture();
-    value = 4; assert(cache.reuse(&value, fields)); assert(value == 9);
-    value = 5; assert(!cache.reuse(&value, fields));
-    value = 10; cache.capture();
-    value = 5; assert(cache.reuse(&value, fields)); assert(value == 10);
-    unsigned another = 5;
-    const Field rebound[] = {{&another, sizeof(another)}};
-    assert(!cache.reuse(&value, rebound));
-    another = 12; cache.capture();
-    another = 5; assert(cache.reuse(&value, rebound)); assert(another == 12);
+    uint32_t first[4]{1,2,3,4}, second[4]{};
+    furnace_replay::copy(second, first);
+    assert(furnace_replay::same(first, second));
+    second[3] = 9; assert(!furnace_replay::same(first, second));
 }
 '''
     (output / "replay.cpp").write_text(program)
     run(["g++", "-std=c++17", "-O3", output.relative_to(ROOT) / "replay.cpp",
          "-o", output.relative_to(ROOT) / "replay"], output, "replay-build", receipt)
     run([output.relative_to(ROOT) / "replay"], output, "replay-run", receipt)
-    receipt["comparisons"] += 518
+    receipt["comparisons"] += 531
 
 
 def reject_stale_compilation(manifest_path, output, receipt):
