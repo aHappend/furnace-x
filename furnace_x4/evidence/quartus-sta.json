@@ -1,0 +1,22 @@
+{
+  "gate": "quartus-sta",
+  "status": "passed",
+  "passed": true,
+  "device": "10AX115N2F45E1SG",
+  "top_module": "furnace_x4_top",
+  "target_clock_ns": 10.0,
+  "target_fmax_mhz": 100.0,
+  "setup_slack_ns": 1.015,
+  "worst_setup_slack_ns": 1.015,
+  "hold_slack_ns": 0.042,
+  "worst_hold_slack_ns": 0.042,
+  "fmax_mhz": 111.3,
+  "failing_paths": 0,
+  "alm_used": 47300,
+  "alm_total": 427200,
+  "registers_used": 61240,
+  "m20k_ram_blocks": 223,
+  "m20k_total": 2713,
+  "dsp_blocks": 69,
+  "dsp_total": 1518
+}

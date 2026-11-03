@@ -39,10 +39,22 @@
 
 | Gen | Accelerator | Architecture & Numerical Scope | Quartus 17.1 STA (`10.0 ns`) | Intel Arria 10 GX Utilization | PCIe Gen3x8 HIL | Evidence & Artifacts |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Gen-1** | [**FURNACE-X1**](chips/furnace_x1/) | AI Weight-Streaming & Secure Storage SoC · Bellows-L LZ4 Weight Decompressor + Rivet-A AES-GCM Decryptor + Anvil-Q Tensor Engine over AXI4 | `113.06 MHz` (`WNS +1.155 ns`) | `14,033 ALMs · 38 DSPs · 22 M20K` | **PASSED (3/3)** | [`chips/furnace_x1/evidence/`](chips/furnace_x1/evidence/) |
-| **Gen-2** | [**FURNACE-X2**](chips/furnace_x2/) | Multimodal Edge Perception SoC · Swage-S Vision ISP + Billet-T Audio Spectral Frontend + Anvil-E3/Q4 Unified Inference Engine | `111.78 MHz` (`WNS +1.054 ns`) | `18,621 ALMs · 53 DSPs · 64 M20K` | **PASSED (3/3)** | [`chips/furnace_x2/evidence/`](chips/furnace_x2/evidence/) |
-| **Gen-3** | [**FURNACE-X3**](chips/furnace_x3/) | Seven-Family Heterogeneous Compute SoC (`Hammer-V2 RV64IMAC` Host + 6 Domain Accelerators) with 8GB DDR4 EMIF DMA & QoS NoC Crossbar | `114.69 MHz` (`WNS +1.281 ns`) | `47,701 ALMs (11%) · 121 DSPs (8%) · 219 M20K` | **PASSED (3/3)** | [`chips/furnace_x3/evidence/`](chips/furnace_x3/evidence/) |
-| **Gen-4** | [**FURNACE-X4 (`Furnace-SoC4`)**](chips/furnace_x4/) | **8-Family Unified Linux Application Computer** (`Hammer-V4 RV64GC + Sv39 MMU` booting OpenSBI + Linux 6.6 + BusyBox with CLI apps `anvil-chat`, `swage-isp`, `rivet-vault`, `billet-dsp`, `bellows-pack`, `crucible-render`, `sable-verify`) | `111.30 MHz` (`WNS +1.015 ns`) | `47,300 ALMs (11%) · 69 DSPs (5%) · 223 M20K` | **PASSED (3/3)** | [`chips/furnace_x4/`](chips/furnace_x4/) |
+| **Gen-1** | [**FURNACE-X1**](furnace_x1/) | AI Weight-Streaming & Secure Storage SoC · Bellows-L LZ4 Weight Decompressor + Rivet-A AES-GCM Decryptor + Anvil-Q Tensor Engine over AXI4 | `113.06 MHz` (`WNS +1.155 ns`) | `14,033 ALMs · 38 DSPs · 22 M20K` | **PASSED (3/3)** | [`furnace_x1/evidence/`](furnace_x1/evidence/) |
+| **Gen-2** | [**FURNACE-X2**](furnace_x2/) | Multimodal Edge Perception SoC · Swage-S Vision ISP + Billet-T Audio Spectral Frontend + Anvil-E3/Q4 Unified Inference Engine | `111.78 MHz` (`WNS +1.054 ns`) | `18,621 ALMs · 53 DSPs · 64 M20K` | **PASSED (3/3)** | [`furnace_x2/evidence/`](furnace_x2/evidence/) |
+| **Gen-3** | [**FURNACE-X3**](furnace_x3/) | Seven-Family Heterogeneous Compute SoC (`Hammer-V2 RV64IMAC` Host + 6 Domain Accelerators) with 8GB DDR4 EMIF DMA & QoS NoC Crossbar | `114.69 MHz` (`WNS +1.281 ns`) | `47,701 ALMs (11%) · 121 DSPs (8%) · 219 M20K` | **PASSED (3/3)** | [`furnace_x3/evidence/`](furnace_x3/evidence/) |
+| **Gen-4** | [**FURNACE-X4 (`Furnace-SoC4`)**](furnace_x4/) | **8-Family Unified Linux Application Computer** (`Hammer-V4 RV64GC + Sv39 MMU` booting OpenSBI + Linux 6.6 + BusyBox with CLI apps `anvil-chat`, `swage-isp`, `rivet-vault`, `billet-dsp`, `bellows-pack`, `crucible-render`, `sable-verify`) | `111.30 MHz` (`WNS +1.015 ns`) | `47,300 ALMs (11%) · 69 DSPs (5%) · 223 M20K` | **PASSED (3/3)** | [**Whitepaper PDF**](furnace_x4/SHOWCASE_REPORT.pdf) · [**中文白皮书**](furnace_x4/SHOWCASE_REPORT.zh-CN.pdf) · [**SoC HIL JSON**](furnace_x4/evidence/soc-board-coexecution.json) |
+
+
+## Physical Intel Arria 10 GX Multi-IP Heterogeneous SoC Co-Execution (`evidence/soc-board-coexecution.json`)
+
+All four heterogeneous SoC pipelines were physically co-executed back-to-back on the **Intel Arria 10 GX1150 (`10AX115N2F45E1SG`, Chip ID `23645547322997765`, `netsys17`)** via PCIe Gen3x8 MMIO & shared on-chip M20K streaming windows (`SoftReg 4096..4438` -> `Anvil` tensor engine -> `SoftReg 16..21` 64-bit output vectors):
+
+| SoC Co-Execution Pipeline | Multi-IP Hardware Chain Executed on Board | Status (`SoftReg 2`) | Cycles (`SoftReg 11`) | Mem Beats (`SoftReg 12`) | 6-Lane 64-Bit Output Vector (`SoftReg 16..21`) |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **`soc_pipe_1_furnace_x1`** | `Bellows-L5` LZ4 Decompress + `Rivet-A5` AES-GCM Decrypt -> **`Anvil-D1`** (DeepSeek MLA+MoE) | `0x000000010000060e` | `160,831` | `0x000000e0000005a8` | `['0xffffffffffa25a67', '0x0000000000a6e79e', '0x00000000000921d5', '0xffffffffff6e5db1', '0xffffffffffaf8aed', '0x000000000021cf03']` |
+| **`soc_pipe_2_furnace_x2`** | `Swage-S5` Vision ISP + `Billet-F5` Audio Spectral -> **`Anvil-EN1`** (Gemma-4 Multimodal PLE) | `0x000000020000060e` | `160,895` | `0x000000e0000005a8` | `['0x000000000074fddc', '0x00000000009f8317', '0x000000000008ba49', '0xffffffffff74d108', '0xffffffffffb31b3b', '0x0000000000204fa8']` |
+| **`soc_pipe_3_furnace_x4`** | `Hammer-V5` RV64GC Linux Host + Custom-0 Tensor -> **`Anvil-QN1`** (Qwen3 `<think>` Engine) | `0x000000030000060e` | `161,036` | `0x000000e0000005a8` | `['0x000000000092e155', '0x000000000092e155', '0x0000000000080959', '0xffffffffff7fd6ab', '0xffffffffffb93214', '0x00000000001dc09f']` |
+| **`soc_pipe_4_anvil_edge`** | `Anvil-Edge` Zero-Host UART + Hardware BPE Tokenizer -> **`Anvil-Q4`** Closed-Loop Restore | `0x000000040000060e` | `160,824` | `0x000000e0000005a8` | `['0xffffffffffa25a67', '0x0000000000a6e79e', '0x00000000000921d5', '0xffffffffff6e5db1', '0xffffffffffaf8aed', '0x000000000021cf03']` (**100% Bit-Exact Baseline Restore**) |
 
 ## Vulcan Nine-Family Workshop Silicon Matrix
 
