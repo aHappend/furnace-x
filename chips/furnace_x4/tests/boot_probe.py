@@ -29,6 +29,12 @@ COMPILE_PROFILES = {
                       "--output-split-cfuncs", "10000"],
         "optimization": "-O3",
     },
+    "o3-pgo": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000"],
+        "optimization": "-O3",
+        "pgo_training_cycles": 2000000,
+    },
     "o3-lto": {
         "verilator": ["-O3", "--output-split", "10000",
                       "--output-split-cfuncs", "10000"],
@@ -153,6 +159,10 @@ def main():
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--repair-of", type=Path)
     parser.add_argument("--compile-profile", choices=COMPILE_PROFILES, default="baseline")
+    parser.add_argument("--invocation-cache", type=Path,
+                        help="Fresh cache under this invocation's output namespace")
+    parser.add_argument("--audit-state", action="store_true",
+                        help="Hash complete final RTL/reference/RAM state for equal-work comparison")
     args = parser.parse_args()
     if args.cycles <= 8 or args.jobs < 1:
         parser.error("cycles must exceed reset duration; jobs must be positive")
@@ -233,34 +243,44 @@ def main():
             }
             if result.returncode:
                 raise RuntimeError(f"{tool} version query failed")
-        # Verilator resolves its C++ prerequisite relative to the generated makefile.
-        # Supply a portable path from obj/ to the project test source.
-        cpp_from_obj = Path(*([".."] * len((relative / "obj").parts))) / "tests/boot_endpoint.cpp"
-        profile = COMPILE_PROFILES[args.compile_profile]
-        optimization = profile["optimization"]
-        compiler_flags = " ".join(
-            [optimization, "-std=c++17", *profile.get("compiler_flags", [])])
-        linker_flags = profile.get("linker_flags", [])
-        run([
-            "verilator", "--cc", "--exe", "--build", "-j", str(args.jobs),
-            "--top-module", "furnace_x4_top", "--Mdir", relative / "obj",
-            "--assert", "-Wno-fatal", *profile["verilator"],
-            "-MAKEFLAGS", f"OPT_FAST={optimization} OPT_SLOW={optimization} OPT_GLOBAL={optimization}",
-            "-CFLAGS", compiler_flags,
-            *(["-LDFLAGS", " ".join(linker_flags)] if linker_flags else []),
-            *[str(p.relative_to(ROOT)) for p in sorted((ROOT / "rtl").glob("*.sv"))],
-            "tests/boot_observers.sv",
-            cpp_from_obj,
-        ], output, "compile", receipt)
+        from boot_compilation import build_pgo, compile_boot, reusable_boot
+        if args.invocation_cache:
+            cache = project_path(args.invocation_cache)
+            # Child output roots and the cache share the Linux invocation root.
+            cache.relative_to(project_path(args.output_root).parent)
+            executable = reusable_boot(cache, output, receipt, args.jobs, args.compile_profile,
+                                       audit=args.audit_state)
+        elif args.compile_profile == "o3-pgo":
+            executable = build_pgo(output, receipt, args.jobs, relative / "image-index.txt",
+                                   audit=args.audit_state)
+        else:
+            executable = compile_boot(output, receipt, args.jobs, args.compile_profile,
+                                      audit=args.audit_state)
+        receipt["executable"] = str(executable)
+        receipt["executable_sha256"] = digest(ROOT / executable)
+        save(output, receipt)
         simulation_argv = [
-            relative / "obj/Vfurnace_x4_top", relative / "image-index.txt",
+            executable, relative / "image-index.txt",
             relative / "uart.txt", str(args.cycles), str(args.seed),
             relative / "simulation-summary.txt",
             relative / "execution-measurements.json",
         ]
         if args.compile_profile == "gprof":
             simulation_argv = ["env", f"GMON_OUT_PREFIX={relative}/gmon", *simulation_argv]
+        if args.audit_state:
+            storage = output / "checkpoint-images"
+            storage.mkdir()
+            state = storage / f"final-{uuid.uuid4().hex[:8]}"
+            simulation_argv = ["env", f"FURNACE_BOOT_AUDIT_DIR={state.relative_to(ROOT)}",
+                               *simulation_argv]
         simulation = run(simulation_argv, output, "simulation", receipt, check=False)
+        if args.audit_state:
+            receipt["final_state"] = {
+                name: {"sha256": digest(state / name), "bytes": (state / name).stat().st_size}
+                for name in ("rtl-context.bin", "host.bin", "ram.bin")
+            }
+            # Retain exact identity, not a redundant 128-MiB weight/RAM dump.
+            (state / "ram.bin").unlink()
         if args.compile_profile == "gprof":
             profiles = list(output.glob("gmon.*"))
             if len(profiles) != 1:

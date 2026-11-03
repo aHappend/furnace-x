@@ -160,6 +160,7 @@ def linux(output, receipt, seeds):
     child_probe("boot_model_probe.py", [], output, receipt, "boot-oracle-unit")
     build = software(output, receipt)
     measured = {}
+    cache = output / f"boot-executable-{uuid.uuid4().hex[:8]}"
     for seed in seeds:
         def observe(child):
             # Failed runs retain real partial comparisons, never a passing boot.
@@ -171,6 +172,7 @@ def linux(output, receipt, seeds):
         child_probe("boot_probe.py", [
             "--build-receipt", str(build.relative_to(ROOT)), "--seed", str(seed),
             "--cycles", "40000000", "--compile-profile", "o3-split",
+            "--invocation-cache", str(cache.relative_to(ROOT)),
         ], output, receipt, f"boot-{seed}", on_receipt=observe)
     assert_coverage(output, coverage_requirements("linux", seeds), measured)
 
