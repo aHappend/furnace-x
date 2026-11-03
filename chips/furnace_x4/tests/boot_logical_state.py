@@ -236,11 +236,14 @@ def schema(directory):
             "Verilated::quiesce();rhs.vlSymsp->__Vserialize(os);returnos;"):
         raise ValueError("unrecognized complete-model archive entry")
     result["archive_entry"] = syms
+    result["active_classes"] = [syms, root]
+    result["uninstantiated_definitions"] = sorted(result["classes"].keys() - {syms, root})
     return result
 
 
 def flat_fields(model):
     return {f"{owner}.{name}": spec for owner, row in model["classes"].items()
+            if owner in model.get("active_classes", model["classes"])
             for name, spec in row["fields"].items()}
 
 
@@ -252,6 +255,10 @@ def scratch_proofs(directory, names):
     """
     wanted = {name.split(".", 1)[1]: name for name in names}
     uses = {name: [] for name in names}
+    defined = set()
+    for path in directory.glob("*.cpp"):
+        defined.update(match[1] for match in FUNCTION.finditer(clean_cpp(path.read_text())))
+    pointer_escapes = []
     for path in sorted(directory.glob("*.cpp")):
         original = path.read_text()
         text = clean_cpp(original)
@@ -267,6 +274,11 @@ def scratch_proofs(directory, names):
             original_body = original[match.end():end]
             operational_start = original_body.find("// Body")
             operational = body[operational_start:] if operational_start >= 0 else body
+            for pointer in re.finditer(r"\bvlSelf\b(?!->)", operational):
+                call = re.search(r"(\w+)\(\s*$", operational[:pointer.start()])
+                if call is None or call[1] not in defined:
+                    pointer_escapes.append({"file": path.name, "function": match[1],
+                                           "reason": "unclassified model-pointer escape"})
             first = {}
             depth = 0
             cursor = 0
@@ -329,10 +341,25 @@ def scratch_proofs(directory, names):
                 })
     return {
         name: {"rule": "whole-scalar-definition-before-first-access-in-every-function",
-               "uses": rows, "proven": bool(rows) and all(
+               "identity": name, "uses": rows,
+               "unclassified_pointer_escapes": pointer_escapes,
+               "proven": bool(rows) and not pointer_escapes and all(
                    row["unconditional_scalar_definition"] for row in rows)}
         for name, rows in uses.items()
     }
+
+
+def unserialized_fields(left, right):
+    unsaved = {}
+    for owner, model in (("baseline", left), ("candidate", right)):
+        for cls, row in model["classes"].items():
+            if cls not in model.get("active_classes", model["classes"]):
+                continue
+            for kind in ("unserialized_data", "unserialized_scheduler"):
+                for name, spec in row[kind].items():
+                    unsaved[f"{owner}:{cls}.{name}"] = {"kind": kind, "type": spec,
+                                                       "disposition": "unresolved"}
+    return unsaved
 
 
 def accounting(left, right, left_directory, right_directory):
@@ -359,13 +386,7 @@ def accounting(left, right, left_directory, right_directory):
                 "disposition": "dead_entry_value" if proven else "unresolved",
                 "backend": owner, "proof": proof,
             }
-    unsaved = {}
-    for owner, model in (("baseline", left), ("candidate", right)):
-        for cls, row in model["classes"].items():
-            for kind in ("unserialized_data", "unserialized_scheduler"):
-                for name, spec in row[kind].items():
-                    unsaved[f"{owner}:{cls}.{name}"] = {"kind": kind, "type": spec,
-                                                       "disposition": "unresolved"}
+    unsaved = unserialized_fields(left, right)
     return {
         "schema": 1, "fields": rows, "backend_only": backend_only, "unserialized": unsaved,
         "baseline": left, "candidate": right,
@@ -382,8 +403,13 @@ def validate_accounting(plan):
     a, b = flat_fields(plan["baseline"]), flat_fields(plan["candidate"])
     if set(plan["fields"]) != a.keys() | b.keys():
         raise ValueError("logical accounting omitted or introduced state")
+    if plan["unserialized"] != unserialized_fields(plan["baseline"], plan["candidate"]):
+        raise ValueError("logical accounting omitted or introduced unserialized state")
     if plan["unserialized"]:
-        raise ValueError("unserialized generated state lacks a settled-boundary proof")
+        count = sum(row["disposition"] == "unresolved" for row in plan["fields"].values())
+        raise ValueError(f"{count} backend fields remain unresolved; "
+                         f"{len(plan['unserialized'])} unserialized generated fields "
+                         "lack a settled-boundary proof")
     for name, row in plan["fields"].items():
         if name in a and name in b:
             if row != {"disposition": "compare_exact", "baseline": name, "candidate": name}:
@@ -396,6 +422,7 @@ def validate_accounting(plan):
             proof = row.get("proof", {})
             if row.get("disposition") != "dead_entry_value" or row.get("backend") != owner or (
                     not proof.get("proven") or not proof.get("uses") or
+                    proof.get("identity") != name or proof.get("unclassified_pointer_escapes") or
                     proof.get("rule") != "whole-scalar-definition-before-first-access-in-every-function"
                     or not all(use["unconditional_scalar_definition"] for use in proof["uses"])
                     or spec["shape"] or spec["words"] != 1):
@@ -567,6 +594,8 @@ def write_exporter(directory, model):
         "    };",
     ]
     for cls, row in classes.items():
+        if cls not in model.get("active_classes", classes):
+            continue
         if cls == root:
             prefix = "dut.rootp->"
         elif cls == syms:

@@ -159,8 +159,8 @@ def fulltop_preflight(output, receipt):
         output / "schema-native-threads-candidate")
 
 
-def logical_preflight(output, receipt, baseline, candidate):
-    from boot_logical_state import accounting, schema, validate_accounting
+def logical_preflight(output, receipt, baseline, candidate, *, syntax_capture=False):
+    from boot_logical_state import accounting, schema, validate_accounting, write_exporter
 
     left, right = schema(baseline), schema(candidate)
     plan = accounting(left, right, baseline, candidate)
@@ -180,6 +180,35 @@ def logical_preflight(output, receipt, baseline, candidate):
         "candidate_serialized_fields": sum(len(row["fields"]) for row in right["classes"].values()),
     }
     save(output, receipt)
+    if syntax_capture:
+        version = run(["verilator", "-V"], output, "verilator-build-configuration", receipt)
+        configuration = (output / version["stdout"]).read_text()
+        roots = re.findall(r"^\s*VERILATOR_ROOT\s*=\s*(.+?)\s*$", configuration, re.M)
+        if not roots or not (Path(roots[0]) / "include/verilated.h").is_file():
+            raise ValueError("cannot identify the installed Verilator include directory")
+        includes = Path(roots[0]) / "include"
+        result = run(["g++", "--version"], output, "comparator-cxx-version", receipt)
+        receipt.setdefault("tool_versions", {})["g++"] = (output / result["stdout"]).read_text()
+        from boot_logical_state_test import exporter_fixture
+        exporter_fixture(output, receipt)
+        for owner, directory, model in (("baseline", baseline, left),
+                                        ("candidate", candidate, right)):
+            capture = output / f"capture-{owner}"
+            capture.mkdir()
+            write_exporter(capture, model)
+            run([
+                "g++", "-std=c++17", "-fsyntax-only", "-DFURNACE_BOOT_AUDIT",
+                "-DFURNACE_BOOT_LOGICAL_AUDIT",
+                *(["-DFURNACE_BOOT_NATIVE_THREADS=2"] if owner == "candidate" else []),
+                "-I", capture.relative_to(ROOT), "-I", directory.relative_to(ROOT),
+                "-I", includes, "-I", includes / "vltstd", "tests/boot_endpoint.cpp",
+            ], output, f"capture-{owner}-syntax", receipt)
+            receipt.setdefault("logical_capture_syntax", {})[owner] = {
+                "exporter": str((capture / "boot_logical_capture.h").relative_to(ROOT)),
+                "sha256": digest(capture / "boot_logical_capture.h"),
+                "scope": "C++ syntax and all field-storage static_asserts only; no model build/run.",
+            }
+            save(output, receipt)
     validate_accounting(plan)
     return plan
 
@@ -213,7 +242,7 @@ def comparator_diagnostic(output, receipt, retained):
     receipt["comparator_sensitivity"] = "passed; see complete unittest stdout/stderr"
     save(output, receipt)
     return logical_preflight(output, receipt, directory / "schema-o3-pgo-fixedpoint",
-                             directory / "schema-native-threads-candidate")
+                             directory / "schema-native-threads-candidate", syntax_capture=True)
 
 
 def measure(output, receipt, cycles, comparison_plan):
@@ -262,6 +291,18 @@ def measure(output, receipt, cycles, comparison_plan):
             if observed["cycles"] != cycles or observed["retired"] <= 0 or (
                     observed["equal_comparisons"] <= 0 or observed["require_comparisons"] <= 0):
                 raise ValueError("native-thread pairing lacks full compared execution")
+            executable_manifest = json.loads((cache / "executable.json").read_text())
+            compiled_path = project_path(Path(executable_manifest["compilation_receipt"]))
+            compiled = json.loads(compiled_path.read_text())
+            if digest(compiled_path) != executable_manifest["compilation_receipt_sha256"]:
+                raise ValueError("native-thread compilation receipt identity changed")
+            capture = compiled["logical_capture"]["compile"]
+            schema_path = project_path(Path(capture["schema"]))
+            expected = comparison_plan[
+                "baseline" if profile == "o3-pgo-fixedpoint" else "candidate"]
+            if digest(schema_path) != capture["schema_sha256"] or (
+                    json.loads(schema_path.read_text()) != expected):
+                raise ValueError("compiled logical schema or proof inputs differ from preflight")
             row = {
                 "seed": seed, "observed": observed, "final_state": child["final_state"],
                 "uart_sha256": digest(path.parent / "uart.txt"),

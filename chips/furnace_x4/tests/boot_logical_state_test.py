@@ -8,13 +8,14 @@ import struct
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from boot_logical_state import (
     MAGIC, SAVE_HEADER, SAVE_TRAILER, compare_fields, declarations, equivalent, flat_fields,
     read_fields, scratch_proofs, serializer_writes, sha256, type_shape,
-    validate_accounting, validate_raw_capture,
+    schema, unserialized_fields, validate_accounting, validate_raw_capture, write_exporter,
 )
 
 FIXTURE_ROOT = None
@@ -111,7 +112,84 @@ def snapshot(folder, model, data):
     }
 
 
+def exporter_fixture(output, receipt):
+    """Execute the generated codec on known storage, not a replacement SoC."""
+    from boot_probe import ROOT, digest, run, save
+
+    directory = output / "codec-fixture"
+    directory.mkdir()
+    root = "Vfurnace_x4_top___024root"
+    model = fixture_model()
+    model["classes"] = {root: model["classes"].pop("fixture___024root")}
+    (directory / (root + ".h")).write_text(
+        "#pragma once\n#include <cstdint>\n"
+        "struct Vfurnace_x4_top___024root {\n"
+        "  uint8_t state;\n  uint8_t bytes[2][3];\n  uint32_t wide[3];\n};\n")
+    (directory / "Vfurnace_x4_top__Syms.h").write_text(
+        '#pragma once\n#include "Vfurnace_x4_top___024root.h"\n'
+        "struct Vfurnace_x4_top { Vfurnace_x4_top___024root *rootp; };\n")
+    write_exporter(directory, model)
+    (directory / "fixture.cpp").write_text(
+        '#include "boot_logical_capture.h"\n'
+        "int main(int argc, char **argv) {\n"
+        "  if (argc != 2) return 2;\n"
+        "  Vfurnace_x4_top___024root state{5, {{1, 2, 3}, {4, 5, 6}},\n"
+        "      {0x12345678U, 0xabcdef01U, 0xfedcba98U}};\n"
+        "  Vfurnace_x4_top dut{&state};\n"
+        "  furnace_logical_capture(argv[1], dut);\n"
+        "  return 0;\n}\n")
+    receipt["codec_fixture"] = {
+        "source_sha256": {str(path.relative_to(ROOT)): digest(path)
+                          for path in sorted(directory.iterdir()) if path.suffix in (".h", ".cpp")},
+        "scope": "Known C++ storage codec only; not RTL simulation, Linux or workload coverage.",
+    }
+    save(output, receipt)
+    relative = directory.relative_to(ROOT)
+    run(["g++", "-std=c++17", relative / "fixture.cpp", "-o", relative / "fixture"],
+        output, "codec-fixture-compile", receipt)
+    run([relative / "fixture", relative / "logical-state.bin"],
+        output, "codec-fixture-execute", receipt)
+    observed = read_fields(directory / "logical-state.bin", flat_fields(model))
+    expected = {root + ".state": b"\x05", root + ".bytes": bytes(range(1, 7)),
+                root + ".wide": struct.pack("=3I", 0x12345678, 0xabcdef01, 0xfedcba98)}
+    if observed != expected:
+        raise ValueError("compiled tagged codec changed scalar, array ordering or wide/high bits")
+    receipt["codec_fixture"].update({
+        "compared_fields": len(expected), "compared_storage_bytes": sum(map(len, expected.values())),
+        "capture_sha256": digest(directory / "logical-state.bin"),
+        "executable_sha256": digest(directory / "fixture"),
+    })
+    save(output, receipt)
+
+
 class LogicalStateSensitivity(unittest.TestCase):
+    def test_changed_python_entrypoints_compile(self):
+        for name in ("boot_logical_state.py", "boot_logical_state_test.py",
+                     "boot_native_threads_probe.py", "boot_probe.py",
+                     "boot_compilation.py", "verify.py"):
+            path = Path(__file__).with_name(name)
+            compile(path.read_text(), str(path), "exec")
+
+    def test_existing_compilation_path_is_not_promoted(self):
+        from boot_compilation import binding, compile_boot
+        from boot_probe import ROOT
+
+        receipt = {"source_sha256": {}, "tool_versions": {}, "image_manifest_sha256": "image"}
+        self.assertNotIn("logical_state", binding(receipt, "baseline", True))
+        with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
+            output = Path(directory)
+            for profile in ("baseline", "native-threads-candidate"):
+                with patch("boot_compilation.run") as execute:
+                    compile_boot(output, receipt, 2, profile, audit=True)
+                command = execute.call_args.args[0]
+                self.assertIn("--build", command)
+                self.assertIn("--savable", command)
+                self.assertIn("-DFURNACE_BOOT_AUDIT", command[command.index("-CFLAGS") + 1])
+                self.assertNotIn("-DFURNACE_BOOT_LOGICAL_AUDIT",
+                                 command[command.index("-CFLAGS") + 1])
+                self.assertFalse((output / "obj/logical-schema.json").exists())
+            output.relative_to(ROOT)
+
     def test_equal_values_and_reordered_storage(self):
         plan = fixture_plan()
         a = values(plan["baseline"])
@@ -174,8 +252,13 @@ class LogicalStateSensitivity(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unproved backend-only"):
             validate_accounting(plan)
         plan = fixture_plan()
-        plan["unserialized"]["candidate:root.task_state"] = {"disposition": "unresolved"}
+        plan["candidate"]["classes"]["fixture___024root"]["unserialized_scheduler"][
+            "task_state"] = "VlMTaskVertex"
+        plan["unserialized"] = unserialized_fields(plan["baseline"], plan["candidate"])
         with self.assertRaisesRegex(ValueError, "settled-boundary proof"):
+            validate_accounting(plan)
+        plan["unserialized"].clear()
+        with self.assertRaisesRegex(ValueError, "omitted or introduced unserialized"):
             validate_accounting(plan)
 
     def test_exact_context_host_ram_uart_and_observations(self):
@@ -268,6 +351,42 @@ class LogicalStateSensitivity(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 serializer_writes(prefix + invalid)
 
+    def test_full_schema_array_omission_and_incorrect_extent(self):
+        root = "Vfurnace_x4_top___024root"
+        with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
+            folder = Path(directory)
+            (folder / (root + ".h")).write_text(
+                "// DESIGN SPECIFIC STATE\n"
+                "VlUnpacked<VlUnpacked<CData/*7:0*/, 3>, 2> bytes;\n"
+                "// CONSTRUCTORS\n")
+            (folder / "Vfurnace_x4_top__Syms.h").write_text(
+                "// INTERNAL STATE\nbool __Vm_didInit = false;\n" + root + " TOP;\n"
+                "// CONSTRUCTORS\n")
+            (folder / "Vfurnace_x4_top__Syms.cpp").write_text(
+                "void Vfurnace_x4_top__Syms::__Vserialize(VerilatedSerialize& os) {\n"
+                "os << __Vm_didInit; TOP.__Vserialize(os);\n}\n")
+            (folder / "Vfurnace_x4_top.cpp").write_text(
+                "VerilatedSerialize& operator<<(VerilatedSerialize& os, Vfurnace_x4_top& rhs) {\n"
+                "Verilated::quiesce(); rhs.vlSymsp->__Vserialize(os); return os;\n}\n")
+            prefix = "void " + root + "::__Vserialize(VerilatedSerialize& os) {\n" + (
+                "uint64_t __Vcheckval = 0x1234ULL; os << __Vcheckval; "
+                "os << vlSymsp->_vm_contextp__; ")
+            loops = ("for (int __Vi0 = 0; __Vi0 < 2; ++__Vi0) { "
+                     "for (int __Vi1 = 0; __Vi1 < 3; ++__Vi1) { os << bytes[__Vi0][__Vi1]; }}")
+            path = folder / (root + "__Slow.cpp")
+            path.write_text(prefix + loops + "\n}\n")
+            model = schema(folder)
+            self.assertEqual(flat_fields(model)[root + ".bytes"]["bytes"], 6)
+            path.write_text(prefix + loops.replace("__Vi1 < 3", "__Vi1 < 2") + "\n}\n")
+            with self.assertRaisesRegex(ValueError, "incomplete serialized array"):
+                schema(folder)
+            path.write_text(prefix + loops + loops + "\n}\n")
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                schema(folder)
+            path.write_text(prefix + "\n}\n")
+            model = schema(folder)
+            self.assertIn("bytes", model["classes"][root]["unserialized_data"])
+
     def test_tagged_capture_strictness(self):
         model = fixture_model()
         expected = flat_fields(model)
@@ -315,6 +434,8 @@ class LogicalStateSensitivity(unittest.TestCase):
                      "later: consume(vlSelf->scratch); }", False),
             "other_signature": ("int g(Root* vlSelf) { return vlSelf->scratch; }\n"
                                 "void f(Root* vlSelf) { vlSelf->scratch = 0U; }", False),
+            "opaque_pointer": ("void f(Root* vlSelf) { vlSelf->scratch = 0U; }\n"
+                               "void g(Root* vlSelf) { external(vlSelf); }", False),
         }
         with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
             folder = Path(directory)
