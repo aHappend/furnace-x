@@ -53,6 +53,10 @@ def main():
             })
             simulation = next(r for r in child["commands"]
                               if r["stdout"] == "simulation.stdout.txt")
+            compilation = next(r for r in child["commands"]
+                               if r["stdout"] == "compile.stdout.txt")
+            if compilation["timed_out"] or compilation["exit_code"] != 0:
+                raise ValueError("pair requires successful settled compilations")
             if simulation["timed_out"] or simulation["exit_code"] != 1 or (
                     child["diagnostic_error"].split(";")[0] != "simulation exit=1"):
                 raise ValueError("pair must contain settled cycle-exhaustion diagnostics")
@@ -72,6 +76,8 @@ def main():
                 "receipt": str(path.relative_to(ROOT)), "seed": child["seed"],
                 "cycles_limit": child["cycles_limit"], "observed": measured,
                 "simulation_duration_s": simulation["duration_s"],
+                "compilation_duration_s": compilation["duration_s"],
+                "uart_sha256": digest(path.parent / "uart.txt"),
                 "elapsed_s": elapsed / 1e9, "endpoint_compiler": compiler[0],
                 "endpoint_optimization_flags": flags,
                 "compile_profile": child.get("compile_profile"),
@@ -137,9 +143,13 @@ def main():
                     command.remove(flag)
                 for flag in (
                     f'OPT_FAST={profile["optimization"]} OPT_SLOW={profile["optimization"]} OPT_GLOBAL={profile["optimization"]}',
-                    f'{profile["optimization"]} -std=c++17',
+                    " ".join([profile["optimization"], "-std=c++17",
+                              *profile.get("compiler_flags", [])]),
                 ):
                     command.remove(flag)
+                if profile.get("linker_flags"):
+                    command.remove("-LDFLAGS")
+                    command.remove(" ".join(profile["linker_flags"]))
                 # Output namespaces and their relative C++ paths necessarily differ.
                 command[command.index("--Mdir") + 1] = "<fresh-output>/obj"
                 command[-1] = "<relative>/tests/boot_endpoint.cpp"
@@ -150,6 +160,20 @@ def main():
                 if not fast or any(re.findall(r"(?<!\S)-O\S+", line)[-1] !=
                                    profile["optimization"] for line in fast):
                     raise ValueError("generated fast RTL compiler flags differ from profile")
+                all_compiles = [line for line in generated
+                                if re.search(r"(?:g\+\+|c\+\+).* -c ", line)]
+                links = [line for line in generated
+                         if re.search(r"(?:g\+\+|c\+\+).* -o Vfurnace_x4_top ", line)]
+                if len(links) != 1:
+                    raise ValueError("missing unique effective linker invocation")
+                row["linker_invocation"] = links[0]
+                for flag in profile.get("compiler_flags", []):
+                    if not all_compiles or any(flag not in line.split()
+                                               for line in all_compiles):
+                        raise ValueError("declared compiler flag missing from a translation unit")
+                for flag in profile.get("linker_flags", []):
+                    if flag not in links[0].split():
+                        raise ValueError("declared linker flag missing from final link")
             if normalized[0] != normalized[1]:
                 raise ValueError("compile commands differ beyond explicitly declared optimization flags")
         receipt["comparison"] = {
@@ -159,6 +183,13 @@ def main():
             "elapsed_speedup": rows[0]["elapsed_s"] / rows[1]["elapsed_s"],
             "limitations": "One paired seed on a shared host; sampled timing estimates are not a causal decomposition.",
             "linux_completion": False,
+            "image_manifest_sha256": before["image_manifest_sha256"],
+            "software_build_receipt_sha256": before["software_build_receipt_sha256"],
+            "hypothesis": (
+                "Cross-translation-unit link-time optimization reduces generated "
+                "evaluation overhead without changing simulated work or comparisons."
+                if after.get("compile_profile") == "o3-lto" else None
+            ),
         }
         status = 0
     except (OSError, ValueError, KeyError, StopIteration, RuntimeError) as error:

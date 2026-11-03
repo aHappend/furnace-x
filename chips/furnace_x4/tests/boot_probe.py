@@ -29,6 +29,13 @@ COMPILE_PROFILES = {
                       "--output-split-cfuncs", "10000"],
         "optimization": "-O3",
     },
+    "o3-lto": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000"],
+        "optimization": "-O3",
+        "compiler_flags": ["-flto=2"],
+        "linker_flags": ["-flto=2"],
+    },
     "o3-small": {
         "verilator": ["-O3", "--output-split", "5000",
                       "--output-split-cfuncs", "1000",
@@ -231,12 +238,16 @@ def main():
         cpp_from_obj = Path(*([".."] * len((relative / "obj").parts))) / "tests/boot_endpoint.cpp"
         profile = COMPILE_PROFILES[args.compile_profile]
         optimization = profile["optimization"]
+        compiler_flags = " ".join(
+            [optimization, "-std=c++17", *profile.get("compiler_flags", [])])
+        linker_flags = profile.get("linker_flags", [])
         run([
             "verilator", "--cc", "--exe", "--build", "-j", str(args.jobs),
             "--top-module", "furnace_x4_top", "--Mdir", relative / "obj",
             "--assert", "-Wno-fatal", *profile["verilator"],
             "-MAKEFLAGS", f"OPT_FAST={optimization} OPT_SLOW={optimization} OPT_GLOBAL={optimization}",
-            "-CFLAGS", f"{optimization} -std=c++17",
+            "-CFLAGS", compiler_flags,
+            *(["-LDFLAGS", " ".join(linker_flags)] if linker_flags else []),
             *[str(p.relative_to(ROOT)) for p in sorted((ROOT / "rtl").glob("*.sv"))],
             "tests/boot_observers.sv",
             cpp_from_obj,
