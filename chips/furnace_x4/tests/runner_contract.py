@@ -14,6 +14,66 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from boot_probe import ROOT, digest, now, project_path, run, save
 
 
+def fixedpoint_contract(output, receipt):
+    from generated_eval import transform
+    header = (ROOT / "tests/generated_eval_cache.h").read_text()
+    (output / "generated_eval_cache.h").write_text(header)
+    program = r'''
+#include "generated_eval_cache.h"
+#include <cassert>
+int main() {
+    using namespace furnace_generated;
+    struct Model { unsigned input, output, counter; } a{3, 0, 0}, b{7, 0, 0};
+    FixedPointCache cache;
+    unsigned evaluated = 0, reused = 0;
+    auto apply = [&](Model& m) {
+        const Field fields[] = {{&m.input, sizeof(m.input)}, {&m.output, sizeof(m.output)}};
+        if (cache.reuse(&m, fields)) { ++reused; return; }
+        ++evaluated;
+        m.output = m.input * 11;
+        cache.fixed = cache.matches(fields);
+    };
+    apply(a); assert(a.output == 33 && !cache.fixed);
+    apply(a); assert(cache.fixed);
+    apply(a); assert(reused == 1 && evaluated == 2);
+    a.output = 5; apply(a); assert(a.output == 33 && !cache.fixed);
+    a.input = 9; apply(a); assert(a.output == 99);
+    apply(b); assert(b.output == 77);
+    apply(a); assert(a.output == 99);
+    FixedPointCache sequential;
+    for (unsigned i = 0; i < 100; ++i) {
+        const Field fields[] = {{&a.counter, sizeof(a.counter)}};
+        assert(!sequential.reuse(&a, fields));
+        ++a.counter;
+        sequential.fixed = sequential.matches(fields);
+        assert(!sequential.fixed);
+    }
+    assert(a.counter == 100);
+}
+'''
+    (output / "fixedpoint.cpp").write_text(program)
+    run(["g++", "--version"], output, "compiler-version", receipt)
+    run(["g++", "-std=c++17", "-O3", output.relative_to(ROOT) / "fixedpoint.cpp",
+         "-o", output.relative_to(ROOT) / "fixedpoint"],
+        output, "fixedpoint-build", receipt)
+    run([output.relative_to(ROOT) / "fixedpoint"], output, "fixedpoint-run", receipt)
+    receipt["comparisons"] += 211
+    prefix = ("VL_INLINE_OPT void model___nba_sequent__TOP__2"
+              "(Vfurnace_x4_top___024root* vlSelf) {\n// Body\n")
+    body = "    vlSelf->aes__DOT__out = vlSelf->aes__DOT__in;\n" * 10000
+    changed, rows = transform(prefix + body + "\n}")
+    assert len(rows) == 1 and rows[0]["fields"] == ["aes__DOT__in", "aes__DOT__out"]
+    assert body in changed
+    receipt["comparisons"] += 2
+    for forbidden in ("boot_retire(1);", "vlSymsp->callback();", "return;", "while (1) {}"):
+        try:
+            transform(prefix + body + forbidden + "\n}")
+        except ValueError:
+            receipt["comparisons"] += 1
+        else:
+            raise AssertionError(f"fixed-point optimizer accepted side effect: {forbidden}")
+
+
 def reject_stale_compilation(manifest_path, output, receipt):
     from boot_compilation import reusable_boot
     manifest = json.loads(manifest_path.read_text())
@@ -60,6 +120,7 @@ def main():
         "source_sha256": {name: digest(ROOT / name) for name in (
             "tests/boot_probe.py", "tests/boot_compilation.py",
             "tests/runner_contract.py", "tests/verify.py",
+            "tests/generated_eval.py", "tests/generated_eval_cache.h",
         )}, "start_utc": now(), "end_utc": None, "exit_code": None,
         "timeout_s": 600, "commands": [], "comparisons": 0,
     }
@@ -67,6 +128,7 @@ def main():
     status = 1
     try:
         run(["python3", "--version"], output, "version", receipt)
+        fixedpoint_contract(output, receipt)
         run(["python3", "tests/verify.py", "--help"], output, "entrypoint-help", receipt)
         help_text = (output / "entrypoint-help.stdout.txt").read_text()
         assert "{behavior,linux,defects,synthesis,portability}" in help_text

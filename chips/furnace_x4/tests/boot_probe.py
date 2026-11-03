@@ -35,6 +35,13 @@ COMPILE_PROFILES = {
         "optimization": "-O3",
         "pgo_training_cycles": 2000000,
     },
+    "o3-pgo-fixedpoint": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000"],
+        "optimization": "-O3",
+        "pgo_training_cycles": 2000000,
+        "generated_fixedpoint": True,
+    },
     "o3-lto": {
         "verilator": ["-O3", "--output-split", "10000",
                       "--output-split-cfuncs", "10000"],
@@ -163,7 +170,13 @@ def main():
                         help="Fresh cache under this invocation's output namespace")
     parser.add_argument("--audit-state", action="store_true",
                         help="Hash complete final RTL/reference/RAM state for equal-work comparison")
+    parser.add_argument("--compile-only", action="store_true",
+                        help="Prepare one invocation-local executable without a boot acceptance claim")
+    parser.add_argument("--until-complete", action="store_true",
+                        help="Run to scored completion, bounded by the inherited execution deadline")
     args = parser.parse_args()
+    if args.until_complete:
+        args.cycles = (1 << 63) - 1
     if args.cycles <= 8 or args.jobs < 1:
         parser.error("cycles must exceed reset duration; jobs must be positive")
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -185,6 +198,7 @@ def main():
         "tool_versions": {}, "seed": args.seed, "cycles_limit": args.cycles,
         "compile_profile": args.compile_profile,
         "compile_configuration": COMPILE_PROFILES[args.compile_profile],
+        "until_complete": args.until_complete,
         "scope": "Bounded public-pin boot diagnostic, not full behavior/Linux/defects/synthesis acceptance.",
     }
     save(output, receipt)
@@ -251,15 +265,19 @@ def main():
             cache.relative_to(project_path(args.output_root).parent)
             executable = reusable_boot(cache, output, receipt, args.jobs, args.compile_profile,
                                        audit=args.audit_state)
-        elif args.compile_profile == "o3-pgo":
+        elif "pgo_training_cycles" in COMPILE_PROFILES[args.compile_profile]:
             executable = build_pgo(output, receipt, args.jobs, relative / "image-index.txt",
-                                   audit=args.audit_state)
+                                   audit=args.audit_state, profile_name=args.compile_profile)
         else:
             executable = compile_boot(output, receipt, args.jobs, args.compile_profile,
                                       audit=args.audit_state)
         receipt["executable"] = str(executable)
         receipt["executable_sha256"] = digest(ROOT / executable)
         save(output, receipt)
+        if args.compile_only:
+            receipt["scope"] = "Compilation only; no complete-boot or workload acceptance."
+            status = 0
+            return 0
         simulation_argv = [
             executable, relative / "image-index.txt",
             relative / "uart.txt", str(args.cycles), str(args.seed),

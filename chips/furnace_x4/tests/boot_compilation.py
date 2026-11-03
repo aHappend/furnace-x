@@ -41,8 +41,9 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
         if phase == "use":
             flags += ["-Wmissing-profile", "-Werror=coverage-mismatch"]
     cpp = Path(*([".."] * len(obj.parts))) / "tests/boot_endpoint.cpp"
-    run([
-        "verilator", "--cc", "--exe", "--build", "-j", str(jobs),
+    command = [
+        "verilator", "--cc", "--exe", *([] if profile.get("generated_fixedpoint") else ["--build"]),
+        "-j", str(jobs),
         "--top-module", "furnace_x4_top", "--Mdir", obj,
         "--assert", "-Wno-fatal", *(["--savable"] if audit else []),
         *profile["verilator"], "-MAKEFLAGS",
@@ -51,7 +52,15 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
         *(["-LDFLAGS", " ".join(link)] if link else []),
         *[p.relative_to(ROOT) for p in sorted((ROOT / "rtl").glob("*.sv"))],
         "tests/boot_observers.sv", cpp,
-    ], output, stem, receipt)
+    ]
+    run(command, output, stem, receipt)
+    if profile.get("generated_fixedpoint"):
+        from generated_eval import optimize
+        receipt.setdefault("generated_evaluation", {})[stem] = optimize(ROOT / obj, digest)
+        save(output, receipt)
+        run(["make", "-C", obj, "-f", "Vfurnace_x4_top.mk", "-j", str(jobs),
+             f"OPT_FAST={optimization}", f"OPT_SLOW={optimization}",
+             f"OPT_GLOBAL={optimization}"], output, stem + "-build", receipt)
     return obj / "Vfurnace_x4_top"
 
 
@@ -61,15 +70,15 @@ def clean_objects(obj):
             path.unlink()
 
 
-def build_pgo(output, receipt, jobs, image_index, *, audit=False):
+def build_pgo(output, receipt, jobs, image_index, *, audit=False, profile_name="o3-pgo"):
     profile_directory = output.relative_to(ROOT) / "compiler-profiles"
     project_path(profile_directory).mkdir()
     obj = output.relative_to(ROOT) / "obj"
     executable = compile_boot(
-        output, receipt, jobs, "o3-pgo", obj=obj, phase="generate",
+        output, receipt, jobs, profile_name, obj=obj, phase="generate",
         profile_directory=profile_directory, audit=audit, stem="compile-generate",
     )
-    cycles = COMPILE_PROFILES["o3-pgo"]["pgo_training_cycles"]
+    cycles = COMPILE_PROFILES[profile_name]["pgo_training_cycles"]
     training = run([
         executable, image_index, output.relative_to(ROOT) / "training-uart.txt",
         str(cycles), "17", output.relative_to(ROOT) / "training-summary.txt",
@@ -93,10 +102,12 @@ def build_pgo(output, receipt, jobs, image_index, *, audit=False):
     save(output, receipt)
     clean_objects(ROOT / obj)
     executable = compile_boot(
-        output, receipt, jobs, "o3-pgo", obj=obj, phase="use",
+        output, receipt, jobs, profile_name, obj=obj, phase="use",
         profile_directory=profile_directory, audit=audit, stem="compile",
     )
-    diagnostics = (output / "compile.stderr.txt").read_text()
+    diagnostics = (output / ("compile-build.stderr.txt" if
+                   COMPILE_PROFILES[profile_name].get("generated_fixedpoint")
+                   else "compile.stderr.txt")).read_text()
     missing = re.findall(r"^([^:\n]+\.cpp):.*\n.*profile count data file not found",
                          diagnostics, re.MULTILINE)
     warning_count = diagnostics.count("[-Wmissing-profile]")
@@ -146,10 +157,10 @@ def reusable_boot(cache, output, receipt, jobs, profile_name, *, audit=False):
     save(compile_output, compiled)
     from boot_probe import now
     try:
-        if profile_name == "o3-pgo":
+        if "pgo_training_cycles" in COMPILE_PROFILES[profile_name]:
             executable = build_pgo(
                 compile_output, compiled, jobs, output.relative_to(ROOT) / "image-index.txt",
-                audit=audit)
+                audit=audit, profile_name=profile_name)
         else:
             executable = compile_boot(compile_output, compiled, jobs, profile_name, audit=audit)
         compiled["exit_code"] = 0

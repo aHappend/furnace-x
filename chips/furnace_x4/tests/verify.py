@@ -7,6 +7,7 @@ separate scope from full-top containment. Complete Linux execution is not establ
 """
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import datetime
 import json
 import os
@@ -156,24 +157,94 @@ def behavior(output, receipt, seeds):
     assert_coverage(output, coverage_requirements("behavior", seeds), measured)
 
 
+def linux_runs(output, receipt, seeds, build, *, cycles=None, audit=False,
+               cache=None, stem="boot"):
+    """One local compilation, then disjoint processes with one inherited deadline."""
+    measured = {}
+    cache = output / f"boot-executable-{uuid.uuid4().hex[:8]}" if cache is None else cache
+    common = [
+        "--build-receipt", str(build.relative_to(ROOT)),
+        "--compile-profile", "o3-pgo-fixedpoint",
+        "--invocation-cache", str(cache.relative_to(ROOT)),
+        *(["--audit-state"] if audit else []),
+    ]
+    child_probe("boot_probe.py", [*common, "--compile-only"],
+                output, receipt, stem + "-compilation")
+    manifest_path = cache / "executable.json"
+    manifest_hash = digest(manifest_path)
+    manifest = json.loads(manifest_path.read_text())
+    receipt["boot_compilation_manifest"] = {
+        "path": str(manifest_path.relative_to(ROOT)), "sha256": manifest_hash,
+        "executable_sha256": manifest["sha256"],
+    }
+    save(output, receipt)
+
+    def launch(seed):
+        root = output / f"{stem}-{seed}-{uuid.uuid4().hex[:8]}"
+        root.mkdir()
+        launcher = {
+            "schema": 1, "commands": [], "cwd": ".", "start_utc": now(),
+            "source_sha256": receipt["source_sha256"], "seed": seed,
+            "end_utc": None, "exit_code": None,
+        }
+        try:
+            record = run([
+                "python3", "tests/boot_probe.py", "--output-root", root.relative_to(ROOT),
+                *common, "--seed", str(seed),
+                *(["--cycles", str(cycles)] if cycles is not None else ["--until-complete"]),
+            ], root, "launcher", launcher, timeout_s=2700, check=False)
+            launcher["exit_code"] = record["exit_code"]
+        finally:
+            launcher["end_utc"] = now()
+            if launcher["exit_code"] is None:
+                launcher["exit_code"] = 1
+            save(root, launcher)
+        paths = list(root.glob("boot-*/receipt.json"))
+        if len(paths) != 1:
+            raise ValueError(f"seed{seed}: missing unique boot receipt")
+        return seed, root, paths[0], json.loads(paths[0].read_text())
+
+    failures, runs = [], []
+    with ThreadPoolExecutor(max_workers=len(seeds)) as workers:
+        futures = {workers.submit(launch, seed): seed for seed in seeds}
+        for future in as_completed(futures):
+            seed = futures[future]
+            try:
+                seed, root, path, child = future.result()
+                for retained in (root / "receipt.json", path):
+                    receipt.setdefault("children", []).append({
+                        "receipt": str(retained.relative_to(ROOT)), "sha256": digest(retained),
+                    })
+                runs.append({"seed": seed, "receipt": str(path.relative_to(ROOT))})
+                for name, expected in child["source_sha256"].items():
+                    if digest(project_path(Path(name))) != expected:
+                        raise ValueError(f"seed{seed}: source changed: {name}")
+                reuse = child.get("executable_reuse", {})
+                if reuse.get("compiled") is not False or (
+                        child.get("executable_sha256") != manifest["sha256"]):
+                    raise ValueError(f"seed{seed}: executable was not identically reused")
+                measured.update({f"seed{seed}.{name}": value for name, value in
+                                 child.get("execution_observations", {}).get("coverage", {}).items()
+                                 if name != "complete_boot" or child["exit_code"] == 0})
+                measured.update(child.get("measurements", {}))
+                write_coverage(output, coverage_requirements("linux", seeds), measured)
+                if child["exit_code"]:
+                    failures.append(f"seed{seed}: boot exit={child['exit_code']}")
+            except (OSError, ValueError, KeyError, RuntimeError) as error:
+                failures.append(f"seed{seed}: {error}")
+            receipt["boot_runs"] = sorted(runs, key=lambda row: row["seed"])
+            save(output, receipt)
+    if digest(manifest_path) != manifest_hash:
+        raise ValueError("invocation-local executable manifest changed during seed execution")
+    if failures:
+        raise ValueError("; ".join(failures))
+    return measured
+
+
 def linux(output, receipt, seeds):
     child_probe("boot_model_probe.py", [], output, receipt, "boot-oracle-unit")
     build = software(output, receipt)
-    measured = {}
-    cache = output / f"boot-executable-{uuid.uuid4().hex[:8]}"
-    for seed in seeds:
-        def observe(child):
-            # Failed runs retain real partial comparisons, never a passing boot.
-            measured.update({f"seed{seed}.{name}": value for name, value in
-                             child.get("execution_observations", {}).get("coverage", {}).items()
-                             if name != "complete_boot" or child["exit_code"] == 0})
-            measured.update(child.get("measurements", {}))
-            write_coverage(output, coverage_requirements("linux", seeds), measured)
-        child_probe("boot_probe.py", [
-            "--build-receipt", str(build.relative_to(ROOT)), "--seed", str(seed),
-            "--cycles", "40000000", "--compile-profile", "o3-split",
-            "--invocation-cache", str(cache.relative_to(ROOT)),
-        ], output, receipt, f"boot-{seed}", on_receipt=observe)
+    measured = linux_runs(output, receipt, seeds, build)
     assert_coverage(output, coverage_requirements("linux", seeds), measured)
 
 
