@@ -166,6 +166,7 @@ class LogicalStateSensitivity(unittest.TestCase):
     def test_changed_python_entrypoints_compile(self):
         for name in ("boot_logical_state.py", "boot_logical_state_test.py",
                      "boot_lifetime.py", "boot_task_graph.py", "boot_scheduler.py",
+                     "boot_fixedpoint.py",
                      "boot_native_threads_probe.py", "boot_probe.py",
                      "boot_compilation.py", "verify.py"):
             path = Path(__file__).with_name(name)
@@ -198,6 +199,79 @@ class LogicalStateSensitivity(unittest.TestCase):
         result = compare_fields(plan, a, b)
         self.assertEqual(result["exact_fields"], 3)
         self.assertEqual(result["exact_storage_bytes"], 19)
+
+    def test_fixedpoint_exact_wrapper_and_state_extent_sensitivity(self):
+        from boot_fixedpoint import project
+        from generated_eval import transform
+
+        source = (
+            "VL_INLINE_OPT void Vfurnace_x4_top___024root___nba_sequent__TOP__2"
+            "(Vfurnace_x4_top___024root* vlSelf) {\n"
+            "    // Body\n"
+            "    //" + "." * 500001 + "\n"
+            "    vlSelf->aes__DOT__out = vlSelf->aes__DOT__in;\n}")
+        transformed, rows = transform(source)
+        self.assertEqual(len(rows), 1)
+        original, proof = project(transformed)
+        self.assertEqual(original, source)
+        self.assertEqual(proof[0]["fields"], ["aes__DOT__in", "aes__DOT__out"])
+        corruptions = [
+            transformed.replace("if (cache.reuse())", "if (cache.fixed)"),
+            transformed.replace("cache.fixed = cache.matches();", "cache.fixed = true;"),
+            transformed.replace("sizeof(vlSelf->aes__DOT__out)", "1"),
+            transformed.replace(
+                "        {&vlSelf->aes__DOT__out, sizeof(vlSelf->aes__DOT__out)},\n", ""),
+            transformed + "\nvoid escape() { external(cache.owner); }\n",
+            transformed.replace("= vlSelf->aes__DOT__in;", "= external_state;"),
+        ]
+        for changed in corruptions:
+            with self.subTest(mutation=changed[-160:]), self.assertRaises(ValueError):
+                project(changed)
+
+    def test_fixedpoint_cache_header_and_projection_binding(self):
+        from boot_fixedpoint import audited_sources, validate
+        from generated_eval import transform
+
+        source = (
+            "VL_INLINE_OPT void Vfurnace_x4_top___024root___nba_sequent__TOP__2"
+            "(Vfurnace_x4_top___024root* vlSelf) {\n"
+            "    // Body\n"
+            "    //" + "." * 500001 + "\n"
+            "    vlSelf->aes__DOT__out = vlSelf->aes__DOT__in;\n}")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as temporary:
+            directory = Path(temporary)
+            cpp = directory / "Vfixture.cpp"
+            cpp.write_text(transform(source)[0])
+            with self.assertRaisesRegex(ValueError, "cache implementation"):
+                audited_sources(directory)
+            header = directory / "generated_eval_cache.h"
+            header.write_bytes(Path(__file__).with_name("generated_eval_cache.h").read_bytes())
+            projected, proof = audited_sources(directory)
+            self.assertEqual(projected[cpp.name], source)
+            self.assertEqual(len(proof["sources"]), 1)
+            model = fixture_model()
+            model["evaluation_cache"] = proof
+            model["generated_sha256"][cpp.name] = sha256(cpp)
+            from boot_scheduler import RUNTIME_RULE, RUNTIME_SHA256
+            plan = {"baseline": model, "candidate": fixture_model(), "fields": {},
+                    "evaluation_caches": {"baseline": proof, "candidate": None},
+                    "evaluation_cache_runtime": {
+                        "rule": RUNTIME_RULE, "source_sha256": RUNTIME_SHA256}}
+            validate(plan)
+            altered = copy.deepcopy(plan)
+            del altered["evaluation_caches"]["baseline"]
+            with self.assertRaisesRegex(ValueError, "cache accounting omitted"):
+                validate(altered)
+            altered = copy.deepcopy(plan)
+            altered["baseline"]["generated_sha256"][cpp.name] = "changed"
+            with self.assertRaisesRegex(ValueError, "source identity"):
+                validate(altered)
+            for mutation in (
+                    header.read_text().replace("fixed && matches()", "fixed"),
+                    header.read_text().replace("std::memcmp", "unreviewed_compare")):
+                header.write_text(mutation)
+                with self.assertRaisesRegex(ValueError, "cache implementation"):
+                    audited_sources(directory)
 
     def test_omitted_accounting(self):
         plan = fixture_plan()

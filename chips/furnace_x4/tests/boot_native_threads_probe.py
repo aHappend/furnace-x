@@ -230,6 +230,8 @@ def logical_preflight(output, receipt, baseline, candidate, *, syntax_capture=Fa
         receipt.setdefault("tool_versions", {})["g++"] = (output / result["stdout"]).read_text()
         from boot_logical_state_test import exporter_fixture
         exporter_fixture(output, receipt)
+        from boot_fixedpoint import compiled_fixture
+        compiled_fixture(output, receipt)
         for owner, directory, model in (("baseline", baseline, left),
                                         ("candidate", candidate, right)):
             capture = output / f"capture-{owner}"
@@ -360,15 +362,78 @@ def capture_diagnostic(output, receipt, build_receipt, cycles):
     save(output, receipt)
 
 
-def measure(output, receipt, cycles, comparison_plan):
-    from boot_logical_state import equivalent, validate_accounting
+def retained_capture_diagnostic(output, receipt, retained):
+    """Reanalyze retained executed inputs; do not relabel this as a fresh run."""
+    from boot_logical_state import accounting, equivalent, schema, validate_accounting
+
+    path = project_path(retained)
+    previous = json.loads(path.read_text())
+    path.parent.relative_to(ROOT / "evidence/preparation")
+    receipt["retained_capture_input"] = {
+        "receipt": str(retained), "sha256": digest(path),
+        "scope": "New source-bound cache/lifetime analysis of historical executed captures only.",
+    }
+    pairs, models, directories = {}, {}, {}
+    for owner in ("baseline", "candidate"):
+        row = previous["fulltop_capture_validation"][owner]
+        child_path = project_path(Path(row["receipt"]))
+        expected = next(item["sha256"] for item in previous["children"]
+                        if item["receipt"] == row["receipt"])
+        if digest(child_path) != expected:
+            raise ValueError("retained capture receipt identity changed")
+        child = json.loads(child_path.read_text())
+        for name, value in child["source_sha256"].items():
+            if name.startswith("rtl/") and digest(project_path(Path(name))) != value:
+                raise ValueError("RTL differs from retained capture: " + name)
+        capture = child["logical_capture"]["compile"]
+        model_path = project_path(Path(capture["schema"]))
+        if digest(model_path) != capture["schema_sha256"]:
+            raise ValueError("retained executed schema identity changed")
+        original = json.loads(model_path.read_text())
+        model = schema(model_path.parent)
+        without_cache = dict(model)
+        without_cache.pop("evaluation_cache", None)
+        if without_cache != {key: value for key, value in original.items()
+                             if key != "evaluation_cache"}:
+            raise ValueError("retained executed sources differ from original capture schema")
+        pairs[owner], models[owner], directories[owner] = row, model, model_path.parent
+        receipt.setdefault("reanalyzed_captures", {})[owner] = {
+            "receipt": row["receipt"], "sha256": expected,
+            "generated_sha256": model["generated_sha256"],
+            "evaluation_cache": model.get("evaluation_cache"),
+        }
+        save(output, receipt)
+    plan = accounting(models["baseline"], models["candidate"],
+                      directories["baseline"], directories["candidate"],
+                      receipt["scheduler_runtime_library"])
+    manifest = output / "retained-executed-logical-accounting.json"
+    with manifest.open("x") as stream:
+        stream.write(json.dumps(plan, indent=2) + "\n")
+    receipt["retained_executed_accounting"] = {
+        "manifest": manifest.name, "sha256": digest(manifest), "complete": plan["complete"]}
+    save(output, receipt)
+    validate_accounting(plan)
+    receipt["retained_capture_comparison"] = equivalent(
+        plan, pairs["baseline"], pairs["candidate"],
+        project_path(Path(pairs["baseline"]["state_directory"])),
+        project_path(Path(pairs["candidate"]["state_directory"])))
+    receipt["retained_capture_scope"] = (
+        "Historical seed-17 20000-cycle prefix only; cache accounted by source-bound "
+        "noninterference induction, not equal cache bytes or fresh simulation. "
+        "No Linux completion, throughput measurement or backend promotion.")
+    save(output, receipt)
+
+
+def measure(output, receipt, cycles, comparison_plan, *, complete=True):
+    from boot_logical_state import accounting, equivalent, schema, validate_accounting
     from verify import SEEDS, assert_coverage, coverage_requirements, linux_runs, software
 
     validate_accounting(comparison_plan)
     started = time.monotonic()
     build = software(output, receipt)
     receipt["fresh_software_s"] = time.monotonic() - started
-    pairs = {}
+    pairs, executed = {}, {}
+    executed_plan = None
     caches = {}
     mismatches = []
     for profile in ("o3-pgo-fixedpoint", "native-threads-candidate"):
@@ -416,9 +481,33 @@ def measure(output, receipt, cycles, comparison_plan):
             schema_path = project_path(Path(capture["schema"]))
             expected = comparison_plan[
                 "baseline" if profile == "o3-pgo-fixedpoint" else "candidate"]
+            model = schema(schema_path.parent)
             if digest(schema_path) != capture["schema_sha256"] or (
-                    json.loads(schema_path.read_text()) != expected):
-                raise ValueError("compiled logical schema or proof inputs differ from preflight")
+                    json.loads(schema_path.read_text()) != model):
+                raise ValueError("compiled logical schema differs from executed generated inputs")
+            projected_identity = dict(model["generated_sha256"])
+            for name, proof in (model.get("evaluation_cache") or {}).get("sources", {}).items():
+                projected_identity[name] = proof["projected_sha256"]
+            if projected_identity != expected["generated_sha256"]:
+                raise ValueError("executed generated sources do not project exactly to preflight")
+            owner = "baseline" if profile == "o3-pgo-fixedpoint" else "candidate"
+            if owner in executed and executed[owner][0] != model:
+                raise ValueError("generated source identity changed between paired seeds")
+            executed[owner] = model, schema_path.parent
+            if len(executed) == 2 and executed_plan is None:
+                executed_plan = accounting(
+                    executed["baseline"][0], executed["candidate"][0],
+                    executed["baseline"][1], executed["candidate"][1],
+                    receipt["scheduler_runtime_library"])
+                manifest = output / "paired-executed-logical-accounting.json"
+                with manifest.open("x") as stream:
+                    stream.write(json.dumps(executed_plan, indent=2) + "\n")
+                receipt["paired_executed_accounting"] = {
+                    "manifest": manifest.name, "sha256": digest(manifest),
+                    "complete": executed_plan["complete"],
+                }
+                save(output, receipt)
+                validate_accounting(executed_plan)
             row = {
                 "seed": seed, "observed": observed, "final_state": child["final_state"],
                 "uart_sha256": digest(path.parent / "uart.txt"),
@@ -439,7 +528,7 @@ def measure(output, receipt, cycles, comparison_plan):
                 }
                 try:
                     comparison["logical_state_comparison"] = equivalent(
-                        comparison_plan, before, row,
+                        executed_plan, before, row,
                         project_path(Path(before["state_directory"])),
                         project_path(Path(row["state_directory"])))
                     comparison["full_equivalence"] = True
@@ -451,7 +540,17 @@ def measure(output, receipt, cycles, comparison_plan):
             save(output, receipt)
     if mismatches:
         raise ValueError("native-thread state comparison rejected: " + "; ".join(mismatches))
-    receipt["paired_three_seed_equivalence"] = "exact full-state equality"
+    receipt["paired_three_seed_equivalence"] = (
+        "complete-state comparison: exact shared RTL/host/RAM and proven backend-only state")
+    if not complete:
+        receipt["prefix_measurement_scope"] = (
+            "Three initialized equal-work prefixes only; all cache states are accounted "
+            "by source-bound noninterference, not compared as raw equal bytes. "
+            "No complete Linux execution, feasibility result or backend promotion.")
+        receipt["all_seed_speedups_above_one"] = all(
+            row["speedup"] > 1 for row in receipt["equal_work"])
+        save(output, receipt)
+        return
     if any(row["speedup"] <= 1 for row in receipt["equal_work"]):
         raise ValueError("native-thread candidate did not improve every measured seed")
     measured = linux_runs(output, receipt, SEEDS, build, audit=True,
@@ -466,11 +565,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--resources", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--repair-of", type=Path, action="append")
-    parser.add_argument("--mode", choices=("support", "preflight", "measure", "cleanup", "comparator"),
+    parser.add_argument("--mode", choices=(
+        "support", "preflight", "measure", "pairing", "cleanup", "comparator"),
                         default="support")
     parser.add_argument("--retained-schema", type=Path)
     parser.add_argument("--capture-build-receipt", type=Path,
                         help="Also validate actual initialized full-top prefix captures")
+    parser.add_argument("--retained-capture", type=Path,
+                        help="Reanalyze historical executed captures without rerunning simulation")
     parser.add_argument("--cleanup-of", type=Path)
     parser.add_argument("--cycles", type=int, default=5000000)
     parser.add_argument("--experiment-origin", type=Path,
@@ -538,6 +640,8 @@ def main():
             comparator_diagnostic(output, receipt, args.retained_schema)
             if args.capture_build_receipt:
                 capture_diagnostic(output, receipt, args.capture_build_receipt, args.cycles)
+            if args.retained_capture:
+                retained_capture_diagnostic(output, receipt, args.retained_capture)
             status = 0
             return 0
         if args.mode == "cleanup":
@@ -571,10 +675,17 @@ def main():
                 "No full-top candidate was built and no output-only substitute was used."
             )
         receipt["save_state_compatibility"] = "code generation accepted; paired comparison still required"
-        if args.mode in ("preflight", "measure"):
+        if args.mode in ("preflight", "measure", "pairing"):
+            if args.mode == "pairing":
+                run(["python3", "tests/boot_logical_state_test.py", "--fixture-root",
+                     (output / "comparator-fixtures").relative_to(ROOT)],
+                    output, "comparator-sensitivity", receipt)
+                run(["g++", "--version"], output, "cache-cxx-version", receipt)
+                from boot_fixedpoint import compiled_fixture
+                compiled_fixture(output, receipt)
             comparison_plan = fulltop_preflight(output, receipt)
-        if args.mode == "measure":
-            measure(output, receipt, args.cycles, comparison_plan)
+        if args.mode in ("measure", "pairing"):
+            measure(output, receipt, args.cycles, comparison_plan, complete=args.mode == "measure")
         status = 0
     except (OSError, ValueError, RuntimeError) as error:
         receipt["error"] = str(error)

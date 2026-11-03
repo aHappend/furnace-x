@@ -239,6 +239,10 @@ def schema(directory):
     result["archive_entry"] = syms
     result["active_classes"] = [syms, root]
     result["uninstantiated_definitions"] = sorted(result["classes"].keys() - {syms, root})
+    from boot_fixedpoint import audited_sources
+    _, cache = audited_sources(directory)
+    if cache is not None:
+        result["evaluation_cache"] = cache
     return result
 
 
@@ -407,6 +411,9 @@ def accounting(left, right, left_directory, right_directory, runtime=None):
     return {
         "schema": 1, "fields": rows, "backend_only": backend_only, "unserialized": unsaved,
         "baseline": left, "candidate": right,
+        "evaluation_caches": {owner: model.get("evaluation_cache")
+                              for owner, model in (("baseline", left), ("candidate", right))},
+        "evaluation_cache_runtime": runtime,
         "complete": all(row["disposition"] != "unresolved"
                         for row in (*rows.values(), *unsaved.values())),
         "sampling_boundary": (
@@ -422,6 +429,8 @@ def validate_accounting(plan):
         raise ValueError("logical accounting omitted or introduced state")
     from boot_scheduler import validate_accounting as validate_scheduler_accounting
     validate_scheduler_accounting(plan)
+    from boot_fixedpoint import validate as validate_fixedpoint
+    validate_fixedpoint(plan)
     for name, row in plan["fields"].items():
         if name in a and name in b:
             if row != {"disposition": "compare_exact", "baseline": name, "candidate": name}:

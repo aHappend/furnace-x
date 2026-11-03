@@ -208,14 +208,21 @@ class State:
 
 class Lifetime:
     def __init__(self, directory, clean_cpp, closing):
+        from boot_fixedpoint import audited_sources
+
+        try:
+            projected, self.evaluation_cache = audited_sources(directory)
+            cache_error = None
+        except ValueError as exc:
+            projected, self.evaluation_cache, cache_error = {}, None, str(exc)
         self.functions = {}
-        self.errors = []
+        self.errors = [] if cache_error is None else [cache_error]
         self.outside = set()
         self.unclassified_fields = set()
         self.escaped_fields = set()
         self.escape = []
         for path in sorted(directory.glob("*.cpp")):
-            text = clean_cpp(path.read_text())
+            text = clean_cpp(projected.get(path.name, path.read_text()))
             covered = []
             for match in re.finditer(r"void \w+::__V(?:serialize|deserialize)\([^;{}]*\) \{", text):
                 covered.append((match.start(), closing(text, match.end() - 1) + 1))
@@ -391,6 +398,7 @@ class Lifetime:
             "boundary": "Each generated entry, including each native worker, starts independently.",
             "native_schedule_error": self.graph_error,
             "storage_shape": shape, "storage_units": units,
+            **({"evaluation_cache": self.evaluation_cache} if self.evaluation_cache else {}),
         }
         failure = None
         if self.errors:
