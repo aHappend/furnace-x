@@ -49,6 +49,19 @@ COMPILE_PROFILES = {
         "generated_fixedpoint": True,
         "generated_schedule_profile": True,
     },
+    "scalar-baseline": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000"],
+        "optimization": "-O3",
+        "generated_fixedpoint": True,
+    },
+    "scalar-candidate": {
+        "verilator": ["-O3", "--output-split", "10000",
+                      "--output-split-cfuncs", "10000"],
+        "optimization": "-O3",
+        "generated_fixedpoint": True,
+        "generated_scalar": True,
+    },
     "o3-pgo-replay": {
         "verilator": ["-O3", "--output-split", "10000",
                       "--output-split-cfuncs", "10000"],
