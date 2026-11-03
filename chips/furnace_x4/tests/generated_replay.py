@@ -122,12 +122,13 @@ def transform(text):
                 "    static thread_local const void* owner = nullptr;\n"
                 "    static thread_local bool fixed = false;\n"
                 f'    static thread_local furnace_replay::Counter counter("{match[1]}", {number});\n'
-                "    ++counter.calls;\n"
-                "    if (fixed && owner == vlSelf &&\n            " + checks + ") {\n"
-                "        ++counter.hits;\n" + restore_locals + "\n"
-                "    } else {\n        owner = vlSelf;\n" + snapshots + "\n"
-                + chunk + "\n        fixed = " + model_checks + ";\n"
-                + save_locals + "\n    }\n    }\n")
+                "    const bool consider = counter.consider();\n"
+                "    if (consider && fixed && owner == vlSelf &&\n            " + checks + ") {\n"
+                "        ++counter.hits;\n        counter.misses = 0;\n" + restore_locals + "\n"
+                "    } else {\n        if (consider) {\n        owner = vlSelf;\n"
+                + snapshots + "\n        }\n"
+                + chunk + "\n        if (consider) {\n        fixed = " + model_checks + ";\n"
+                + save_locals + "\n        counter.evaluated(fixed);\n        }\n    }\n    }\n")
             records.append({"region": number, "body_bytes": len(chunk), "fields": fields})
         if not records:
             return match[0]
