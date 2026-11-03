@@ -12,6 +12,7 @@ No cached outputs, sequential scheduling changes, or model storage changes.
 
 from collections import defaultdict
 import re
+import uuid
 
 from generated_replay import statements
 from generated_scalar import FUNCTION, scalar_fields
@@ -240,6 +241,14 @@ def transform(sources, header):
             if field in public:
                 prologue += (f"furnace_dependency::input(vlSelf, {field_ids[field]}, "
                              f"vlSelf->{field});\n")
+        # Compare external writes with the state at the previous eval's exit,
+        # not its entry (DUT-produced public outputs can change during eval).
+        prologue += "furnace_dependency::OnExit furnace_dependency_commit([&]() {\n"
+        for field in fields:
+            if field in public:
+                prologue += (f"furnace_dependency::remember(vlSelf, {field_ids[field]}, "
+                             f"vlSelf->{field});\n")
+        prologue += "});\n"
         text, count = entry.subn(lambda m: m[0] + prologue, text)
         if text != sources[filename]:
             text = '#include "generated_dependency.h"\n' + text
@@ -313,6 +322,16 @@ inline void input(const void* owner, unsigned field, uint64_t value) {
     s.inputs[field] = value;
     s.input_seen[field] = true;
 }
+inline void remember(const void* owner, unsigned field, uint64_t value) {
+    auto& s = bind(owner);
+    s.inputs[field] = value;
+    s.input_seen[field] = true;
+}
+template<class F> struct OnExit {
+    F finish;
+    explicit OnExit(F f) : finish(f) {}
+    ~OnExit() { finish(); }
+};
 inline bool take(const void* owner, unsigned region) {
     auto& s = bind(owner);
     const bool dirty = s.dirty[region];
@@ -346,20 +365,31 @@ def optimize(directory, digest):
         raise ValueError("unrecognized generated deserialization entry")
     report["deserialization_invalidation_entries"] = restore_entries
     destination = directory / "generated_dependency.h"
-    with destination.open("x") as stream:
-        stream.write(sideband)
+    if destination.exists():
+        if destination.read_text() != sideband:
+            raise ValueError("PGO dependency graph/header changed between compilation phases")
+    else:
+        with destination.open("x") as stream:
+            stream.write(sideband)
     report["header_sha256"] = digest(destination)
+    generation = directory / f"dependency-generation-{uuid.uuid4().hex[:8]}"
+    generation.mkdir()
+    report["generation"] = generation.name
     report["files"] = []
     for path in paths:
         if originals[path.name] == changed[path.name]:
             continue
         before = digest(path)
-        snapshot = path.with_suffix(".dependency-original")
+        snapshot = generation / (path.stem + ".before.cpp")
         with snapshot.open("x") as stream:
             stream.write(originals[path.name])
+        transformed = generation / (path.stem + ".after.cpp")
+        with transformed.open("x") as stream:
+            stream.write(changed[path.name])
         path.write_text(changed[path.name])
         report["files"].append({
             "file": path.name, "before_sha256": before, "after_sha256": digest(path),
-            "original": snapshot.name,
+            "original": str(snapshot.relative_to(directory)),
+            "transformed": str(transformed.relative_to(directory)),
         })
     return report

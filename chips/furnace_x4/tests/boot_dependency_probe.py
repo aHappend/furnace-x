@@ -31,6 +31,7 @@ struct Vfurnace_x4_top___024root {
     VL_IN8(rst_n,0,0);
     VL_IN(input,31,0);
     VL_OUT(output,31,0);
+    VL_OUT(public_result,31,0);
     IData/*31:0*/ middle;
     IData/*31:0*/ alternate;
     IData/*31:0*/ feedback;
@@ -53,6 +54,7 @@ struct Vfurnace_x4_top___024root {
     }
     vlSelf->output = vlSelf->middle ^ local;
     vlSelf->alternate = vlSelf->input + 3U;
+    vlSelf->public_result = vlSelf->input * 17U;
     vlSelf->stable = vlSelf->input * 11U;
     vlSelf->output = vlSelf->output + vlSelf->alternate;
     vlSelf->feedback = (vlSelf->feedback < 9U) ? vlSelf->feedback + 1U : 9U;
@@ -164,6 +166,15 @@ int main() {
             ++compared;
         }
     }
+    // Detect a public overwrite equal to the previous eval's entry value.
+    actual.input = expected.input = 0;
+    model___024root___eval(&actual); reference___024root___eval(&expected);
+    actual.input = expected.input = 1;
+    model___024root___eval(&actual); reference___024root___eval(&expected);
+    actual.public_result = expected.public_result = 0;
+    model___024root___eval(&actual); reference___024root___eval(&expected);
+    assert(std::memcmp(&actual, &expected, sizeof(actual)) == 0);
+    ++compared;
     assert(furnace_dependency::executed > 0);
     assert(furnace_dependency::skipped > 0);
     assert(furnace_dependency::invalidations > 1000);
@@ -287,13 +298,24 @@ def main():
     parser.add_argument("--repair-of", type=Path, action="append", required=True)
     parser.add_argument("--mode", choices=("contract", "measure"), default="contract")
     parser.add_argument("--cycles", type=int, default=5000000)
+    parser.add_argument("--experiment-origin", type=Path,
+                        help="Failed setup receipt whose original aggregate deadline is retained")
     parser.add_argument("--output-root", type=Path, default=Path("evidence/preparation"))
     args = parser.parse_args()
     if args.cycles <= 8:
         parser.error("prefix cycles must exceed reset duration")
     started = time.monotonic()
-    os.environ["FURNACE_VERIFY_DEADLINE"] = str(min(
-        float(os.environ.get("FURNACE_VERIFY_DEADLINE", "inf")), started + 2700))
+    deadline = min(float(os.environ.get("FURNACE_VERIFY_DEADLINE", "inf")), started + 2700)
+    origin = None
+    if args.experiment_origin:
+        origin_path = project_path(args.experiment_origin)
+        origin = json.loads(origin_path.read_text())
+        original_start = datetime.datetime.fromisoformat(origin["start_utc"])
+        elapsed = (datetime.datetime.now(datetime.timezone.utc) - original_start).total_seconds()
+        # Include all failed setup work and the repair interval. A one-second
+        # margin avoids extending the old deadline through clock-conversion skew.
+        deadline = min(deadline, started + 2700 - elapsed - 1)
+    os.environ["FURNACE_VERIFY_DEADLINE"] = str(deadline)
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = project_path(args.output_root) / f"boot-dependency-{stamp}-{uuid.uuid4().hex[:8]}"
     output.mkdir(parents=True, exist_ok=False)
@@ -305,7 +327,13 @@ def main():
         "commands": [], "children": [], "promoted": False,
         "complete_three_seed_feasibility": "not established",
         "scope": "Opt-in dependency-scheduling diagnostic, not mandatory acceptance.",
+        "initial_remaining_s": max(0, deadline - started),
     }
+    if origin is not None:
+        receipt["experiment_origin"] = {
+            "receipt": str(args.experiment_origin), "sha256": digest(origin_path),
+            "start_utc": origin["start_utc"],
+        }
     save(output, receipt)
     print(f"Dependency experiment: {output.relative_to(ROOT)}/receipt.json", flush=True)
     status = 1
