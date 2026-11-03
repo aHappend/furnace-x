@@ -9,7 +9,7 @@ import uuid
 from boot_probe import COMPILE_PROFILES, ROOT, digest, project_path, run, save
 
 
-def binding(receipt, profile, audit):
+def binding(receipt, profile, audit, logical=False):
     return {
         "source_sha256": receipt["source_sha256"],
         "tool_versions": receipt["tool_versions"],
@@ -17,11 +17,12 @@ def binding(receipt, profile, audit):
         "compile_profile": profile,
         "configuration": COMPILE_PROFILES[profile],
         "audit_state": audit,
+        **({"logical_state": True} if logical else {}),
     }
 
 
 def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
-                 profile_directory=None, audit=False, stem="compile"):
+                 profile_directory=None, audit=False, logical=False, stem="compile"):
     profile = COMPILE_PROFILES[profile_name]
     relative = output.relative_to(ROOT)
     obj = relative / "obj" if obj is None else obj
@@ -30,6 +31,10 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
     link = list(profile.get("linker_flags", []))
     if audit:
         flags.append("-DFURNACE_BOOT_AUDIT")
+    if logical:
+        if not audit:
+            raise ValueError("logical state capture requires the complete raw state audit")
+        flags.append("-DFURNACE_BOOT_LOGICAL_AUDIT")
     if phase is not None:
         if phase not in ("generate", "use") or profile_directory is None:
             raise ValueError("PGO requires a generation/use phase and profile directory")
@@ -42,7 +47,8 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
             flags += ["-Wmissing-profile", "-Werror=coverage-mismatch"]
     cpp = Path(*([".."] * len(obj.parts))) / "tests/boot_endpoint.cpp"
     command = [
-        "verilator", "--cc", "--exe", *([] if profile.get("generated_fixedpoint") else ["--build"]),
+        "verilator", "--cc", "--exe",
+        *([] if profile.get("generated_fixedpoint") or logical else ["--build"]),
         "-j", str(jobs),
         "--top-module", "furnace_x4_top", "--Mdir", obj,
         "--assert", "-Wno-fatal", *(["--savable"] if audit else []),
@@ -54,6 +60,16 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
         "tests/boot_observers.sv", cpp,
     ]
     run(command, output, stem, receipt)
+    if logical:
+        from boot_logical_state import schema, write_exporter
+        model = schema(ROOT / obj)
+        write_exporter(ROOT / obj, model)
+        receipt.setdefault("logical_capture", {})[stem] = {
+            "schema": str(obj / "logical-schema.json"),
+            "schema_sha256": digest(ROOT / obj / "logical-schema.json"),
+            "exporter_sha256": digest(ROOT / obj / "boot_logical_capture.h"),
+        }
+        save(output, receipt)
     if profile.get("generated_fixedpoint"):
         from generated_eval import optimize
         receipt.setdefault("generated_evaluation", {})[stem] = optimize(ROOT / obj, digest)
@@ -72,6 +88,7 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
             receipt.setdefault("generated_schedule_profile", {})[stem] = instrument(
                 ROOT / obj, digest)
         save(output, receipt)
+    if profile.get("generated_fixedpoint") or logical:
         run(["make", "-C", obj, "-f", "Vfurnace_x4_top.mk", "-j", str(jobs),
              f"OPT_FAST={optimization}", f"OPT_SLOW={optimization}",
              f"OPT_GLOBAL={optimization}"], output, stem + "-build", receipt)
@@ -84,13 +101,13 @@ def clean_objects(obj):
             path.unlink()
 
 
-def build_pgo(output, receipt, jobs, image_index, *, audit=False, profile_name="o3-pgo"):
+def build_pgo(output, receipt, jobs, image_index, *, audit=False, logical=False, profile_name="o3-pgo"):
     profile_directory = output.relative_to(ROOT) / "compiler-profiles"
     project_path(profile_directory).mkdir()
     obj = output.relative_to(ROOT) / "obj"
     executable = compile_boot(
         output, receipt, jobs, profile_name, obj=obj, phase="generate",
-        profile_directory=profile_directory, audit=audit, stem="compile-generate",
+        profile_directory=profile_directory, audit=audit, logical=logical, stem="compile-generate",
     )
     cycles = COMPILE_PROFILES[profile_name]["pgo_training_cycles"]
     training = run([
@@ -117,7 +134,7 @@ def build_pgo(output, receipt, jobs, image_index, *, audit=False, profile_name="
     clean_objects(ROOT / obj)
     executable = compile_boot(
         output, receipt, jobs, profile_name, obj=obj, phase="use",
-        profile_directory=profile_directory, audit=audit, stem="compile",
+        profile_directory=profile_directory, audit=audit, logical=logical, stem="compile",
     )
     diagnostics = (output / ("compile-build.stderr.txt" if
                    COMPILE_PROFILES[profile_name].get("generated_fixedpoint")
@@ -134,10 +151,10 @@ def build_pgo(output, receipt, jobs, image_index, *, audit=False, profile_name="
     return executable
 
 
-def reusable_boot(cache, output, receipt, jobs, profile_name, *, audit=False):
+def reusable_boot(cache, output, receipt, jobs, profile_name, *, audit=False, logical=False):
     """Only share within the caller's fresh output namespace, never globally."""
     manifest_path = cache / "executable.json"
-    expected = binding(receipt, profile_name, audit)
+    expected = binding(receipt, profile_name, audit, logical)
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text())
         executable = project_path(Path(manifest["executable"]))
@@ -174,9 +191,10 @@ def reusable_boot(cache, output, receipt, jobs, profile_name, *, audit=False):
         if "pgo_training_cycles" in COMPILE_PROFILES[profile_name]:
             executable = build_pgo(
                 compile_output, compiled, jobs, output.relative_to(ROOT) / "image-index.txt",
-                audit=audit, profile_name=profile_name)
+                audit=audit, logical=logical, profile_name=profile_name)
         else:
-            executable = compile_boot(compile_output, compiled, jobs, profile_name, audit=audit)
+            executable = compile_boot(compile_output, compiled, jobs, profile_name,
+                                      audit=audit, logical=logical)
         compiled["exit_code"] = 0
     finally:
         compiled["end_utc"] = now()

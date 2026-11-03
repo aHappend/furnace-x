@@ -109,7 +109,7 @@ def serialization_schema(directory):
 
 
 def fulltop_preflight(output, receipt):
-    """Reject incompatible complete archives before compiling any candidate."""
+    """Keep raw layout diagnostics and require complete logical accounting."""
     from boot_probe import COMPILE_PROFILES
 
     schemas = {}
@@ -150,21 +150,74 @@ def fulltop_preflight(output, receipt):
         }
     receipt["serialization_schema_differences"] = differences
     save(output, receipt)
-    if differences:
-        receipt["save_state_compatibility"] = "incompatible with existing exact archive comparison"
-        raise ValueError(
-            "full-top native threading changes the complete serialized RTL schema. "
-            "Raw archive equality cannot compare these models; no fields, checksums or "
-            "backend state were excluded or normalized. No candidate C++ build or "
-            "simulation is permitted by this preflight. A proven complete-state "
-            "comparison method is needed before a paired experiment."
-        )
-    receipt["save_state_compatibility"] = "identical complete generated serialization schemas"
+    receipt["save_state_compatibility"] = (
+        "different raw layouts; complete logical comparison required" if differences else
+        "identical complete generated serialization schemas")
     save(output, receipt)
+    return logical_preflight(
+        output, receipt, output / "schema-o3-pgo-fixedpoint",
+        output / "schema-native-threads-candidate")
 
 
-def measure(output, receipt, cycles):
-    from boot_pgo_probe import equivalent
+def logical_preflight(output, receipt, baseline, candidate):
+    from boot_logical_state import accounting, schema, validate_accounting
+
+    left, right = schema(baseline), schema(candidate)
+    plan = accounting(left, right, baseline, candidate)
+    path = output / "logical-state-accounting.json"
+    with path.open("x") as stream:
+        stream.write(json.dumps(plan, indent=2) + "\n")
+    counts = {}
+    for row in plan["fields"].values():
+        key = row["disposition"]
+        counts[key] = counts.get(key, 0) + 1
+    receipt["logical_comparator"] = {
+        "manifest": path.name, "sha256": digest(path), "dispositions": counts,
+        "baseline_directory": str(baseline.relative_to(ROOT)),
+        "candidate_directory": str(candidate.relative_to(ROOT)),
+        "unserialized_fields": len(plan["unserialized"]), "complete": plan["complete"],
+        "baseline_serialized_fields": sum(len(row["fields"]) for row in left["classes"].values()),
+        "candidate_serialized_fields": sum(len(row["fields"]) for row in right["classes"].values()),
+    }
+    save(output, receipt)
+    validate_accounting(plan)
+    return plan
+
+
+def comparator_diagnostic(output, receipt, retained):
+    """Repair diagnostics use saved codegen, never rerun the known slow boots."""
+    path = project_path(retained)
+    previous = json.loads(path.read_text())
+    directory = path.parent
+    directory.relative_to(ROOT / "evidence/preparation")
+    if previous.get("serialization_schema_differences") is None:
+        raise ValueError("retained receipt does not contain the original schema failure")
+    receipt["retained_schema_input"] = {
+        "receipt": str(retained), "sha256": digest(path),
+        "scope": "Historical generated C++ inputs for comparator development only.",
+    }
+    for profile in ("o3-pgo-fixedpoint", "native-threads-candidate"):
+        schema_directory = directory / f"schema-{profile}"
+        for name, expected in previous["serialization_schemas"][profile]["generated_sha256"].items():
+            if digest(project_path(Path(name))) != expected:
+                raise ValueError("retained generated serializer changed: " + name)
+        receipt.setdefault("retained_codegen_sha256", {})[profile] = {
+            str(item.relative_to(ROOT)): digest(item)
+            for item in sorted(schema_directory.iterdir())
+            if item.suffix in (".cpp", ".h")
+        }
+    save(output, receipt)
+    run(["python3", "tests/boot_logical_state_test.py", "--fixture-root",
+         (output / "comparator-fixtures").relative_to(ROOT)],
+        output, "comparator-sensitivity", receipt)
+    receipt["comparator_sensitivity"] = "passed; see complete unittest stdout/stderr"
+    save(output, receipt)
+    return logical_preflight(output, receipt, directory / "schema-o3-pgo-fixedpoint",
+                             directory / "schema-native-threads-candidate")
+
+
+def measure(output, receipt, cycles, comparison_plan):
+    from boot_logical_state import equivalent
     from verify import SEEDS, assert_coverage, coverage_requirements, linux_runs, software
 
     started = time.monotonic()
@@ -183,6 +236,7 @@ def measure(output, receipt, cycles):
                 "python3", "tests/boot_probe.py", "--build-receipt", build.relative_to(ROOT),
                 "--seed", str(seed), "--cycles", str(cycles), "--compile-profile", profile,
                 "--invocation-cache", cache.relative_to(ROOT), "--audit-state",
+                "--logical-state",
                 "--output-root", root.relative_to(ROOT),
             ], output, f"{profile}-seed{seed}", receipt, timeout_s=2700, check=False)
             found = list(root.glob("boot-*/receipt.json"))
@@ -212,6 +266,7 @@ def measure(output, receipt, cycles):
                 "seed": seed, "observed": observed, "final_state": child["final_state"],
                 "uart_sha256": digest(path.parent / "uart.txt"),
                 "simulation_s": simulation["duration_s"], "receipt": str(path.relative_to(ROOT)),
+                "state_directory": child["final_state_directory"],
             }
             if profile == "o3-pgo-fixedpoint":
                 pairs[seed] = (child, row)
@@ -226,7 +281,10 @@ def measure(output, receipt, cycles):
                     "speedup": before["simulation_s"] / row["simulation_s"],
                 }
                 try:
-                    equivalent(before, row)
+                    comparison["logical_state_comparison"] = equivalent(
+                        comparison_plan, before, row,
+                        project_path(Path(before["state_directory"])),
+                        project_path(Path(row["state_directory"])))
                     comparison["full_equivalence"] = True
                 except ValueError as error:
                     comparison["full_equivalence"] = False
@@ -241,7 +299,7 @@ def measure(output, receipt, cycles):
         raise ValueError("native-thread candidate did not improve every measured seed")
     measured = linux_runs(output, receipt, SEEDS, build, audit=True,
                           cache=caches["native-threads-candidate"], stem="complete-native-threads",
-                          profile="native-threads-candidate")
+                          profile="native-threads-candidate", logical=True)
     assert_coverage(output, coverage_requirements("linux", SEEDS), measured)
     receipt["complete_three_seed_feasibility"] = "scored complete within inherited deadline"
     receipt["requires_independent_evaluation"] = True
@@ -251,8 +309,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--resources", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--repair-of", type=Path, action="append")
-    parser.add_argument("--mode", choices=("support", "preflight", "measure", "cleanup"),
+    parser.add_argument("--mode", choices=("support", "preflight", "measure", "cleanup", "comparator"),
                         default="support")
+    parser.add_argument("--retained-schema", type=Path)
     parser.add_argument("--cleanup-of", type=Path)
     parser.add_argument("--cycles", type=int, default=5000000)
     parser.add_argument("--experiment-origin", type=Path,
@@ -264,6 +323,8 @@ def main():
         return 0
     if args.mode == "cleanup" and args.cleanup_of is None:
         parser.error("--mode cleanup requires --cleanup-of")
+    if args.mode == "comparator" and args.retained_schema is None:
+        parser.error("--mode comparator requires --retained-schema")
     started = time.monotonic()
     deadline = min(float(os.environ.get("FURNACE_VERIFY_DEADLINE", "inf")), started + 2700)
     origin = None
@@ -313,6 +374,11 @@ def main():
         for tool in ("python3", "verilator"):
             record = run([tool, "--version"], output, tool + "-version", receipt)
             receipt.setdefault("tool_versions", {})[tool] = (output / record["stdout"]).read_text()
+        if args.mode == "comparator":
+            receipt["scope"] = "Comparator sensitivity and retained-codegen state accounting only."
+            comparator_diagnostic(output, receipt, args.retained_schema)
+            status = 0
+            return 0
         if args.mode == "cleanup":
             clean_completed_objects(output, receipt, project_path(args.cleanup_of))
             receipt["scope"] = "Completed diagnostic object cleanup only; no new simulation."
@@ -345,9 +411,9 @@ def main():
             )
         receipt["save_state_compatibility"] = "code generation accepted; paired comparison still required"
         if args.mode in ("preflight", "measure"):
-            fulltop_preflight(output, receipt)
+            comparison_plan = fulltop_preflight(output, receipt)
         if args.mode == "measure":
-            measure(output, receipt, args.cycles)
+            measure(output, receipt, args.cycles, comparison_plan)
         status = 0
     except (OSError, ValueError, RuntimeError) as error:
         receipt["error"] = str(error)

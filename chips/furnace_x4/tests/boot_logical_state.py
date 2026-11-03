@@ -13,6 +13,7 @@ import math
 from pathlib import Path
 import re
 import struct
+import sys
 
 
 SCALAR_BYTES = {"CData": 1, "SData": 2, "IData": 4, "QData": 8, "bool": 1}
@@ -22,6 +23,8 @@ FUNCTION = re.compile(
     r"\([^;{}]*\) \{")
 REFERENCE = re.compile(r"\bvlSelf->(\w+)")
 MAGIC = b"FURNACE-LOGICAL-STATE-1\n"
+SAVE_HEADER = b"verilatorsave02\n"
+SAVE_TRAILER = b"vltsaved"
 
 
 def sha256(path):
@@ -70,6 +73,9 @@ def type_shape(value):
 def declarations(text):
     fields = {}
     unsaved = {}
+    region = re.search(r"// (?:DESIGN SPECIFIC STATE|INTERNAL STATE|INTERNAL VARIABLES)", text)
+    if region:
+        text = text[region.end():].split("// CONSTRUCTORS", 1)[0]
     for line in text.splitlines():
         line = line.strip()
         port = re.fullmatch(r"VL_(?:IN|OUT|INOUT)(8|16|64|W)?\((\w+),(\d+),0(?:,(\d+))?\);", line)
@@ -83,15 +89,22 @@ def declarations(text):
             fields[port[2]] = {"bits": bits, "shape": [], "element_bytes": storage, "words": words}
             continue
         data = re.fullmatch(r"((?:VlUnpacked<.*>|VlWide<\d+>/\*\d+:0\*/|"
-                            r"(?:CData|SData|IData|QData)/\*\d+:0\*/|bool))\s+(\w+);", line)
+                            r"(?:CData|SData|IData|QData)/\*\d+:0\*/|bool))\s+"
+                            r"(\w+)(?: = (?:false|true))?;", line)
         if data:
             if data[2] in fields:
                 raise ValueError(f"duplicate declaration: {data[2]}")
             fields[data[2]] = type_shape(data[1])
             continue
-        scheduler = re.fullmatch(r"(VlTriggerVec<\d+>|VlMTaskVertex)\s+(\w+);", line)
+        scheduler = re.fullmatch(
+            r"(VlTriggerVec<\d+>|VlMTaskVertex|VlDeleter|VlThreadPool\*|"
+            r"V\w+\*\s+const)\s+(\w+);", line)
         if scheduler:
             unsaved[scheduler[2]] = scheduler[1]
+            continue
+        if line.endswith(";") and line not in ("};", ";") and not re.fullmatch(
+                r"(?:class\s+\w+|V(?!l)\w+\s+\w+);", line):
+            raise ValueError("unaccounted generated member declaration: " + line)
     return fields, unsaved
 
 
@@ -114,6 +127,7 @@ def serializer_writes(body):
             check = re.match(r"uint64_t __Vcheckval = (0x[0-9a-fA-F]+)ULL;", tail)
             loop = re.match(r"for \(int (\w+) = 0; \1 < (\d+); \+\+\1\) \{", tail)
             write = re.match(r"os\s*<<\s*([^;]+);", tail)
+            instance = re.match(r"(\w+)\.__Vserialize\(os\);", tail)
             if check and not loops:
                 rows.append({"kind": "signature", "value": int(check[1], 16)})
                 position += check.end()
@@ -139,6 +153,9 @@ def serializer_writes(body):
                     rows.append({"kind": "field", "name": match[1],
                                  "loops": [size for _, size in loops]})
                 position += write.end()
+            elif instance and not loops:
+                rows.append({"kind": "instance", "name": instance[1]})
+                position += instance.end()
             else:
                 raise ValueError("unaccounted serializer statement: " + tail[:120])
         if nested:
@@ -148,13 +165,19 @@ def serializer_writes(body):
     parse(0, [], False)
     if [r["kind"] for r in rows[:3]] != ["signature", "signature_write", "context"]:
         # Symbol tables have only __Vm_didInit, without a per-module signature.
-        if rows != [{"kind": "field", "name": "__Vm_didInit", "loops": []}]:
+        if not rows or rows[0] != {"kind": "field", "name": "__Vm_didInit", "loops": []} or any(
+                row["kind"] != "instance" for row in rows[1:]):
             raise ValueError("unknown serializer metadata layout")
+    elif any(row["kind"] not in ("field", "instance") for row in rows[3:]):
+        raise ValueError("repeated serializer metadata")
     return rows
 
 
 def schema(directory):
     result = {"classes": {}, "generated_sha256": {}}
+    for path in sorted(directory.iterdir()):
+        if path.name.startswith("V") and path.suffix in (".cpp", ".h"):
+            result["generated_sha256"][path.name] = sha256(path)
     for path in sorted(directory.glob("*.cpp")):
         original = path.read_text()
         stripped = clean_cpp(original)
@@ -165,7 +188,14 @@ def schema(directory):
             end = closing(stripped, match.end() - 1)
             writes = serializer_writes(original[match.end():end])
             header = directory / (name + ".h")
-            declared, scheduler = declarations(header.read_text())
+            header_text = header.read_text()
+            declared, scheduler = declarations(header_text)
+            modules = dict((instance, cls) for cls, instance in re.findall(
+                r"(?m)^\s*(V(?!l)\w+)\s+(\w+);", header_text))
+            instances = [row["name"] for row in writes if row["kind"] == "instance"]
+            if len(set(instances)) != len(instances) or set(instances) != modules.keys():
+                raise ValueError(f"serialized instance tree mismatch in {name}: "
+                                 f"calls={instances}, declarations={modules}")
             fields = {}
             for row in writes:
                 if row["kind"] != "field":
@@ -184,13 +214,28 @@ def schema(directory):
             missing = declared.keys() - fields.keys()
             result["classes"][name] = {
                 "fields": fields, "writes": writes,
+                "module_instances": modules,
                 "unserialized_data": {key: declared[key] for key in sorted(missing)},
                 "unserialized_scheduler": scheduler,
             }
-            result["generated_sha256"][header.name] = sha256(header)
-            result["generated_sha256"][path.name] = sha256(path)
     if not any(name.endswith("___024root") for name in result["classes"]):
         raise ValueError("missing complete RTL root serializer")
+    for row in result["classes"].values():
+        if any(cls not in result["classes"] for cls in row["module_instances"].values()):
+            raise ValueError("missing serialized module instance")
+    root = next(name for name in result["classes"] if name.endswith("___024root"))
+    top = root.removesuffix("___024root")
+    syms = top + "__Syms"
+    if result["classes"][syms]["module_instances"] != {"TOP": root}:
+        raise ValueError("unrecognized savable top instance tree")
+    top_source = clean_cpp((directory / (top + ".cpp")).read_text())
+    entry = re.search(
+        r"VerilatedSerialize& operator<<\(VerilatedSerialize& os, " + re.escape(top) +
+        r"& rhs\) \{([^{}]*)\}", top_source)
+    if not entry or re.sub(r"\s+", "", entry[1]) != (
+            "Verilated::quiesce();rhs.vlSymsp->__Vserialize(os);returnos;"):
+        raise ValueError("unrecognized complete-model archive entry")
+    result["archive_entry"] = syms
     return result
 
 
@@ -208,12 +253,20 @@ def scratch_proofs(directory, names):
     wanted = {name.split(".", 1)[1]: name for name in names}
     uses = {name: [] for name in names}
     for path in sorted(directory.glob("*.cpp")):
-        text = clean_cpp(path.read_text())
+        original = path.read_text()
+        text = clean_cpp(original)
+        covered = []
+        for match in re.finditer(r"void \w+::__V(?:serialize|deserialize)\([^;{}]*\) \{", text):
+            covered.append((match.start(), closing(text, match.end() - 1) + 1))
         for match in FUNCTION.finditer(text):
+            end = closing(text, match.end() - 1)
+            covered.append((match.start(), end + 1))
             if "___ctor_var_reset" in match[1]:
                 continue
-            end = closing(text, match.end() - 1)
             body = text[match.end():end]
+            original_body = original[match.end():end]
+            operational_start = original_body.find("// Body")
+            operational = body[operational_start:] if operational_start >= 0 else body
             first = {}
             depth = 0
             cursor = 0
@@ -239,10 +292,40 @@ def scratch_proofs(directory, names):
                     rhs = REFERENCE.sub("source_value", assignment[1])
                     safe = (not any(ref[1] == field for ref in REFERENCE.finditer(assignment[1]))
                             and not re.search(r"[(){}\[\]&*]|\b(?:new|throw|return)\b", rhs))
+                if re.search(r"\b(?:goto|catch|setjmp|longjmp)\b|(?m:^\s*#)", body):
+                    safe = False
+                if re.search(r"\bvlSelf\b(?!->)", operational):
+                    safe = False
                 uses[wanted[field]].append({
                     "file": path.name, "function": match[1],
                     "line": text.count("\n", 0, match.end() + use.start()) + 1,
                     "unconditional_scalar_definition": safe,
+                })
+            # A generated field accessed through a different alias, a bare
+            # local of the same name, or a method call is not covered by the
+            # scalar access proof above.
+            for token in re.finditer(r"\b[A-Za-z_]\w*\b", body):
+                if token[0] in wanted and body[max(0, token.start() - 8):token.start()] != "vlSelf->":
+                    uses[wanted[token[0]]].append({
+                        "file": path.name, "function": match[1],
+                        "line": text.count("\n", 0, match.end() + token.start()) + 1,
+                        "unconditional_scalar_definition": False,
+                        "reason": "unrecognized access to generated field identity",
+                    })
+        covered.sort()
+        interval = 0
+        for token in re.finditer(r"\b[A-Za-z_]\w*\b", text):
+            if token[0] not in wanted:
+                continue
+            while interval < len(covered) and covered[interval][1] <= token.start():
+                interval += 1
+            if interval == len(covered) or not (
+                    covered[interval][0] <= token.start() < covered[interval][1]):
+                uses[wanted[token[0]]].append({
+                    "file": path.name, "function": "unparsed generated code",
+                    "line": text.count("\n", 0, token.start()) + 1,
+                    "unconditional_scalar_definition": False,
+                    "reason": "access outside recognized generated function",
                 })
     return {
         name: {"rule": "whole-scalar-definition-before-first-access-in-every-function",
@@ -377,8 +460,71 @@ def compare_fields(plan, left, right):
                                      for row in plan["fields"].values())}
 
 
+def validate_raw_capture(model, folder, fields):
+    """Tie every tagged byte to the original unmodified VerilatedSave archive."""
+    context = (folder / "context.bin").read_bytes()
+    if not context.startswith(SAVE_HEADER) or not context.endswith(SAVE_TRAILER):
+        raise ValueError("invalid complete context archive framing")
+    context = context[len(SAVE_HEADER):-len(SAVE_TRAILER)]
+    raw = (folder / "rtl-context.bin").read_bytes()
+    offset = 0
+
+    def consume(expected):
+        nonlocal offset
+        if raw[offset:offset + len(expected)] != expected:
+            raise ValueError(f"raw RTL/context capture mismatch at byte {offset}")
+        offset += len(expected)
+
+    consume(SAVE_HEADER)
+    consume(context)
+    visited = set()
+    captured = set()
+
+    def visit(owner):
+        if owner in visited:
+            raise ValueError("duplicate or cyclic serialized module instance")
+        visited.add(owner)
+        row = model["classes"][owner]
+        signature = None
+        for write in row["writes"]:
+            kind = write["kind"]
+            if kind == "signature":
+                signature = write["value"]
+            elif kind == "signature_write":
+                if signature is None:
+                    raise ValueError("missing serializer structural signature")
+                consume(signature.to_bytes(8, sys.byteorder))
+            elif kind == "context":
+                consume(context)
+            elif kind == "instance":
+                visit(row["module_instances"][write["name"]])
+            elif kind == "field":
+                identity = owner + "." + write["name"]
+                if identity in captured:
+                    raise ValueError("repeated raw serialized field: " + identity)
+                captured.add(identity)
+                consume(fields[identity])
+            else:
+                raise ValueError("unknown raw archive record")
+
+    visit(model["archive_entry"])
+    consume(SAVE_TRAILER)
+    if offset != len(raw) or captured != fields.keys():
+        raise ValueError("raw capture has trailing or unaccounted state")
+    return {"raw_bytes": len(raw), "context_payload_bytes": len(context),
+            "raw_fields_validated": len(captured)}
+
+
 def equivalent(plan, left, right, left_folder, right_folder):
     """The native path only: the existing same-layout raw comparator is unchanged."""
+    expected_state = {"rtl-context.bin", "host.bin", "ram.bin", "context.bin", "logical-state.bin"}
+    for row, folder in ((left, left_folder), (right, right_folder)):
+        if row["final_state"].keys() != expected_state:
+            raise ValueError("equal-work snapshot field set mismatch")
+        for name in sorted(expected_state - {"ram.bin"}):
+            path = folder / name
+            if row["final_state"][name] != {"sha256": sha256(path), "bytes": path.stat().st_size}:
+                raise ValueError("equal-work retained snapshot identity mismatch: " + name)
     for key in ("host.bin", "ram.bin", "context.bin"):
         if left["final_state"][key] != right["final_state"][key]:
             raise ValueError(f"equal-work exact state mismatch: {key}")
@@ -391,10 +537,11 @@ def equivalent(plan, left, right, left_folder, right_folder):
     for key in left["observed"]:
         if key != "profile" and left["observed"][key] != right["observed"][key]:
             raise ValueError("equal-work observation mismatch: " + key)
-    return compare_fields(
-        plan,
-        read_fields(left_folder / "logical-state.bin", flat_fields(plan["baseline"])),
-        read_fields(right_folder / "logical-state.bin", flat_fields(plan["candidate"])))
+    a = read_fields(left_folder / "logical-state.bin", flat_fields(plan["baseline"]))
+    b = read_fields(right_folder / "logical-state.bin", flat_fields(plan["candidate"]))
+    raw = {"baseline": validate_raw_capture(plan["baseline"], left_folder, a),
+           "candidate": validate_raw_capture(plan["candidate"], right_folder, b)}
+    return {**compare_fields(plan, a, b), "raw_archive_validation": raw}
 
 
 def write_exporter(directory, model):

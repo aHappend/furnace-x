@@ -214,11 +214,15 @@ def main():
                         help="Fresh cache under this invocation's output namespace")
     parser.add_argument("--audit-state", action="store_true",
                         help="Hash complete final RTL/reference/RAM state for equal-work comparison")
+    parser.add_argument("--logical-state", action="store_true",
+                        help="Also retain every identified RTL field and the exact context archive")
     parser.add_argument("--compile-only", action="store_true",
                         help="Prepare one invocation-local executable without a boot acceptance claim")
     parser.add_argument("--until-complete", action="store_true",
                         help="Run to scored completion, bounded by the inherited execution deadline")
     args = parser.parse_args()
+    if args.logical_state and not args.audit_state:
+        parser.error("--logical-state requires --audit-state")
     if args.until_complete:
         args.cycles = (1 << 63) - 1
     if args.cycles <= 8 or args.jobs < 1:
@@ -243,6 +247,7 @@ def main():
         "compile_profile": args.compile_profile,
         "compile_configuration": COMPILE_PROFILES[args.compile_profile],
         "until_complete": args.until_complete,
+        **({"logical_state": True} if args.logical_state else {}),
         "scope": "Bounded public-pin boot diagnostic, not full behavior/Linux/defects/synthesis acceptance.",
     }
     save(output, receipt)
@@ -308,13 +313,14 @@ def main():
             # Child output roots and the cache share the Linux invocation root.
             cache.relative_to(project_path(args.output_root).parent)
             executable = reusable_boot(cache, output, receipt, args.jobs, args.compile_profile,
-                                       audit=args.audit_state)
+                                       audit=args.audit_state, logical=args.logical_state)
         elif "pgo_training_cycles" in COMPILE_PROFILES[args.compile_profile]:
             executable = build_pgo(output, receipt, args.jobs, relative / "image-index.txt",
-                                   audit=args.audit_state, profile_name=args.compile_profile)
+                                   audit=args.audit_state, logical=args.logical_state,
+                                   profile_name=args.compile_profile)
         else:
             executable = compile_boot(output, receipt, args.jobs, args.compile_profile,
-                                      audit=args.audit_state)
+                                      audit=args.audit_state, logical=args.logical_state)
         receipt["executable"] = str(executable)
         receipt["executable_sha256"] = digest(ROOT / executable)
         save(output, receipt)
@@ -338,10 +344,15 @@ def main():
                                *simulation_argv]
         simulation = run(simulation_argv, output, "simulation", receipt, check=False)
         if args.audit_state:
+            names = ["rtl-context.bin", "host.bin", "ram.bin"]
+            if args.logical_state:
+                names += ["context.bin", "logical-state.bin"]
             receipt["final_state"] = {
                 name: {"sha256": digest(state / name), "bytes": (state / name).stat().st_size}
-                for name in ("rtl-context.bin", "host.bin", "ram.bin")
+                for name in names
             }
+            if args.logical_state:
+                receipt["final_state_directory"] = str(state.relative_to(ROOT))
             # Retain exact identity, not a redundant 128-MiB weight/RAM dump.
             (state / "ram.bin").unlink()
         if args.compile_profile == "gprof":

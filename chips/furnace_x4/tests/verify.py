@@ -158,7 +158,7 @@ def behavior(output, receipt, seeds):
 
 
 def linux_runs(output, receipt, seeds, build, *, cycles=None, audit=False,
-               cache=None, stem="boot", profile="o3-pgo-fixedpoint"):
+               cache=None, stem="boot", profile="o3-pgo-fixedpoint", logical=False):
     """One local compilation, then disjoint processes with one inherited deadline."""
     measured = {}
     cache = output / f"boot-executable-{uuid.uuid4().hex[:8]}" if cache is None else cache
@@ -167,6 +167,7 @@ def linux_runs(output, receipt, seeds, build, *, cycles=None, audit=False,
         "--compile-profile", profile,
         "--invocation-cache", str(cache.relative_to(ROOT)),
         *(["--audit-state"] if audit else []),
+        *(["--logical-state"] if logical else []),
     ]
     child_probe("boot_probe.py", [*common, "--compile-only"],
                 output, receipt, stem + "-compilation")
