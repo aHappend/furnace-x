@@ -187,6 +187,18 @@ def atom(text):
     return re.sub(r"\s+", "", text)
 
 
+def addressed(text, start):
+    pos = start - 1
+    while pos >= 0 and text[pos].isspace():
+        pos -= 1
+    if pos < 0 or text[pos] != "&":
+        return False
+    pos -= 1
+    while pos >= 0 and text[pos].isspace():
+        pos -= 1
+    return pos < 0 or text[pos] in "=,(?:{;!~" or text[max(0, pos - 5):pos + 1] == "return"
+
+
 @dataclass(frozen=True)
 class State:
     defined: int = 0
@@ -200,6 +212,7 @@ class Lifetime:
         self.errors = []
         self.outside = set()
         self.unclassified_fields = set()
+        self.escaped_fields = set()
         self.escape = []
         for path in sorted(directory.glob("*.cpp")):
             text = clean_cpp(path.read_text())
@@ -229,6 +242,9 @@ class Lifetime:
                 self.unclassified_fields.update(
                     token[0] for token in TOKEN.finditer(normalized)
                     if normalized[max(0, token.start() - 8):token.start()] != "vlSelf->")
+                self.escaped_fields.update(
+                    ref[1] for ref in REF.finditer(normalized)
+                    if addressed(normalized, ref.start()))
             covered.sort()
             cursor = 0
             for start, end in covered:
@@ -381,6 +397,8 @@ class Lifetime:
             failure = "; ".join(self.errors)
         if target in self.outside:
             failure = "field identity occurs outside parsed generated functions"
+        if target in self.escaped_fields:
+            failure = "generated field address escapes the bounded lifetime analysis"
         if target in self.unclassified_fields:
             failure = "field identity has an unclassified alias/local access"
         if self.escape:

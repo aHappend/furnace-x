@@ -556,6 +556,9 @@ class LogicalStateSensitivity(unittest.TestCase):
             "unknown_helper": (
                 "void entry(Root* vlSelf) { vlSelf->scratch = unknown(vlSelf->a); "
                 "consume(vlSelf->scratch); }", False),
+            "field_address_escape": (
+                "void entry(Root* vlSelf) { vlSelf->scratch = 1U; "
+                "external(&vlSelf->scratch); consume(vlSelf->scratch); }", False),
         }
         with tempfile.TemporaryDirectory(dir=FIXTURE_ROOT) as directory:
             folder = Path(directory)
