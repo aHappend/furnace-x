@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Bounded runner self-test, including deliberate timeout and descendant cleanup."""
 
+import argparse
+import copy
 import datetime
 import json
 from pathlib import Path
@@ -9,17 +11,55 @@ import time
 import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from boot_probe import ROOT, digest, now, run, save
+from boot_probe import ROOT, digest, now, project_path, run, save
+
+
+def reject_stale_compilation(manifest_path, output, receipt):
+    from boot_compilation import reusable_boot
+    manifest = json.loads(manifest_path.read_text())
+    paths = [manifest_path, project_path(Path(manifest["executable"])),
+             project_path(Path(manifest["compilation_receipt"]))]
+    identities = {str(p.relative_to(ROOT)): digest(p) for p in paths}
+    receipt["reuse_guard_fixture"] = identities
+    fixture = manifest["binding"]
+    cases = []
+    for changed in ("source_sha256", "tool_versions", "image_manifest_sha256"):
+        guard_output = output / f"guard-{changed}-{uuid.uuid4().hex[:8]}"
+        guard_output.mkdir()
+        consumer = copy.deepcopy(fixture)
+        if changed == "source_sha256":
+            consumer[changed]["tests/intentional-stale-fixture"] = "0" * 64
+        elif changed == "tool_versions":
+            consumer[changed]["intentional-stale-tool"] = {"stdout": "not the bound tool"}
+        else:
+            consumer[changed] = "0" * 64
+        try:
+            reusable_boot(manifest_path.parent, guard_output, consumer, 2,
+                          fixture["compile_profile"], audit=fixture["audit_state"])
+        except ValueError as error:
+            assert "identity mismatch" in str(error), str(error)
+        else:
+            raise AssertionError(f"reused executable with changed {changed}")
+        cases.append(changed)
+        receipt["comparisons"] += 1
+    assert {str(p.relative_to(ROOT)): digest(p) for p in paths} == identities
+    receipt["comparisons"] += 1
+    receipt["stale_compilation_rejections"] = cases
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--reuse-manifest", type=Path,
+                        help="Retained executable fixture for non-executing identity-guard checks")
+    args = parser.parse_args()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = ROOT / "evidence/preparation" / f"runner-{stamp}-{uuid.uuid4().hex[:8]}"
     output.mkdir(parents=True)
     receipt = {
-        "schema": 1, "argv": ["python3", "tests/runner_contract.py"], "cwd": ".",
+        "schema": 1, "argv": ["python3", "tests/runner_contract.py", *sys.argv[1:]], "cwd": ".",
         "source_sha256": {name: digest(ROOT / name) for name in (
-            "tests/boot_probe.py", "tests/runner_contract.py", "tests/verify.py",
+            "tests/boot_probe.py", "tests/boot_compilation.py",
+            "tests/runner_contract.py", "tests/verify.py",
         )}, "start_utc": now(), "end_utc": None, "exit_code": None,
         "timeout_s": 600, "commands": [], "comparisons": 0,
     }
@@ -85,8 +125,10 @@ def main():
         assert receipt["commands"][-1]["launch_error"]
         assert receipt["commands"][-1]["end_utc"]
         receipt["comparisons"] += 1
+        if args.reuse_manifest:
+            reject_stale_compilation(project_path(args.reuse_manifest), output, receipt)
         status = 0
-    except (OSError, RuntimeError, AssertionError) as error:
+    except (OSError, ValueError, KeyError, RuntimeError, AssertionError) as error:
         receipt["error"] = str(error)
         print(str(error), file=sys.stderr)
     finally:
