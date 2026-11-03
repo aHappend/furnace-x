@@ -3,6 +3,7 @@
 
 import json
 from pathlib import Path
+import re
 
 from boot_probe import COMPILE_PROFILES, ROOT, digest, project_path, run, save
 
@@ -37,7 +38,7 @@ def compile_boot(output, receipt, jobs, profile_name, *, obj=None, phase=None,
         flags.append(flag)
         link.append(flag)
         if phase == "use":
-            flags += ["-Werror=missing-profile", "-Werror=coverage-mismatch"]
+            flags += ["-Wmissing-profile", "-Werror=coverage-mismatch"]
     cpp = Path(*([".."] * len(obj.parts))) / "tests/boot_endpoint.cpp"
     run([
         "verilator", "--cc", "--exe", "--build", "-j", str(jobs),
@@ -90,10 +91,21 @@ def build_pgo(output, receipt, jobs, image_index, *, audit=False):
     receipt["profile_training"] = observed
     save(output, receipt)
     clean_objects(ROOT / obj)
-    return compile_boot(
+    executable = compile_boot(
         output, receipt, jobs, "o3-pgo", obj=obj, phase="use",
         profile_directory=profile_directory, audit=audit, stem="compile",
     )
+    diagnostics = (output / "compile.stderr.txt").read_text()
+    missing = re.findall(r"^([^:\n]+\.cpp):.*\n.*profile count data file not found",
+                         diagnostics, re.MULTILINE)
+    warning_count = diagnostics.count("[-Wmissing-profile]")
+    allowed = re.compile(
+        r"Vfurnace_x4_top___024unit__(?:Slow|DepSet_h[0-9a-f]+__0__Slow)\.cpp")
+    if warning_count != len(missing) or any(not allowed.fullmatch(name) for name in missing):
+        raise ValueError(f"PGO has missing profiles outside unused unit helpers: {missing}")
+    receipt["untrained_cold_units"] = missing
+    save(output, receipt)
+    return executable
 
 
 def reusable_boot(cache, output, receipt, jobs, profile_name, *, audit=False):
